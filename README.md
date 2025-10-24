@@ -1,73 +1,204 @@
-# Welcome to your Lovable project
+# Classmate Central
 
-## Project info
+Полнофункциональная CRM система для управления образовательным центром.
 
-**URL**: https://lovable.dev/projects/85b39ad9-fac5-40e1-b170-d29dc56b22a3
+## Возможности
 
-## How can I edit this code?
+- 🔐 **Аутентификация** - JWT-based авторизация с автообновлением токенов
+- 👨‍🏫 **Управление учителями** - CRUD операции, статусы, загруженность
+- 👨‍🎓 **Управление учениками** - CRUD операции, предметы, группы
+- 👥 **Группы** - Создание и управление учебными группами
+- 📅 **Расписание** - Интерактивный календарь занятий
+- ⚙️ **Настройки** - Настройка центра, темы оформления
 
-There are several ways of editing your application.
+## Tech Stack
 
-**Use Lovable**
+### Backend
+- **Go** 1.21+
+- **Gin** - Web framework
+- **PostgreSQL** - База данных
+- **JWT** - Аутентификация
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/85b39ad9-fac5-40e1-b170-d29dc56b22a3) and start prompting.
+### Frontend
+- **React** + **TypeScript**
+- **Vite** - Build tool
+- **React Query** - Server state
+- **Tailwind CSS** - Styling
+- **shadcn/ui** - UI components
 
-Changes made via Lovable will be committed automatically to this repo.
+## Быстрый старт
 
-**Use your preferred IDE**
+### 1. Backend Setup
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+```bash
+cd backend
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+# Запустить PostgreSQL через Docker
+docker-compose up -d
 
-Follow these steps:
+# Создать .env файл
+cp .env.example .env
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+# Установить зависимости (автоматически при go run)
+go mod download
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# Запустить сервер
+go run cmd/api/main.go
+```
 
-# Step 3: Install the necessary dependencies.
-npm i
+Backend будет доступен на `http://localhost:8080`
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+### 2. Frontend Setup
+
+```bash
+cd frontend
+
+# Установить зависимости
+npm install
+
+# Создать .env файл
+echo "VITE_API_URL=http://localhost:8080/api" > .env
+
+# Запустить dev сервер
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Frontend будет доступен на `http://localhost:5173`
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### 3. Первый вход
 
-**Use GitHub Codespaces**
+1. Откройте `http://localhost:5173`
+2. Нажмите "Зарегистрироваться"
+3. Создайте первый аккаунт
+4. Войдите в систему
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Структура проекта
 
-## What technologies are used for this project?
+```
+classmate-central-92/
+├── backend/              # Go API
+│   ├── cmd/api/         # Main application
+│   ├── internal/
+│   │   ├── models/      # Data models
+│   │   ├── handlers/    # HTTP handlers
+│   │   ├── repository/  # Database layer
+│   │   ├── middleware/  # Auth, CORS
+│   │   └── database/    # DB connection
+│   ├── migrations/      # SQL migrations
+│   └── docker-compose.yml
+│
+└── frontend/            # React application
+    ├── src/
+    │   ├── api/        # API clients
+    │   ├── components/ # React components
+    │   ├── pages/      # Application pages
+    │   ├── hooks/      # Custom hooks
+    │   └── context/    # Auth context
+    └── public/
+```
 
-This project is built with:
+## API Endpoints
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### Authentication
+- `POST /api/auth/register` - Регистрация
+- `POST /api/auth/login` - Вход
+- `POST /api/auth/refresh` - Обновление токена
+- `GET /api/auth/me` - Текущий пользователь
 
-## How can I deploy this project?
+### Protected Endpoints (требуют JWT)
+- `GET/POST/PUT/DELETE /api/teachers` - Учителя
+- `GET/POST/PUT/DELETE /api/students` - Ученики
+- `GET/POST/PUT/DELETE /api/groups` - Группы
+- `GET/POST/PUT/DELETE /api/lessons` - Уроки
+- `GET/PUT /api/settings` - Настройки
 
-Simply open [Lovable](https://lovable.dev/projects/85b39ad9-fac5-40e1-b170-d29dc56b22a3) and click on Share -> Publish.
+## Environment Variables
 
-## Can I connect a custom domain to my Lovable project?
+### Backend (.env)
+```env
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=classmate_central
+DB_SSLMODE=disable
 
-Yes, you can!
+JWT_SECRET=your-secret-key
+JWT_EXPIRATION=24h
+JWT_REFRESH_EXPIRATION=168h
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+SERVER_PORT=8080
+FRONTEND_URL=http://localhost:5173
+```
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+### Frontend (.env)
+```env
+VITE_API_URL=http://localhost:8080/api
+```
+
+## Development
+
+### Backend
+```bash
+cd backend
+go run cmd/api/main.go
+```
+
+### Frontend
+```bash
+cd frontend
+npm run dev
+```
+
+### Database
+```bash
+cd backend
+docker-compose up -d     # Запустить
+docker-compose down      # Остановить
+docker-compose logs -f   # Логи
+```
+
+## Production Build
+
+### Backend
+```bash
+cd backend
+go build -o bin/api cmd/api/main.go
+./bin/api
+```
+
+### Frontend
+```bash
+cd frontend
+npm run build
+# Файлы в dist/ готовы к деплою
+```
+
+## Troubleshooting
+
+### Backend не подключается к БД
+- Проверьте что PostgreSQL запущен: `docker-compose ps`
+- Проверьте настройки в `.env`
+- Проверьте логи: `docker-compose logs postgres`
+
+### Frontend не может подключиться к API
+- Убедитесь что backend запущен на порту 8080
+- Проверьте `VITE_API_URL` в `.env`
+- Проверьте CORS настройки в backend
+
+### Ошибка "Invalid token"
+- Очистите localStorage в браузере
+- Заново войдите в систему
+
+## Contributing
+
+1. Fork репозиторий
+2. Создайте feature branch
+3. Commit изменения
+4. Push в branch
+5. Создайте Pull Request
+
+## License
+
+MIT License
+

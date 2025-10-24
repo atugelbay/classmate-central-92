@@ -1,0 +1,808 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { teachersAPI } from "@/api/teachers";
+import { studentsAPI } from "@/api/students";
+import { groupsAPI } from "@/api/groups";
+import { lessonsAPI } from "@/api/lessons";
+import { settingsAPI } from "@/api/settings";
+import { roomsApi } from "@/api/rooms";
+import { leadsApi } from "@/api/leads";
+import * as financeApi from "@/api/finance";
+import * as subscriptionsApi from "@/api/subscriptions";
+import { 
+  Teacher, 
+  Student, 
+  Group, 
+  Lesson, 
+  Settings, 
+  Room, 
+  Lead,
+  LeadActivity,
+  LeadTask,
+  PaymentTransaction,
+  StudentBalance,
+  Tariff,
+  DebtRecord,
+  SubscriptionType,
+  StudentSubscription,
+  SubscriptionFreeze,
+  LessonAttendance,
+} from "@/types";
+import { toast } from "sonner";
+
+// Teachers hooks
+export const useTeachers = () => {
+  return useQuery({
+    queryKey: ["teachers"],
+    queryFn: teachersAPI.getAll,
+  });
+};
+
+export const useCreateTeacher = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: teachersAPI.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["teachers"] });
+      toast.success("Учитель успешно добавлен");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при добавлении учителя");
+    },
+  });
+};
+
+export const useUpdateTeacher = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Teacher> }) =>
+      teachersAPI.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["teachers"] });
+      toast.success("Учитель успешно обновлен");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при обновлении учителя");
+    },
+  });
+};
+
+export const useDeleteTeacher = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: teachersAPI.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["teachers"] });
+      toast.success("Учитель успешно удален");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при удалении учителя");
+    },
+  });
+};
+
+// Students hooks
+export const useStudents = () => {
+  return useQuery({
+    queryKey: ["students"],
+    queryFn: studentsAPI.getAll,
+  });
+};
+
+export const useCreateStudent = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: studentsAPI.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      toast.success("Ученик успешно добавлен");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при добавлении ученика");
+    },
+  });
+};
+
+export const useUpdateStudent = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Student> }) =>
+      studentsAPI.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      toast.success("Ученик успешно обновлен");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при обновлении ученика");
+    },
+  });
+};
+
+export const useDeleteStudent = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: studentsAPI.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      toast.success("Ученик успешно удален");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при удалении ученика");
+    },
+  });
+};
+
+// Groups hooks
+export const useGroups = () => {
+  return useQuery({
+    queryKey: ["groups"],
+    queryFn: groupsAPI.getAll,
+  });
+};
+
+export const useCreateGroup = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: groupsAPI.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
+      toast.success("Группа успешно создана");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при создании группы");
+    },
+  });
+};
+
+export const useUpdateGroup = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Group> }) =>
+      groupsAPI.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
+      toast.success("Группа успешно обновлена");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при обновлении группы");
+    },
+  });
+};
+
+export const useDeleteGroup = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: groupsAPI.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
+      toast.success("Группа успешно удалена");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при удалении группы");
+    },
+  });
+};
+
+// Lessons hooks
+export const useLessons = () => {
+  return useQuery({
+    queryKey: ["lessons"],
+    queryFn: lessonsAPI.getAll,
+  });
+};
+
+export const useCreateLesson = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: lessonsAPI.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["lessons"] });
+      toast.success("Урок успешно создан");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при создании урока");
+    },
+  });
+};
+
+export const useUpdateLesson = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Lesson> }) =>
+      lessonsAPI.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["lessons"] });
+      toast.success("Урок успешно обновлен");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при обновлении урока");
+    },
+  });
+};
+
+export const useDeleteLesson = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: lessonsAPI.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["lessons"] });
+      toast.success("Урок успешно удален");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при удалении урока");
+    },
+  });
+};
+
+// Settings hooks
+export const useSettings = () => {
+  return useQuery({
+    queryKey: ["settings"],
+    queryFn: settingsAPI.get,
+  });
+};
+
+export const useUpdateSettings = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: settingsAPI.update,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["settings"] });
+      toast.success("Настройки успешно обновлены");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при обновлении настроек");
+    },
+  });
+};
+
+// Rooms hooks
+export const useRooms = () => {
+  return useQuery({
+    queryKey: ["rooms"],
+    queryFn: roomsApi.getAll,
+  });
+};
+
+export const useCreateRoom = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: roomsApi.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["rooms"] });
+      toast.success("Аудитория успешно создана");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при создании аудитории");
+    },
+  });
+};
+
+export const useUpdateRoom = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Room> }) =>
+      roomsApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["rooms"] });
+      toast.success("Аудитория успешно обновлена");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при обновлении аудитории");
+    },
+  });
+};
+
+export const useDeleteRoom = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: roomsApi.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["rooms"] });
+      toast.success("Аудитория успешно удалена");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при удалении аудитории");
+    },
+  });
+};
+
+// Leads hooks
+export const useLeads = (filters?: { status?: string; source?: string }) => {
+  return useQuery({
+    queryKey: ["leads", filters],
+    queryFn: () => leadsApi.getAll(filters),
+  });
+};
+
+export const useLeadById = (id: string) => {
+  return useQuery({
+    queryKey: ["leads", id],
+    queryFn: () => leadsApi.getById(id),
+    enabled: !!id,
+  });
+};
+
+export const useCreateLead = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: leadsApi.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      toast.success("Лид успешно добавлен");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при добавлении лида");
+    },
+  });
+};
+
+export const useUpdateLead = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Lead> }) =>
+      leadsApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      toast.success("Лид успешно обновлен");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при обновлении лида");
+    },
+  });
+};
+
+export const useDeleteLead = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: leadsApi.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      toast.success("Лид успешно удален");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при удалении лида");
+    },
+  });
+};
+
+export const useLeadStats = () => {
+  return useQuery({
+    queryKey: ["leads", "stats"],
+    queryFn: leadsApi.getStats,
+  });
+};
+
+// Lead Activities hooks
+export const useLeadActivities = (leadId: string) => {
+  return useQuery({
+    queryKey: ["leads", leadId, "activities"],
+    queryFn: () => leadsApi.getActivities(leadId),
+    enabled: !!leadId,
+  });
+};
+
+export const useAddLeadActivity = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ leadId, activity }: { leadId: string; activity: Omit<LeadActivity, "id" | "leadId" | "createdAt" | "createdBy"> }) =>
+      leadsApi.addActivity(leadId, activity),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["leads", variables.leadId, "activities"] });
+      toast.success("Активность добавлена");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при добавлении активности");
+    },
+  });
+};
+
+// Lead Tasks hooks
+export const useLeadTasks = (leadId: string) => {
+  return useQuery({
+    queryKey: ["leads", leadId, "tasks"],
+    queryFn: () => leadsApi.getTasks(leadId),
+    enabled: !!leadId,
+  });
+};
+
+export const useCreateLeadTask = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ leadId, task }: { leadId: string; task: Omit<LeadTask, "id" | "leadId" | "createdAt" | "completedAt"> }) =>
+      leadsApi.createTask(leadId, task),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["leads", variables.leadId, "tasks"] });
+      toast.success("Задача создана");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при создании задачи");
+    },
+  });
+};
+
+export const useUpdateLeadTask = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ leadId, taskId, task }: { leadId: string; taskId: number; task: Partial<LeadTask> }) =>
+      leadsApi.updateTask(leadId, taskId, task),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["leads", variables.leadId, "tasks"] });
+      toast.success("Задача обновлена");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при обновлении задачи");
+    },
+  });
+};
+
+// ============= FINANCE MODULE HOOKS =============
+
+// Payment Transactions
+export const useTransactions = () => {
+  return useQuery({
+    queryKey: ["transactions"],
+    queryFn: financeApi.getAllTransactions,
+  });
+};
+
+export const useStudentTransactions = (studentId: string) => {
+  return useQuery({
+    queryKey: ["transactions", "student", studentId],
+    queryFn: () => financeApi.getTransactionsByStudent(studentId),
+    enabled: !!studentId,
+  });
+};
+
+export const useCreateTransaction = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Omit<PaymentTransaction, "id" | "createdAt">) =>
+      financeApi.createTransaction(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["balances"] });
+      toast.success("Транзакция создана");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при создании транзакции");
+    },
+  });
+};
+
+// Student Balances
+export const useStudentBalance = (studentId: string) => {
+  return useQuery({
+    queryKey: ["balance", studentId],
+    queryFn: () => financeApi.getStudentBalance(studentId),
+    enabled: !!studentId,
+  });
+};
+
+export const useAllBalances = () => {
+  return useQuery({
+    queryKey: ["balances"],
+    queryFn: financeApi.getAllBalances,
+  });
+};
+
+// Tariffs
+export const useTariffs = () => {
+  return useQuery({
+    queryKey: ["tariffs"],
+    queryFn: financeApi.getTariffs,
+  });
+};
+
+export const useTariffById = (id: string) => {
+  return useQuery({
+    queryKey: ["tariffs", id],
+    queryFn: () => financeApi.getTariffById(id),
+    enabled: !!id,
+  });
+};
+
+export const useCreateTariff = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Omit<Tariff, "id" | "createdAt">) =>
+      financeApi.createTariff(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tariffs"] });
+      toast.success("Тариф создан");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при создании тарифа");
+    },
+  });
+};
+
+export const useUpdateTariff = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Tariff> }) =>
+      financeApi.updateTariff(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tariffs"] });
+      toast.success("Тариф обновлен");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при обновлении тарифа");
+    },
+  });
+};
+
+export const useDeleteTariff = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: financeApi.deleteTariff,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tariffs"] });
+      toast.success("Тариф удален");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при удалении тарифа");
+    },
+  });
+};
+
+// Debts
+export const useDebts = (status?: string) => {
+  return useQuery({
+    queryKey: ["debts", status],
+    queryFn: () => financeApi.getDebts(status),
+  });
+};
+
+export const useStudentDebts = (studentId: string) => {
+  return useQuery({
+    queryKey: ["debts", "student", studentId],
+    queryFn: () => financeApi.getDebtsByStudent(studentId),
+    enabled: !!studentId,
+  });
+};
+
+export const useCreateDebt = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Omit<DebtRecord, "id" | "createdAt">) =>
+      financeApi.createDebt(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["debts"] });
+      toast.success("Долг создан");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при создании долга");
+    },
+  });
+};
+
+export const useUpdateDebt = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<DebtRecord> }) =>
+      financeApi.updateDebt(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["debts"] });
+      toast.success("Долг обновлен");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при обновлении долга");
+    },
+  });
+};
+
+export const useDeleteDebt = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: financeApi.deleteDebt,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["debts"] });
+      toast.success("Долг удален");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при удалении долга");
+    },
+  });
+};
+
+// ============= SUBSCRIPTION MODULE HOOKS =============
+
+// Subscription Types
+export const useSubscriptionTypes = () => {
+  return useQuery({
+    queryKey: ["subscriptionTypes"],
+    queryFn: subscriptionsApi.getSubscriptionTypes,
+  });
+};
+
+export const useSubscriptionTypeById = (id: string) => {
+  return useQuery({
+    queryKey: ["subscriptionTypes", id],
+    queryFn: () => subscriptionsApi.getSubscriptionTypeById(id),
+    enabled: !!id,
+  });
+};
+
+export const useCreateSubscriptionType = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Omit<SubscriptionType, "id" | "createdAt">) =>
+      subscriptionsApi.createSubscriptionType(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subscriptionTypes"] });
+      toast.success("Тип абонемента создан");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при создании типа абонемента");
+    },
+  });
+};
+
+export const useUpdateSubscriptionType = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<SubscriptionType> }) =>
+      subscriptionsApi.updateSubscriptionType(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subscriptionTypes"] });
+      toast.success("Тип абонемента обновлен");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при обновлении типа абонемента");
+    },
+  });
+};
+
+export const useDeleteSubscriptionType = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: subscriptionsApi.deleteSubscriptionType,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subscriptionTypes"] });
+      toast.success("Тип абонемента удален");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при удалении типа абонемента");
+    },
+  });
+};
+
+// Student Subscriptions
+export const useAllSubscriptions = () => {
+  return useQuery({
+    queryKey: ["subscriptions"],
+    queryFn: subscriptionsApi.getAllSubscriptions,
+  });
+};
+
+export const useStudentSubscriptions = (studentId: string) => {
+  return useQuery({
+    queryKey: ["subscriptions", "student", studentId],
+    queryFn: () => subscriptionsApi.getStudentSubscriptions(studentId),
+    enabled: !!studentId,
+  });
+};
+
+export const useSubscriptionById = (id: string) => {
+  return useQuery({
+    queryKey: ["subscriptions", id],
+    queryFn: () => subscriptionsApi.getSubscriptionById(id),
+    enabled: !!id,
+  });
+};
+
+export const useCreateStudentSubscription = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Omit<StudentSubscription, "id" | "createdAt">) =>
+      subscriptionsApi.createStudentSubscription(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+      toast.success("Абонемент создан");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при создании абонемента");
+    },
+  });
+};
+
+export const useUpdateSubscription = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<StudentSubscription> }) =>
+      subscriptionsApi.updateSubscription(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+      toast.success("Абонемент обновлен");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при обновлении абонемента");
+    },
+  });
+};
+
+export const useDeleteSubscription = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: subscriptionsApi.deleteSubscription,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+      toast.success("Абонемент удален");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при удалении абонемента");
+    },
+  });
+};
+
+// Subscription Freezes
+export const useSubscriptionFreezes = (subscriptionId: string) => {
+  return useQuery({
+    queryKey: ["subscriptions", subscriptionId, "freezes"],
+    queryFn: () => subscriptionsApi.getSubscriptionFreezes(subscriptionId),
+    enabled: !!subscriptionId,
+  });
+};
+
+export const useCreateFreeze = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ subscriptionId, data }: { subscriptionId: string; data: Omit<SubscriptionFreeze, "id" | "subscriptionId" | "createdAt"> }) =>
+      subscriptionsApi.createFreeze(subscriptionId, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["subscriptions", variables.subscriptionId, "freezes"] });
+      queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+      toast.success("Заморозка создана");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при создании заморозки");
+    },
+  });
+};
+
+export const useUpdateFreeze = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: subscriptionsApi.updateFreeze,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+      toast.success("Заморозка обновлена");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при обновлении заморозки");
+    },
+  });
+};
+
+// Lesson Attendance
+export const useMarkAttendance = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Omit<LessonAttendance, "id" | "markedAt">) =>
+      subscriptionsApi.markAttendance(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["attendance"] });
+      queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+      toast.success("Посещаемость отмечена");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при отметке посещаемости");
+    },
+  });
+};
+
+export const useLessonAttendance = (lessonId: string) => {
+  return useQuery({
+    queryKey: ["attendance", "lesson", lessonId],
+    queryFn: () => subscriptionsApi.getAttendanceByLesson(lessonId),
+    enabled: !!lessonId,
+  });
+};
+
+export const useStudentAttendance = (studentId: string) => {
+  return useQuery({
+    queryKey: ["attendance", "student", studentId],
+    queryFn: () => subscriptionsApi.getAttendanceByStudent(studentId),
+    enabled: !!studentId,
+  });
+};

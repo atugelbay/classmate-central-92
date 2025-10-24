@@ -1,0 +1,191 @@
+export interface Teacher {
+  id: string;
+  name: string;
+  subject: string;
+  email: string;
+  phone: string;
+  status: "active" | "inactive";
+  avatar?: string;
+  workload: number; // lessons per week
+}
+
+export interface Student {
+  id: string;
+  name: string;
+  age: number;
+  email: string;
+  phone: string;
+  subjects: string[];
+  groupIds: string[];
+  avatar?: string;
+}
+
+export interface Lesson {
+  id: string;
+  title: string;
+  teacherId: string;
+  groupId?: string;
+  subject: string;
+  start: Date;
+  end: Date;
+  room: string;
+  roomId?: string;
+  status: "scheduled" | "completed" | "cancelled";
+  studentIds: string[];
+}
+
+export interface Group {
+  id: string;
+  name: string;
+  subject: string;
+  teacherId: string;
+  studentIds: string[];
+  schedule: string;
+}
+
+export interface Settings {
+  centerName: string;
+  logo?: string;
+  themeColor: string;
+}
+
+export interface Room {
+  id: string;
+  name: string;
+  capacity: number;
+  color: string;
+  status: "active" | "inactive";
+}
+
+export type LeadSource = "call" | "website" | "social" | "referral" | "other";
+export type LeadStatus = "new" | "in_progress" | "enrolled" | "rejected";
+
+export interface Lead {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string;
+  source: LeadSource;
+  status: LeadStatus;
+  notes?: string;
+  assignedTo?: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export type LeadActivityType = "call" | "meeting" | "note" | "email";
+
+export interface LeadActivity {
+  id: number;
+  leadId: string;
+  activityType: LeadActivityType;
+  description: string;
+  createdBy?: number;
+  createdAt: Date;
+}
+
+export type LeadTaskStatus = "pending" | "completed";
+
+export interface LeadTask {
+  id: number;
+  leadId: string;
+  title: string;
+  description?: string;
+  dueDate?: Date;
+  status: LeadTaskStatus;
+  assignedTo?: number;
+  createdAt: Date;
+  completedAt?: Date;
+}
+
+export interface LeadConversionStats {
+  totalLeads: number;
+  newLeads: number;
+  inProgressLeads: number;
+  enrolledLeads: number;
+  rejectedLeads: number;
+  conversionRate: number;
+}
+
+// ============= FINANCE MODULE =============
+
+export interface PaymentTransaction {
+  id: number;
+  studentId: string;
+  amount: number;
+  type: "payment" | "refund" | "debt";
+  paymentMethod: "cash" | "card" | "transfer" | "other";
+  description: string;
+  createdAt: string;
+  createdBy?: number;
+}
+
+export interface StudentBalance {
+  studentId: string;
+  balance: number;
+  lastPaymentDate?: string;
+}
+
+export interface Tariff {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  durationDays?: number; // null = unlimited
+  lessonCount?: number; // null = unlimited
+  createdAt: string;
+}
+
+export interface DebtRecord {
+  id: number;
+  studentId: string;
+  amount: number;
+  dueDate?: string;
+  status: "pending" | "paid";
+  notes: string;
+  createdAt: string;
+}
+
+// ============= SUBSCRIPTION MODULE =============
+
+export interface SubscriptionType {
+  id: string;
+  name: string;
+  lessonsCount: number;
+  validityDays?: number; // null = unlimited
+  price: number;
+  canFreeze: boolean;
+  description: string;
+  createdAt: string;
+}
+
+export interface StudentSubscription {
+  id: string;
+  studentId: string;
+  subscriptionTypeId: string;
+  lessonsRemaining: number;
+  startDate: string;
+  endDate?: string; // null = no expiry
+  status: "active" | "expired" | "frozen";
+  freezeDaysRemaining: number;
+  createdAt: string;
+}
+
+export interface SubscriptionFreeze {
+  id: number;
+  subscriptionId: string;
+  freezeStart: string;
+  freezeEnd?: string; // null = still frozen
+  reason: string;
+  createdAt: string;
+}
+
+export interface LessonAttendance {
+  id: number;
+  lessonId: string;
+  studentId: string;
+  subscriptionId?: string;
+  status: "attended" | "missed" | "cancelled";
+  markedAt: string;
+  markedBy?: number;
+}
