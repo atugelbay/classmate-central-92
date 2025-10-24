@@ -16,7 +16,7 @@ type Database struct {
 func NewDatabase() (*Database, error) {
 	// Try to use DATABASE_URL first (Railway, Heroku, etc.)
 	connStr := os.Getenv("DATABASE_URL")
-	
+
 	// If DATABASE_URL is not set, build connection string from individual env vars
 	if connStr == "" {
 		connStr = fmt.Sprintf(
