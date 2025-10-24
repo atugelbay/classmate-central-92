@@ -1,6 +1,6 @@
 module classmate-central
 
-go 1.24.4
+go 1.21
 
 require (
 	github.com/gin-gonic/gin v1.11.0
