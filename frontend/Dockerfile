@@ -34,9 +34,12 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Create entrypoint script
 RUN echo '#!/bin/sh' > /docker-entrypoint.sh && \
-    echo 'export PORT=${PORT:-80}' >> /docker-entrypoint.sh && \
-    echo 'envsubst "\$PORT" < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf' >> /docker-entrypoint.sh && \
-    echo 'nginx -g "daemon off;"' >> /docker-entrypoint.sh && \
+    echo 'PORT=${PORT:-80}' >> /docker-entrypoint.sh && \
+    echo 'echo "Using PORT: $PORT"' >> /docker-entrypoint.sh && \
+    echo 'sed "s/\$PORT/$PORT/g" /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf' >> /docker-entrypoint.sh && \
+    echo 'echo "Nginx config:"' >> /docker-entrypoint.sh && \
+    echo 'cat /etc/nginx/conf.d/default.conf' >> /docker-entrypoint.sh && \
+    echo 'exec nginx -g "daemon off;"' >> /docker-entrypoint.sh && \
     chmod +x /docker-entrypoint.sh
 
 # Start nginx with entrypoint
