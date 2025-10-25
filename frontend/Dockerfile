@@ -20,28 +20,18 @@ RUN npm run build
 # Runtime stage - Nginx
 FROM nginx:alpine
 
-# Install gettext for envsubst
-RUN apk add --no-cache gettext
-
 # Remove default nginx config
 RUN rm /etc/nginx/conf.d/default.conf
 
-# Copy custom nginx config template
-COPY nginx.conf /etc/nginx/templates/default.conf.template
+# Copy custom nginx config
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy built files from builder
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Create entrypoint script
-RUN echo '#!/bin/sh' > /docker-entrypoint.sh && \
-    echo 'PORT=${PORT:-80}' >> /docker-entrypoint.sh && \
-    echo 'echo "Using PORT: $PORT"' >> /docker-entrypoint.sh && \
-    echo 'sed "s/\$PORT/$PORT/g" /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf' >> /docker-entrypoint.sh && \
-    echo 'echo "Nginx config:"' >> /docker-entrypoint.sh && \
-    echo 'cat /etc/nginx/conf.d/default.conf' >> /docker-entrypoint.sh && \
-    echo 'exec nginx -g "daemon off;"' >> /docker-entrypoint.sh && \
-    chmod +x /docker-entrypoint.sh
+# Expose port 80
+EXPOSE 80
 
-# Start nginx with entrypoint
-CMD ["/docker-entrypoint.sh"]
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]
 
