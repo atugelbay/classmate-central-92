@@ -145,16 +145,38 @@ func (h *MigrationHandler) runMigration(companyID string, req MigrationRequest, 
 	status.CurrentStep = "Запуск скрипта миграции"
 	status.Progress = 10
 
+	// Get database credentials (support both Railway PG* and standard DB_* env vars)
+	dbHost := os.Getenv("DB_HOST")
+	if dbHost == "" {
+		dbHost = os.Getenv("PGHOST")
+	}
+	dbPort := os.Getenv("DB_PORT")
+	if dbPort == "" {
+		dbPort = os.Getenv("PGPORT")
+	}
+	dbName := os.Getenv("DB_NAME")
+	if dbName == "" {
+		dbName = os.Getenv("PGDATABASE")
+	}
+	dbUser := os.Getenv("DB_USER")
+	if dbUser == "" {
+		dbUser = os.Getenv("PGUSER")
+	}
+	dbPassword := os.Getenv("DB_PASSWORD")
+	if dbPassword == "" {
+		dbPassword = os.Getenv("PGPASSWORD")
+	}
+
 	result, err := migrationService.RunMigration(services.MigrationConfig{
 		AlfaCRMURL: req.AlfaCRMURL,
 		Email:      req.Email,
 		APIKey:     req.APIKey,
 		CompanyID:  companyID,
-		DBHost:     os.Getenv("DB_HOST"),
-		DBPort:     os.Getenv("DB_PORT"),
-		DBName:     os.Getenv("DB_NAME"),
-		DBUser:     os.Getenv("DB_USER"),
-		DBPassword: os.Getenv("DB_PASSWORD"),
+		DBHost:     dbHost,
+		DBPort:     dbPort,
+		DBName:     dbName,
+		DBUser:     dbUser,
+		DBPassword: dbPassword,
 	})
 
 	// Always save logs, even on success
