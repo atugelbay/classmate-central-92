@@ -153,7 +153,7 @@ func (h *MigrationHandler) runMigration(companyID string, req MigrationRequest, 
 	dbName := os.Getenv("DB_NAME")
 	dbUser := os.Getenv("DB_USER")
 	dbPassword := os.Getenv("DB_PASSWORD")
-	
+
 	// If not set, try to parse from DATABASE_URL (Railway format)
 	if dbHost == "" || dbPort == "" || dbName == "" || dbUser == "" || dbPassword == "" {
 		databaseURL := os.Getenv("DATABASE_URL")
@@ -161,14 +161,14 @@ func (h *MigrationHandler) runMigration(companyID string, req MigrationRequest, 
 			// Parse postgresql://user:password@host:port/database
 			// Example: postgresql://postgres:password@postgres.railway.internal:5432/railway
 			var user, pass, host, port, database string
-			
+
 			// Remove postgresql:// prefix
 			if len(databaseURL) > 13 && databaseURL[:13] == "postgresql://" {
 				databaseURL = databaseURL[13:]
 			} else if len(databaseURL) > 11 && databaseURL[:11] == "postgres://" {
 				databaseURL = databaseURL[11:]
 			}
-			
+
 			// Split by @
 			parts := strings.Split(databaseURL, "@")
 			if len(parts) == 2 {
@@ -178,12 +178,12 @@ func (h *MigrationHandler) runMigration(companyID string, req MigrationRequest, 
 					user = authParts[0]
 					pass = authParts[1]
 				}
-				
+
 				// Parse host:port/database
 				hostParts := strings.Split(parts[1], "/")
 				if len(hostParts) == 2 {
 					database = hostParts[1]
-					
+
 					// Parse host:port
 					hostPortParts := strings.Split(hostParts[0], ":")
 					if len(hostPortParts) == 2 {
@@ -192,7 +192,7 @@ func (h *MigrationHandler) runMigration(companyID string, req MigrationRequest, 
 					}
 				}
 			}
-			
+
 			// Use parsed values if original vars were empty
 			if dbHost == "" {
 				dbHost = host
