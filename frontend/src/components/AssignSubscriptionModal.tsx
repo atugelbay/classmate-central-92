@@ -153,7 +153,7 @@ export default function AssignSubscriptionModal({
         subscriptionTypeId: customMode ? undefined : selectedTypeId,
         groupId: groupId || undefined,
         teacherId: teacherId || undefined,
-        lessonsRemaining: totalLessons, // Required field
+        // Note: lessonsRemaining is computed field (total_lessons - used_lessons), don't send it
         totalLessons,
         usedLessons: 0,
         totalPrice,

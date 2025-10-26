@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -44,6 +44,12 @@ export default function Subscriptions() {
   const [selectedType, setSelectedType] = useState<SubscriptionType | null>(null);
   const [selectedSubscription, setSelectedSubscription] = useState<StudentSubscription | null>(null);
   const [billingTypeFilter, setBillingTypeFilter] = useState<string>("all");
+  
+  // For subscription form
+  const [formTypeId, setFormTypeId] = useState<string>("");
+  const [formTotalLessons, setFormTotalLessons] = useState<number>(0);
+  const [formTotalPrice, setFormTotalPrice] = useState<number>(0);
+  const [formPricePerLesson, setFormPricePerLesson] = useState<number>(0);
 
   // Statistics
   const activeSubscriptions = subscriptions.filter(s => s.status === "active").length;
@@ -69,6 +75,34 @@ export default function Subscriptions() {
     monthly: "bg-green-100 text-green-800",
     unlimited: "bg-purple-100 text-purple-800",
   } as const;
+
+  // Auto-fill form values when subscription type is selected
+  useEffect(() => {
+    if (formTypeId) {
+      const type = subscriptionTypes.find(t => t.id === formTypeId);
+      if (type) {
+        setFormTotalLessons(type.lessonsCount);
+        setFormTotalPrice(type.price);
+        setFormPricePerLesson(type.lessonsCount > 0 ? type.price / type.lessonsCount : 0);
+      }
+    }
+  }, [formTypeId, subscriptionTypes]);
+
+  // Initialize form when dialog opens with existing subscription
+  useEffect(() => {
+    if (selectedSubscription && isSubscriptionDialogOpen) {
+      setFormTypeId(selectedSubscription.subscriptionTypeId);
+      setFormTotalLessons(selectedSubscription.totalLessons);
+      setFormTotalPrice(selectedSubscription.totalPrice);
+      setFormPricePerLesson(selectedSubscription.pricePerLesson);
+    } else if (isSubscriptionDialogOpen) {
+      // Reset form when creating new
+      setFormTypeId("");
+      setFormTotalLessons(0);
+      setFormTotalPrice(0);
+      setFormPricePerLesson(0);
+    }
+  }, [selectedSubscription, isSubscriptionDialogOpen]);
 
   const handleTypeSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -97,10 +131,16 @@ export default function Subscriptions() {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
 
+    // Note: lessonsRemaining is a computed field (total_lessons - used_lessons)
+    // We need to send totalLessons and usedLessons instead
+    // Prices come from state (auto-filled from selected type)
     const subscriptionData = {
       studentId: formData.get("studentId") as string,
-      subscriptionTypeId: formData.get("subscriptionTypeId") as string,
-      lessonsRemaining: parseInt(formData.get("lessonsRemaining") as string),
+      subscriptionTypeId: formTypeId,
+      totalLessons: formTotalLessons,
+      usedLessons: parseInt(formData.get("usedLessons") as string) || 0,
+      totalPrice: formTotalPrice,
+      pricePerLesson: formPricePerLesson,
       startDate: new Date(formData.get("startDate") as string).toISOString(),
       endDate: formData.get("endDate") ? new Date(formData.get("endDate") as string).toISOString() : undefined,
       status: (formData.get("status") as any) || "active",
@@ -231,7 +271,7 @@ export default function Subscriptions() {
                   </div>
                   <div>
                     <Label htmlFor="subscriptionTypeId">Тип абонемента</Label>
-                    <Select name="subscriptionTypeId" defaultValue={selectedSubscription?.subscriptionTypeId} required>
+                    <Select value={formTypeId} onValueChange={setFormTypeId} required>
                       <SelectTrigger>
                         <SelectValue placeholder="Выберите тип" />
                       </SelectTrigger>
@@ -243,10 +283,54 @@ export default function Subscriptions() {
                         ))}
                       </SelectContent>
                     </Select>
+                    {formTypeId && (
+                      <div className="mt-2 p-3 bg-blue-50 rounded-lg text-sm">
+                        <p className="text-blue-900">
+                          <span className="font-medium">Автоматически заполнено из шаблона</span>
+                        </p>
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <Label htmlFor="lessonsRemaining">Осталось уроков</Label>
-                    <Input id="lessonsRemaining" name="lessonsRemaining" type="number" defaultValue={selectedSubscription?.lessonsRemaining} required />
+                  {/* Display prices from selected type (readonly) */}
+                  <div className="p-4 bg-gray-50 rounded-lg border border-gray-200 space-y-3">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Всего уроков</Label>
+                        <p className="text-lg font-semibold">{formTotalLessons}</p>
+                      </div>
+                      <div>
+                        <Label htmlFor="usedLessons">Использовано уроков</Label>
+                        <Input 
+                          id="usedLessons" 
+                          name="usedLessons" 
+                          type="number" 
+                          min="0"
+                          max={formTotalLessons}
+                          defaultValue={selectedSubscription?.usedLessons || 0} 
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Общая стоимость</Label>
+                        <p className="text-lg font-semibold">{formTotalPrice.toLocaleString()} ₸</p>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Цена за урок</Label>
+                        <p className="text-lg font-semibold">{formPricePerLesson.toLocaleString()} ₸</p>
+                      </div>
+                    </div>
+                    
+                    {selectedSubscription && (
+                      <div className="pt-2 border-t">
+                        <p className="text-sm text-blue-900">
+                          <span className="font-medium">Осталось уроков: </span>
+                          <span className="text-lg font-bold">{selectedSubscription.lessonsRemaining}</span>
+                          <span className="text-xs text-blue-700 ml-2">(вычисляется автоматически)</span>
+                        </p>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <Label htmlFor="startDate">Дата начала</Label>
@@ -298,6 +382,7 @@ export default function Subscriptions() {
                     <TableHead>Студент</TableHead>
                     <TableHead>Тип</TableHead>
                     <TableHead>Уроков осталось</TableHead>
+                    <TableHead>Цены</TableHead>
                     <TableHead>Период</TableHead>
                     <TableHead>Статус</TableHead>
                     <TableHead>Заморозка</TableHead>
@@ -306,7 +391,7 @@ export default function Subscriptions() {
                 <TableBody>
                   {subscriptions.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground">
+                      <TableCell colSpan={7} className="text-center text-muted-foreground">
                         Нет абонементов
                       </TableCell>
                     </TableRow>
@@ -316,6 +401,12 @@ export default function Subscriptions() {
                         <TableCell>{getStudentName(subscription.studentId)}</TableCell>
                         <TableCell>{getTypeName(subscription.subscriptionTypeId)}</TableCell>
                         <TableCell className="font-medium">{subscription.lessonsRemaining}</TableCell>
+                        <TableCell className="text-sm">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="font-medium">{subscription.totalPrice?.toLocaleString() || 0} ₸</span>
+                            <span className="text-muted-foreground text-xs">{subscription.pricePerLesson?.toLocaleString() || 0} ₸/урок</span>
+                          </div>
+                        </TableCell>
                         <TableCell>
                           {moment(subscription.startDate).format("DD.MM.YYYY")} - {subscription.endDate ? moment(subscription.endDate).format("DD.MM.YYYY") : "∞"}
                         </TableCell>

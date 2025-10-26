@@ -2,7 +2,7 @@ import { useState } from "react";
 import moment from "moment";
 import "moment/locale/ru";
 
-import { useLessons, useCreateLesson, useUpdateLesson, useDeleteLesson, useTeachers, useGroups, useRooms, useCreateRoom, useStudents, useMarkAttendance } from "@/hooks/useData";
+import { useLessons, useDeleteLesson, useTeachers, useGroups, useRooms, useCreateRoom, useStudents, useMarkAttendance } from "@/hooks/useData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Loader2, Trash2, ChevronLeft, ChevronRight, Building2, Calendar, CalendarDays, CalendarRange, CheckCircle2, XCircle, Clock, Edit, ClipboardCheck } from "lucide-react";
@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import RoomScheduleView from "@/components/RoomScheduleView";
 import WeekScheduleView from "@/components/WeekScheduleView";
 import MonthScheduleView from "@/components/MonthScheduleView";
+import { LessonFormModal } from "@/components/LessonFormModal";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -49,100 +50,42 @@ export default function Schedule() {
   const { data: groups = [] } = useGroups();
   const { data: rooms = [] } = useRooms();
   const { data: students = [] } = useStudents();
-  const createLesson = useCreateLesson();
-  const updateLesson = useUpdateLesson();
   const deleteLesson = useDeleteLesson();
   const createRoom = useCreateRoom();
   const markAttendance = useMarkAttendance();
   
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isLessonFormOpen, setIsLessonFormOpen] = useState(false);
+  const [lessonFormData, setLessonFormData] = useState<any>(null);
+  const [lessonFormMode, setLessonFormMode] = useState<"create" | "edit">("create");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isRoomDialogOpen, setIsRoomDialogOpen] = useState(false);
   const [isLessonDetailsDialogOpen, setIsLessonDetailsDialogOpen] = useState(false);
   const [isAttendanceDialogOpen, setIsAttendanceDialogOpen] = useState(false);
-  const [selectedSlot, setSelectedSlot] = useState<{ start: Date; end: Date; roomId?: string } | null>(null);
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<"day" | "week" | "month">("day");
   const [attendanceData, setAttendanceData] = useState<Record<string, { status: string; reason: string; notes: string }>>({});
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-
-    const startDate = formData.get("date") as string;
-    const startTime = formData.get("startTime") as string;
-    const endTime = formData.get("endTime") as string;
-
-    const start = new Date(`${startDate}T${startTime}`);
-    const end = new Date(`${startDate}T${endTime}`);
-
-    const roomId = formData.get("roomId") as string;
-    const selectedRoom = rooms.find(r => r.id === roomId);
-
-    const lessonData = {
-      title: formData.get("title") as string,
-      teacherId: formData.get("teacherId") as string,
-      groupId: formData.get("groupId") as string,
-      subject: formData.get("subject") as string,
-      start,
-      end,
-      room: selectedRoom?.name || "",
-      roomId: roomId,
-      status: "scheduled" as const,
-      studentIds: [],
-    };
-
-    try {
-      await createLesson.mutateAsync(lessonData as any);
-      setIsDialogOpen(false);
-      setSelectedSlot(null);
-      toast.success("Урок создан");
-    } catch (error) {
-      toast.error("Ошибка при создании урока");
-    }
+  const handleSlotClick = (start: Date, end: Date, roomId: string) => {
+    setLessonFormData({
+      date: start,
+      startTime: moment(start).format("HH:mm"),
+      endTime: moment(end).format("HH:mm"),
+      roomId,
+    });
+    setLessonFormMode("create");
+    setIsLessonFormOpen(true);
   };
 
-
-  const handleEditSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!selectedLesson) return;
-
-    const formData = new FormData(e.currentTarget);
-    const startDate = formData.get("date") as string;
-    const startTime = formData.get("startTime") as string;
-    const endTime = formData.get("endTime") as string;
-
-    const start = new Date(`${startDate}T${startTime}`);
-    const end = new Date(`${startDate}T${endTime}`);
-
-    const roomId = formData.get("roomId") as string;
-    const selectedRoom = rooms.find(r => r.id === roomId);
-
-    const lessonData = {
-      title: formData.get("title") as string,
-      teacherId: formData.get("teacherId") as string,
-      groupId: formData.get("groupId") as string,
-      subject: formData.get("subject") as string,
-      start,
-      end,
-      room: selectedRoom?.name || selectedLesson.room,
-      roomId: roomId,
-      status: selectedLesson.status,
-      studentIds: selectedLesson.studentIds,
-    };
-
-    try {
-      await updateLesson.mutateAsync({
-        id: selectedLesson.id,
-        data: lessonData as any,
-      });
-      setIsEditDialogOpen(false);
-      setSelectedLesson(null);
-    } catch (error) {
-      // Error is handled by the hook
-    }
+  const handleEditLesson = (lesson: Lesson) => {
+    setLessonFormData({
+      ...lesson,
+      date: lesson.start,
+      startTime: moment(lesson.start).format("HH:mm"),
+      endTime: moment(lesson.end).format("HH:mm"),
+    });
+    setLessonFormMode("edit");
+    setIsLessonFormOpen(true);
   };
 
   const handleDelete = async () => {
@@ -186,33 +129,6 @@ export default function Schedule() {
     setAttendanceData(initialData);
     setIsLessonDetailsDialogOpen(false);
     setIsAttendanceDialogOpen(true);
-  };
-
-  const handleSlotClick = (start: Date, end: Date, roomId: string) => {
-    setSelectedSlot({ start, end, roomId });
-    setIsDialogOpen(true);
-  };
-
-  const handleLessonUpdate = async (lessonId: string, updates: { start: Date; end: Date; roomId?: string }) => {
-    const lesson = lessons.find(l => l.id === lessonId);
-    if (!lesson) return;
-
-    const updatedData = {
-      ...lesson,
-      start: updates.start,
-      end: updates.end,
-      roomId: updates.roomId || lesson.roomId,
-      room: updates.roomId ? rooms.find(r => r.id === updates.roomId)?.name || lesson.room : lesson.room,
-    };
-
-    try {
-      await updateLesson.mutateAsync({
-        id: lessonId,
-        data: updatedData as any,
-      });
-    } catch (error) {
-      // Error is handled by the hook
-    }
   };
 
   const handlePrevious = () => {
@@ -419,127 +335,14 @@ export default function Schedule() {
             </DialogContent>
           </Dialog>
           
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Добавить урок
-              </Button>
-            </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Новый урок</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="title">Название урока</Label>
-                <Input id="title" name="title" required />
-              </div>
-              <div>
-                <Label htmlFor="subject">Предмет</Label>
-                <Input id="subject" name="subject" required />
-              </div>
-              <div>
-                <Label htmlFor="teacherId">Преподаватель</Label>
-                <Select name="teacherId" required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Выберите преподавателя" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {teachers.map((teacher) => (
-                      <SelectItem key={teacher.id} value={teacher.id}>
-                        {teacher.name} - {teacher.subject}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="groupId">Группа</Label>
-                <Select name="groupId">
-                  <SelectTrigger>
-                    <SelectValue placeholder="Выберите группу (необязательно)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {groups.map((group) => (
-                      <SelectItem key={group.id} value={group.id}>
-                        {group.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="date">Дата</Label>
-                <Input
-                  id="date"
-                  name="date"
-                  type="date"
-                  defaultValue={
-                    selectedSlot
-                      ? moment(selectedSlot.start).format("YYYY-MM-DD")
-                      : moment().format("YYYY-MM-DD")
-                  }
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="startTime">Время начала</Label>
-                  <Input 
-                    id="startTime" 
-                    name="startTime" 
-                    type="time"
-                    defaultValue={
-                      selectedSlot
-                        ? moment(selectedSlot.start).format("HH:mm")
-                        : "10:00"
-                    }
-                    required 
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="endTime">Время окончания</Label>
-                  <Input 
-                    id="endTime" 
-                    name="endTime" 
-                    type="time"
-                    defaultValue={
-                      selectedSlot
-                        ? moment(selectedSlot.end).format("HH:mm")
-                        : "12:00"
-                    }
-                    required 
-                  />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="roomId">Аудитория</Label>
-                <Select name="roomId" required defaultValue={selectedSlot?.roomId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Выберите аудиторию" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {rooms && rooms.length > 0 ? (
-                      rooms.map((room) => (
-                        <SelectItem key={room.id} value={room.id}>
-                          {room.name} (Вместимость: {room.capacity})
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="" disabled>
-                        Нет доступных аудиторий
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button type="submit" className="w-full">
-                Создать урок
-              </Button>
-            </form>
-          </DialogContent>
-          </Dialog>
+          <Button onClick={() => {
+            setLessonFormData({});
+            setLessonFormMode("create");
+            setIsLessonFormOpen(true);
+          }}>
+            <Plus className="mr-2 h-4 w-4" />
+            Добавить урок
+          </Button>
         </div>
       </div>
 
@@ -597,7 +400,6 @@ export default function Schedule() {
               selectedDate={selectedDate}
               onLessonClick={handleLessonClick}
               onSlotClick={handleSlotClick}
-              onLessonUpdate={handleLessonUpdate}
             />
           )}
           {viewMode === "week" && (
@@ -609,7 +411,6 @@ export default function Schedule() {
               selectedDate={selectedDate}
               onLessonClick={handleLessonClick}
               onSlotClick={handleSlotClick}
-              onLessonUpdate={handleLessonUpdate}
             />
           )}
           {viewMode === "month" && (
@@ -624,147 +425,20 @@ export default function Schedule() {
       </Card>
 
 
-      {/* Edit Lesson Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Редактировать урок</DialogTitle>
-          </DialogHeader>
-          {selectedLesson && (
-            <form onSubmit={handleEditSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="edit-title">Название урока</Label>
-                <Input 
-                  id="edit-title" 
-                  name="title" 
-                  defaultValue={selectedLesson.title}
-                  required 
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-subject">Предмет</Label>
-                <Input 
-                  id="edit-subject" 
-                  name="subject" 
-                  defaultValue={selectedLesson.subject}
-                  required 
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-teacherId">Преподаватель</Label>
-                <Select name="teacherId" defaultValue={selectedLesson.teacherId} required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Выберите преподавателя" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {teachers.map((teacher) => (
-                      <SelectItem key={teacher.id} value={teacher.id}>
-                        {teacher.name} - {teacher.subject}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="edit-groupId">Группа</Label>
-                <Select name="groupId" defaultValue={selectedLesson.groupId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Выберите группу (необязательно)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {groups.map((group) => (
-                      <SelectItem key={group.id} value={group.id}>
-                        {group.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="edit-date">Дата</Label>
-                <Input
-                  id="edit-date"
-                  name="date"
-                  type="date"
-                  defaultValue={moment.utc(selectedLesson.start).local().format("YYYY-MM-DD")}
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="edit-startTime">Время начала</Label>
-                  <Input 
-                    id="edit-startTime" 
-                    name="startTime" 
-                    type="time"
-                    defaultValue={moment.utc(selectedLesson.start).local().format("HH:mm")}
-                    required 
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="edit-endTime">Время окончания</Label>
-                  <Input 
-                    id="edit-endTime" 
-                    name="endTime" 
-                    type="time"
-                    defaultValue={moment.utc(selectedLesson.end).local().format("HH:mm")}
-                    required 
-                  />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="edit-roomId">Аудитория</Label>
-                <Select name="roomId" required defaultValue={selectedLesson.roomId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Выберите аудиторию" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {rooms && rooms.length > 0 ? (
-                      rooms.map((room) => (
-                        <SelectItem key={room.id} value={room.id}>
-                          {room.name} (Вместимость: {room.capacity})
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="" disabled>
-                        Нет доступных аудиторий
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex justify-between pt-4">
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={() => {
-                    setIsEditDialogOpen(false);
-                    setIsDeleteDialogOpen(true);
-                  }}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Удалить урок
-                </Button>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setIsEditDialogOpen(false);
-                      setSelectedLesson(null);
-                    }}
-                  >
-                    Отмена
-                  </Button>
-                  <Button type="submit">
-                    Сохранить изменения
-                  </Button>
-                </div>
-              </div>
-            </form>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Lesson Form Modal */}
+      <LessonFormModal
+        open={isLessonFormOpen}
+        onOpenChange={setIsLessonFormOpen}
+        teachers={teachers}
+        groups={groups}
+        rooms={rooms}
+        students={students}
+        initialData={lessonFormData}
+        mode={lessonFormMode}
+        onSuccess={() => {
+          setLessonFormData(null);
+        }}
+      />
 
       {/* Lesson Details Dialog */}
       <Dialog open={isLessonDetailsDialogOpen} onOpenChange={setIsLessonDetailsDialogOpen}>
@@ -861,8 +535,10 @@ export default function Schedule() {
                   <Button
                     variant="outline"
                     onClick={() => {
-                      setIsLessonDetailsDialogOpen(false);
-                      setIsEditDialogOpen(true);
+                      if (selectedLesson) {
+                        setIsLessonDetailsDialogOpen(false);
+                        handleEditLesson(selectedLesson);
+                      }
                     }}
                   >
                     <Edit className="h-4 w-4 mr-2" />
@@ -1041,10 +717,7 @@ export default function Schedule() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => {
-              setIsDeleteDialogOpen(false);
-              setIsEditDialogOpen(true);
-            }}>
+            <AlertDialogCancel>
               Отмена
             </AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">

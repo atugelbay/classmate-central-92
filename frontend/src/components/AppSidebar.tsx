@@ -10,6 +10,7 @@ import {
   UserPlus,
   DollarSign,
   Ticket,
+  UserCheck,
 } from "lucide-react";
 import {
   Sidebar,
@@ -58,6 +59,11 @@ const navItems = [
     title: "Группы",
     url: "/groups",
     icon: UsersRound,
+  },
+  {
+    title: "Индивидуальные",
+    url: "/individual-lessons",
+    icon: UserCheck,
   },
   {
     title: "Финансы",

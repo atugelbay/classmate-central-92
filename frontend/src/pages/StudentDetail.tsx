@@ -13,6 +13,8 @@ import {
   useStudentAttendanceJournal,
   useStudentNotifications,
   useMarkNotificationRead,
+  useLessons,
+  useTeachers,
 } from "@/hooks/useData";
 import AssignSubscriptionModal from "@/components/AssignSubscriptionModal";
 import { Button } from "@/components/ui/button";
@@ -52,6 +54,8 @@ export default function StudentDetail() {
   const navigate = useNavigate();
   const { data: students = [] } = useStudents();
   const { data: groups = [] } = useGroups();
+  const { data: lessons = [] } = useLessons();
+  const { data: teachers = [] } = useTeachers();
   const { data: balance } = useStudentBalance(id || "");
   const { data: subscriptions = [] } = useStudentSubscriptions(id || "");
   const { data: transactions = [] } = useStudentTransactions(id || "");
@@ -82,6 +86,18 @@ export default function StudentDetail() {
   }
 
   const studentGroups = groups.filter((g) => student.groupIds?.includes(g.id));
+  
+  // Get student's upcoming lessons
+  const studentLessons = lessons.filter((l) => 
+    l.studentIds?.includes(student.id) || 
+    (l.groupId && student.groupIds?.includes(l.groupId))
+  );
+  const upcomingLessons = studentLessons
+    .filter((l) => moment(l.start).isAfter(moment()))
+    .sort((a, b) => moment(a.start).diff(moment(b.start)));
+  const nextLesson = upcomingLessons[0];
+  const nextLessonTeacher = nextLesson ? teachers.find((t) => t.id === nextLesson.teacherId) : null;
+  const nextLessonGroup = nextLesson?.groupId ? groups.find((g) => g.id === nextLesson.groupId) : null;
 
   const handleAddNote = async () => {
     if (!newNote.trim() || !id) return;
@@ -192,6 +208,57 @@ export default function StudentDetail() {
                   </Badge>
                 </div>
               ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Next Lesson Card */}
+      {nextLesson && (
+        <Card className="border-green-500 bg-gradient-to-r from-green-50 to-emerald-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-green-900">
+              <Clock className="h-5 w-5" />
+              Ближайшее занятие
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Дата и время</p>
+                <p className="font-semibold text-green-900">
+                  {moment(nextLesson.start).format("DD MMMM, dddd")}
+                </p>
+                <p className="text-sm text-green-800">
+                  {moment(nextLesson.start).format("HH:mm")} - {moment(nextLesson.end).format("HH:mm")}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Предмет</p>
+                <Badge variant="secondary" className="mt-1">{nextLesson.subject}</Badge>
+              </div>
+            </div>
+            {nextLessonTeacher && (
+              <div>
+                <p className="text-sm text-muted-foreground">Преподаватель</p>
+                <p className="font-medium text-green-900">{nextLessonTeacher.name}</p>
+              </div>
+            )}
+            {nextLessonGroup ? (
+              <div>
+                <p className="text-sm text-muted-foreground">Группа</p>
+                <p className="font-medium text-green-900">{nextLessonGroup.name}</p>
+              </div>
+            ) : (
+              <div>
+                <Badge variant="outline">Индивидуальное занятие</Badge>
+              </div>
+            )}
+            {nextLesson.room && (
+              <div>
+                <p className="text-sm text-muted-foreground">Аудитория</p>
+                <p className="font-medium text-green-900">{nextLesson.room}</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

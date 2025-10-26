@@ -3,6 +3,7 @@ package repository
 import (
 	"classmate-central/internal/models"
 	"database/sql"
+	"time"
 )
 
 type SubscriptionRepository struct {
@@ -263,10 +264,30 @@ func (r *SubscriptionRepository) UpdateSubscriptionInternal(sub *models.StudentS
 // ============= Subscription Freezes =============
 
 func (r *SubscriptionRepository) CreateFreeze(freeze *models.SubscriptionFreeze) error {
+	// Start transaction
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Insert freeze record
 	query := `INSERT INTO subscription_freezes (subscription_id, freeze_start, freeze_end, reason) 
 	          VALUES ($1, $2, $3, $4) RETURNING id, created_at`
-	return r.db.QueryRow(query, freeze.SubscriptionID, freeze.FreezeStart, freeze.FreezeEnd, freeze.Reason).
+	err = tx.QueryRow(query, freeze.SubscriptionID, freeze.FreezeStart, freeze.FreezeEnd, freeze.Reason).
 		Scan(&freeze.ID, &freeze.CreatedAt)
+	if err != nil {
+		return err
+	}
+
+	// Update subscription status to 'frozen'
+	updateQuery := `UPDATE student_subscriptions SET status = 'frozen' WHERE id = $1`
+	_, err = tx.Exec(updateQuery, freeze.SubscriptionID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (r *SubscriptionRepository) GetFreezesBySubscription(subscriptionID string) ([]models.SubscriptionFreeze, error) {
@@ -290,9 +311,66 @@ func (r *SubscriptionRepository) GetFreezesBySubscription(subscriptionID string)
 }
 
 func (r *SubscriptionRepository) UpdateFreeze(freeze *models.SubscriptionFreeze) error {
+	// Start transaction
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Get freeze details to calculate days frozen
+	var freezeStart time.Time
+	var subscriptionID string
+	err = tx.QueryRow(`SELECT freeze_start, subscription_id FROM subscription_freezes WHERE id = $1`, freeze.ID).
+		Scan(&freezeStart, &subscriptionID)
+	if err != nil {
+		return err
+	}
+
+	// Update freeze record
 	query := `UPDATE subscription_freezes SET freeze_end = $1, reason = $2 WHERE id = $3`
-	_, err := r.db.Exec(query, freeze.FreezeEnd, freeze.Reason, freeze.ID)
-	return err
+	_, err = tx.Exec(query, freeze.FreezeEnd, freeze.Reason, freeze.ID)
+	if err != nil {
+		return err
+	}
+
+	// If freeze_end is set (unfreezing), extend subscription end_date by freeze duration
+	if freeze.FreezeEnd != nil {
+		// Calculate freeze duration in days
+		freezeDuration := freeze.FreezeEnd.Sub(freezeStart)
+		freezeDays := int(freezeDuration.Hours() / 24)
+
+		// Get current subscription end_date
+		var currentEndDate *time.Time
+		err = tx.QueryRow(`SELECT end_date FROM student_subscriptions WHERE id = $1`, subscriptionID).
+			Scan(&currentEndDate)
+		if err != nil {
+			return err
+		}
+
+		// Extend end_date by freeze duration
+		if currentEndDate != nil {
+			newEndDate := currentEndDate.Add(freezeDuration)
+			_, err = tx.Exec(`UPDATE student_subscriptions SET end_date = $1, status = 'active' WHERE id = $2`,
+				newEndDate, subscriptionID)
+		} else {
+			// If no end_date, just change status back to active
+			_, err = tx.Exec(`UPDATE student_subscriptions SET status = 'active' WHERE id = $1`, subscriptionID)
+		}
+		if err != nil {
+			return err
+		}
+
+		// Decrease freeze_days_remaining
+		_, err = tx.Exec(`UPDATE student_subscriptions 
+			SET freeze_days_remaining = GREATEST(0, freeze_days_remaining - $1) 
+			WHERE id = $2`, freezeDays, subscriptionID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
 }
 
 // ============= Lesson Attendance =============

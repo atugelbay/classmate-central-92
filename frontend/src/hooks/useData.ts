@@ -187,11 +187,32 @@ export const useDeleteGroup = () => {
   });
 };
 
+export const useGenerateGroupLessons = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: groupsAPI.generateLessons,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["lessons"] });
+      toast.success(`Создано уроков: ${data.count}`);
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при создании уроков");
+    },
+  });
+};
+
 // Lessons hooks
 export const useLessons = () => {
   return useQuery({
     queryKey: ["lessons"],
     queryFn: lessonsAPI.getAll,
+  });
+};
+
+export const useIndividualLessons = () => {
+  return useQuery({
+    queryKey: ["individual-lessons"],
+    queryFn: lessonsAPI.getIndividual,
   });
 };
 
@@ -201,6 +222,7 @@ export const useCreateLesson = () => {
     mutationFn: lessonsAPI.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["lessons"] });
+      queryClient.invalidateQueries({ queryKey: ["individual-lessons"] });
       toast.success("Урок успешно создан");
     },
     onError: (error: any) => {
@@ -248,6 +270,7 @@ export const useUpdateLesson = () => {
     // Always refetch after error or success to ensure data is in sync with server
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["lessons"] });
+      queryClient.invalidateQueries({ queryKey: ["individual-lessons"] });
     },
   });
 };
@@ -258,10 +281,47 @@ export const useDeleteLesson = () => {
     mutationFn: lessonsAPI.delete,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["lessons"] });
+      queryClient.invalidateQueries({ queryKey: ["individual-lessons"] });
       toast.success("Урок успешно удален");
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.error || "Ошибка при удалении урока");
+    },
+  });
+};
+
+export const useCheckConflicts = () => {
+  return useMutation({
+    mutationFn: lessonsAPI.checkConflicts,
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при проверке конфликтов");
+    },
+  });
+};
+
+export const useTeacherLessons = (teacherId: string, startDate?: string, endDate?: string) => {
+  return useQuery({
+    queryKey: ["lessons", "teacher", teacherId, startDate, endDate],
+    queryFn: () => lessonsAPI.getByTeacher(teacherId, startDate, endDate),
+    enabled: !!teacherId,
+  });
+};
+
+export const useCreateBulkLessons = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: lessonsAPI.createBulk,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["lessons"] });
+      queryClient.invalidateQueries({ queryKey: ["individual-lessons"] });
+      if (data.created > 0) {
+        toast.success(`Создано уроков: ${data.created}${data.skipped > 0 ? `, пропущено: ${data.skipped}` : ""}`);
+      } else {
+        toast.warning(`Все уроки были пропущены из-за конфликтов`);
+      }
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при создании уроков");
     },
   });
 };
