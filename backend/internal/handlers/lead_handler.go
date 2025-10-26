@@ -19,6 +19,7 @@ func NewLeadHandler(repo *repository.LeadRepository) *LeadHandler {
 }
 
 func (h *LeadHandler) GetAll(c *gin.Context) {
+	companyID := c.GetString("company_id")
 	// Check if filtering by status or source
 	status := c.Query("status")
 	source := c.Query("source")
@@ -27,11 +28,11 @@ func (h *LeadHandler) GetAll(c *gin.Context) {
 	var err error
 
 	if status != "" {
-		leads, err = h.repo.GetByStatus(status)
+		leads, err = h.repo.GetByStatus(status, companyID)
 	} else if source != "" {
-		leads, err = h.repo.GetBySource(source)
+		leads, err = h.repo.GetBySource(source, companyID)
 	} else {
-		leads, err = h.repo.GetAll()
+		leads, err = h.repo.GetAll(companyID)
 	}
 
 	if err != nil {
@@ -43,7 +44,8 @@ func (h *LeadHandler) GetAll(c *gin.Context) {
 
 func (h *LeadHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
-	lead, err := h.repo.GetByID(id)
+	companyID := c.GetString("company_id")
+	lead, err := h.repo.GetByID(id, companyID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Lead not found"})
 		return
@@ -58,12 +60,13 @@ func (h *LeadHandler) Create(c *gin.Context) {
 		return
 	}
 
+	companyID := c.GetString("company_id")
 	lead.ID = uuid.New().String()
 	if lead.Status == "" {
 		lead.Status = "new"
 	}
 
-	if err := h.repo.Create(&lead); err != nil {
+	if err := h.repo.Create(&lead, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -73,6 +76,7 @@ func (h *LeadHandler) Create(c *gin.Context) {
 
 func (h *LeadHandler) Update(c *gin.Context) {
 	id := c.Param("id")
+	companyID := c.GetString("company_id")
 	var lead models.Lead
 	if err := c.ShouldBindJSON(&lead); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -80,7 +84,7 @@ func (h *LeadHandler) Update(c *gin.Context) {
 	}
 
 	lead.ID = id
-	if err := h.repo.Update(&lead); err != nil {
+	if err := h.repo.Update(&lead, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -90,7 +94,8 @@ func (h *LeadHandler) Update(c *gin.Context) {
 
 func (h *LeadHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
-	if err := h.repo.Delete(id); err != nil {
+	companyID := c.GetString("company_id")
+	if err := h.repo.Delete(id, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -98,7 +103,8 @@ func (h *LeadHandler) Delete(c *gin.Context) {
 }
 
 func (h *LeadHandler) GetConversionStats(c *gin.Context) {
-	stats, err := h.repo.GetConversionStats()
+	companyID := c.GetString("company_id")
+	stats, err := h.repo.GetConversionStats(companyID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

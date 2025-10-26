@@ -1,7 +1,7 @@
 import { useState } from "react";
 import moment from "moment";
 import "moment/locale/ru";
-import { Lesson } from "@/types";
+import { Lesson, Group } from "@/types";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
@@ -10,12 +10,14 @@ moment.locale("ru");
 
 interface MonthScheduleViewProps {
   lessons: Lesson[];
+  groups: Group[];
   selectedDate: Date;
   onDateClick?: (date: Date) => void;
 }
 
 export default function MonthScheduleView({
   lessons,
+  groups,
   selectedDate,
   onDateClick,
 }: MonthScheduleViewProps) {
@@ -35,7 +37,7 @@ export default function MonthScheduleView({
   // Group lessons by date
   const lessonsByDate: Record<string, Lesson[]> = {};
   lessons.forEach((lesson) => {
-    const dateKey = moment(lesson.start).format('YYYY-MM-DD');
+    const dateKey = moment.utc(lesson.start).local().format('YYYY-MM-DD');
     if (!lessonsByDate[dateKey]) {
       lessonsByDate[dateKey] = [];
     }
@@ -47,6 +49,12 @@ export default function MonthScheduleView({
   const getDayLessons = (date: Date) => {
     const dateKey = moment(date).format('YYYY-MM-DD');
     return lessonsByDate[dateKey] || [];
+  };
+
+  const getGroupName = (groupId?: string) => {
+    if (!groupId) return null;
+    const group = groups.find((g) => g.id === groupId);
+    return group?.name;
   };
 
   const isToday = (date: Date) => {
@@ -130,10 +138,10 @@ export default function MonthScheduleView({
                           onClick={(e) => e.stopPropagation()}
                         >
                           <div className="text-xs font-semibold truncate">
-                            {lesson.title}
+                            {getGroupName(lesson.groupId) || lesson.title}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            {moment(lesson.start).format("HH:mm")}
+                            {moment.utc(lesson.start).local().format("HH:mm")}
                           </div>
                         </Card>
                       ))}
@@ -163,10 +171,10 @@ export default function MonthScheduleView({
                                     className="p-2 hover:shadow-md transition-shadow"
                                   >
                                     <div className="text-sm font-semibold truncate">
-                                      {lesson.title}
+                                      {getGroupName(lesson.groupId) || lesson.title}
                                     </div>
                                     <div className="text-xs text-muted-foreground">
-                                      {moment(lesson.start).format("HH:mm")} - {moment(lesson.end).format("HH:mm")}
+                                      {moment.utc(lesson.start).local().format("HH:mm")} - {moment.utc(lesson.end).local().format("HH:mm")}
                                     </div>
                                     <div className="text-xs text-muted-foreground truncate">
                                       {lesson.subject}

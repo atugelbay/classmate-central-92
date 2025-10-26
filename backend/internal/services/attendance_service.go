@@ -32,7 +32,7 @@ func NewAttendanceService(
 }
 
 // MarkAttendanceWithDeduction marks attendance and deducts from subscription if attended
-func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendanceRequest, markedBy *int) (*models.LessonAttendance, error) {
+func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendanceRequest, markedBy *int, companyID string) (*models.LessonAttendance, error) {
 	// Start transaction
 	tx, err := s.db.Begin()
 	if err != nil {
@@ -49,41 +49,111 @@ func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendan
 		Notes:     req.Notes,
 		MarkedBy:  markedBy,
 		MarkedAt:  time.Now(),
+		CompanyID: companyID,
 	}
 
 	// If student attended, try to deduct from active subscription
 	var subscriptionID *string
 	if req.Status == "attended" {
-		activeSub, err := s.subscriptionRepo.GetActiveSubscription(req.StudentID)
+		// Get active subscription with billing type and price using transaction
+		var activeSub models.StudentSubscription
+		var billingType string
+		var pricePerLesson float64
+		query := `
+			SELECT 
+				ss.id, ss.student_id, ss.subscription_type_id,
+				ss.total_lessons, ss.used_lessons, ss.remaining_lessons,
+				ss.start_date, ss.end_date, ss.status, ss.freeze_days_remaining, ss.created_at,
+				ss.price_per_lesson,
+				st.billing_type
+			FROM student_subscriptions ss
+			JOIN subscription_types st ON ss.subscription_type_id = st.id
+			WHERE ss.student_id = $1 AND ss.status = 'active' AND ss.remaining_lessons > 0
+			ORDER BY ss.created_at DESC
+			LIMIT 1
+		`
+		err := tx.QueryRow(query, req.StudentID).Scan(
+			&activeSub.ID, &activeSub.StudentID, &activeSub.SubscriptionTypeID,
+			&activeSub.TotalLessons, &activeSub.UsedLessons, &activeSub.LessonsRemaining,
+			&activeSub.StartDate, &activeSub.EndDate,
+			&activeSub.Status, &activeSub.FreezeDaysRemaining, &activeSub.CreatedAt,
+			&pricePerLesson,
+			&billingType,
+		)
+
 		if err != nil && err != sql.ErrNoRows {
 			return nil, fmt.Errorf("error getting active subscription: %w", err)
 		}
 
-		if activeSub != nil {
-			// Deduct lesson
-			err = s.subscriptionRepo.DeductLesson(activeSub.ID)
-			if err != nil {
-				return nil, fmt.Errorf("error deducting lesson: %w", err)
-			}
-
+		if err == nil {
 			subscriptionID = &activeSub.ID
 			attendance.SubscriptionID = subscriptionID
 
-			// Check if subscription is now depleted
-			updatedSub, err := s.subscriptionRepo.GetSubscriptionByID(activeSub.ID)
-			if err != nil {
-				return nil, fmt.Errorf("error getting updated subscription: %w", err)
+			// Get current lessons remaining
+			lessonsRemaining := activeSub.LessonsRemaining
+
+			// Deduct lesson ONLY for per_lesson billing type
+			if billingType == "per_lesson" {
+				deductQuery := `
+					UPDATE student_subscriptions 
+					SET used_lessons = used_lessons + 1, updated_at = CURRENT_TIMESTAMP
+					WHERE id = $1 AND remaining_lessons > 0
+				`
+				_, err = tx.Exec(deductQuery, activeSub.ID)
+				if err != nil {
+					return nil, fmt.Errorf("error deducting lesson: %w", err)
+				}
+
+				// Get updated lessons remaining after deduction
+				err = tx.QueryRow("SELECT remaining_lessons FROM student_subscriptions WHERE id = $1", activeSub.ID).Scan(&lessonsRemaining)
+				if err != nil {
+					return nil, fmt.Errorf("error getting updated subscription: %w", err)
+				}
+
+				// Deduct money from student balance
+				if pricePerLesson > 0 {
+					// Ensure student_balance record exists
+					_, err = tx.Exec(`
+						INSERT INTO student_balance (student_id, balance)
+						VALUES ($1, 0)
+						ON CONFLICT (student_id) DO NOTHING
+					`, req.StudentID)
+					if err != nil {
+						return nil, fmt.Errorf("error ensuring student balance exists: %w", err)
+					}
+
+					// Deduct from balance
+					_, err = tx.Exec(`
+						UPDATE student_balance 
+						SET balance = balance - $1
+						WHERE student_id = $2
+					`, pricePerLesson, req.StudentID)
+					if err != nil {
+						return nil, fmt.Errorf("error deducting from balance: %w", err)
+					}
+
+					// Create deduction transaction for history
+					_, err = tx.Exec(`
+						INSERT INTO payment_transactions (
+							student_id, amount, type, payment_method, description, created_at, company_id
+						) VALUES ($1, $2, 'deduction', 'subscription', $3, CURRENT_TIMESTAMP, $4)
+					`, req.StudentID, pricePerLesson,
+						fmt.Sprintf("Списание за посещенное занятие (Урок ID: %s)", req.LessonID),
+						companyID)
+					if err != nil {
+						return nil, fmt.Errorf("error creating deduction transaction: %w", err)
+					}
+				}
 			}
 
-			if updatedSub.LessonsRemaining == 0 {
-				// Mark subscription as expired
-				updatedSub.Status = "expired"
-				err = s.subscriptionRepo.UpdateSubscription(updatedSub)
+			if lessonsRemaining == 0 {
+				// Mark subscription as expired using transaction
+				_, err = tx.Exec("UPDATE student_subscriptions SET status = 'expired' WHERE id = $1", activeSub.ID)
 				if err != nil {
 					return nil, fmt.Errorf("error updating subscription status: %w", err)
 				}
 
-				// Create notification
+				// Create notification (outside transaction is OK)
 				notification := &models.Notification{
 					StudentID: req.StudentID,
 					Type:      "subscription_expired",
@@ -91,14 +161,14 @@ func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendan
 					IsRead:    false,
 				}
 				_ = s.notificationRepo.CreateNotification(notification)
-			} else if updatedSub.LessonsRemaining <= 3 {
+			} else if lessonsRemaining <= 3 {
 				// Warn when running low
 				exists, _ := s.notificationRepo.CheckExistingNotification(req.StudentID, "subscription_expiring")
 				if !exists {
 					notification := &models.Notification{
 						StudentID: req.StudentID,
 						Type:      "subscription_expiring",
-						Message:   fmt.Sprintf("Осталось %d занятий в абонементе.", updatedSub.LessonsRemaining),
+						Message:   fmt.Sprintf("Осталось %d занятий в абонементе.", lessonsRemaining),
 						IsRead:    false,
 					}
 					_ = s.notificationRepo.CreateNotification(notification)
@@ -108,7 +178,7 @@ func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendan
 			// Log subscription change activity
 			metadata := map[string]interface{}{
 				"subscription_id":   activeSub.ID,
-				"lessons_remaining": updatedSub.LessonsRemaining,
+				"lessons_remaining": lessonsRemaining,
 				"lesson_id":         req.LessonID,
 			}
 			metadataJSON, _ := json.Marshal(metadata)
@@ -117,7 +187,7 @@ func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendan
 			activityLog := &models.StudentActivityLog{
 				StudentID:    req.StudentID,
 				ActivityType: "subscription_change",
-				Description:  fmt.Sprintf("Списано занятие с абонемента. Осталось: %d", updatedSub.LessonsRemaining),
+				Description:  fmt.Sprintf("Списано занятие с абонемента. Осталось: %d", lessonsRemaining),
 				Metadata:     &metadataStr,
 				CreatedBy:    markedBy,
 				CreatedAt:    time.Now(),
@@ -126,8 +196,14 @@ func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendan
 		}
 	}
 
-	// Mark attendance in repository
-	err = s.subscriptionRepo.MarkAttendance(attendance)
+	// Mark attendance using transaction
+	insertQuery := `INSERT INTO lesson_attendance (lesson_id, student_id, subscription_id, status, marked_by, company_id) 
+	          VALUES ($1, $2, $3, $4, $5, $6) 
+	          ON CONFLICT (lesson_id, student_id) DO UPDATE 
+	          SET subscription_id = EXCLUDED.subscription_id, status = EXCLUDED.status, marked_at = CURRENT_TIMESTAMP, marked_by = EXCLUDED.marked_by, company_id = EXCLUDED.company_id
+	          RETURNING id, marked_at`
+	err = tx.QueryRow(insertQuery, attendance.LessonID, attendance.StudentID, attendance.SubscriptionID, attendance.Status, attendance.MarkedBy, attendance.CompanyID).
+		Scan(&attendance.ID, &attendance.MarkedAt)
 	if err != nil {
 		return nil, fmt.Errorf("error marking attendance: %w", err)
 	}

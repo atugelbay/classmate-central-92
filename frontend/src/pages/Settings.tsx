@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2, Plus, Edit, Trash2, Building2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MigrationSettings } from "@/components/MigrationSettings";
 import {
   Dialog,
   DialogContent,
@@ -124,6 +125,7 @@ export default function Settings() {
         <TabsList>
           <TabsTrigger value="general">Основные</TabsTrigger>
           <TabsTrigger value="rooms">Аудитории</TabsTrigger>
+          <TabsTrigger value="migration">Миграция</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="space-y-6 max-w-2xl">
@@ -317,6 +319,10 @@ export default function Settings() {
               )}
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="migration" className="space-y-6">
+          <MigrationSettings />
         </TabsContent>
       </Tabs>
 

@@ -151,6 +151,8 @@ export interface DebtRecord {
 
 // ============= SUBSCRIPTION MODULE =============
 
+export type BillingType = "per_lesson" | "monthly" | "unlimited";
+
 export interface SubscriptionType {
   id: string;
   name: string;
@@ -158,20 +160,33 @@ export interface SubscriptionType {
   validityDays?: number; // null = unlimited
   price: number;
   canFreeze: boolean;
+  billingType: BillingType; // NEW: type of billing
   description: string;
   createdAt: string;
+  companyId: string;
 }
 
 export interface StudentSubscription {
   id: string;
   studentId: string;
-  subscriptionTypeId: string;
-  lessonsRemaining: number;
+  subscriptionTypeId?: string; // Optional for custom subscriptions
+  subscriptionTypeName?: string; // Added for display
+  billingType?: BillingType; // NEW: type of billing for display
+  groupId?: string; // Optional group assignment
+  teacherId?: string; // Optional teacher assignment
+  totalLessons: number; // Total lessons in subscription
+  usedLessons: number; // Lessons already used
+  lessonsRemaining: number; // Computed: total - used
+  totalPrice: number; // Total price (can be customized)
+  pricePerLesson: number; // Price per lesson
   startDate: string;
   endDate?: string; // null = no expiry
-  status: "active" | "expired" | "frozen";
+  paidTill?: string; // Paid until date
+  status: "active" | "expired" | "frozen" | "completed";
   freezeDaysRemaining: number;
   createdAt: string;
+  updatedAt: string;
+  companyId: string;
 }
 
 export interface SubscriptionFreeze {

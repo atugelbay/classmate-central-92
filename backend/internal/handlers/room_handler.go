@@ -18,7 +18,8 @@ func NewRoomHandler(repo *repository.RoomRepository) *RoomHandler {
 }
 
 func (h *RoomHandler) GetAll(c *gin.Context) {
-	rooms, err := h.repo.GetAll()
+	companyID := c.GetString("company_id")
+	rooms, err := h.repo.GetAll(companyID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -28,7 +29,8 @@ func (h *RoomHandler) GetAll(c *gin.Context) {
 
 func (h *RoomHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
-	room, err := h.repo.GetByID(id)
+	companyID := c.GetString("company_id")
+	room, err := h.repo.GetByID(id, companyID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Room not found"})
 		return
@@ -51,7 +53,8 @@ func (h *RoomHandler) Create(c *gin.Context) {
 		room.Color = "#8B5CF6"
 	}
 
-	if err := h.repo.Create(&room); err != nil {
+	companyID := c.GetString("company_id")
+	if err := h.repo.Create(&room, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -61,6 +64,7 @@ func (h *RoomHandler) Create(c *gin.Context) {
 
 func (h *RoomHandler) Update(c *gin.Context) {
 	id := c.Param("id")
+	companyID := c.GetString("company_id")
 	var room models.Room
 	if err := c.ShouldBindJSON(&room); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -68,7 +72,7 @@ func (h *RoomHandler) Update(c *gin.Context) {
 	}
 
 	room.ID = id
-	if err := h.repo.Update(&room); err != nil {
+	if err := h.repo.Update(&room, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -78,7 +82,8 @@ func (h *RoomHandler) Update(c *gin.Context) {
 
 func (h *RoomHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
-	if err := h.repo.Delete(id); err != nil {
+	companyID := c.GetString("company_id")
+	if err := h.repo.Delete(id, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

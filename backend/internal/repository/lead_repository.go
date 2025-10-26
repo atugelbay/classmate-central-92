@@ -14,10 +14,10 @@ func NewLeadRepository(db *sql.DB) *LeadRepository {
 	return &LeadRepository{db: db}
 }
 
-func (r *LeadRepository) GetAll() ([]models.Lead, error) {
+func (r *LeadRepository) GetAll(companyID string) ([]models.Lead, error) {
 	query := `SELECT id, name, phone, email, source, status, notes, assigned_to, created_at, updated_at 
-	          FROM leads ORDER BY created_at DESC`
-	rows, err := r.db.Query(query)
+	          FROM leads WHERE company_id = $1 ORDER BY created_at DESC`
+	rows, err := r.db.Query(query, companyID)
 	if err != nil {
 		return nil, err
 	}
@@ -48,13 +48,13 @@ func (r *LeadRepository) GetAll() ([]models.Lead, error) {
 	return leads, nil
 }
 
-func (r *LeadRepository) GetByID(id string) (*models.Lead, error) {
+func (r *LeadRepository) GetByID(id string, companyID string) (*models.Lead, error) {
 	query := `SELECT id, name, phone, email, source, status, notes, assigned_to, created_at, updated_at 
-	          FROM leads WHERE id = $1`
+	          FROM leads WHERE id = $1 AND company_id = $2`
 	var lead models.Lead
 	var email, notes sql.NullString
 	var assignedTo sql.NullInt64
-	err := r.db.QueryRow(query, id).Scan(&lead.ID, &lead.Name, &lead.Phone, &email,
+	err := r.db.QueryRow(query, id, companyID).Scan(&lead.ID, &lead.Name, &lead.Phone, &email,
 		&lead.Source, &lead.Status, &notes, &assignedTo, &lead.CreatedAt, &lead.UpdatedAt)
 	if err != nil {
 		return nil, err
@@ -72,33 +72,33 @@ func (r *LeadRepository) GetByID(id string) (*models.Lead, error) {
 	return &lead, nil
 }
 
-func (r *LeadRepository) Create(lead *models.Lead) error {
-	query := `INSERT INTO leads (id, name, phone, email, source, status, notes, assigned_to, created_at, updated_at) 
-	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
+func (r *LeadRepository) Create(lead *models.Lead, companyID string) error {
+	query := `INSERT INTO leads (id, name, phone, email, source, status, notes, assigned_to, created_at, updated_at, company_id) 
+	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`
 	now := time.Now()
 	_, err := r.db.Exec(query, lead.ID, lead.Name, lead.Phone, lead.Email, lead.Source,
-		lead.Status, lead.Notes, lead.AssignedTo, now, now)
+		lead.Status, lead.Notes, lead.AssignedTo, now, now, companyID)
 	return err
 }
 
-func (r *LeadRepository) Update(lead *models.Lead) error {
+func (r *LeadRepository) Update(lead *models.Lead, companyID string) error {
 	query := `UPDATE leads SET name = $1, phone = $2, email = $3, source = $4, status = $5, 
-	          notes = $6, assigned_to = $7, updated_at = $8 WHERE id = $9`
+	          notes = $6, assigned_to = $7, updated_at = $8 WHERE id = $9 AND company_id = $10`
 	_, err := r.db.Exec(query, lead.Name, lead.Phone, lead.Email, lead.Source, lead.Status,
-		lead.Notes, lead.AssignedTo, time.Now(), lead.ID)
+		lead.Notes, lead.AssignedTo, time.Now(), lead.ID, companyID)
 	return err
 }
 
-func (r *LeadRepository) Delete(id string) error {
-	query := `DELETE FROM leads WHERE id = $1`
-	_, err := r.db.Exec(query, id)
+func (r *LeadRepository) Delete(id string, companyID string) error {
+	query := `DELETE FROM leads WHERE id = $1 AND company_id = $2`
+	_, err := r.db.Exec(query, id, companyID)
 	return err
 }
 
-func (r *LeadRepository) GetByStatus(status string) ([]models.Lead, error) {
+func (r *LeadRepository) GetByStatus(status string, companyID string) ([]models.Lead, error) {
 	query := `SELECT id, name, phone, email, source, status, notes, assigned_to, created_at, updated_at 
-	          FROM leads WHERE status = $1 ORDER BY created_at DESC`
-	rows, err := r.db.Query(query, status)
+	          FROM leads WHERE status = $1 AND company_id = $2 ORDER BY created_at DESC`
+	rows, err := r.db.Query(query, status, companyID)
 	if err != nil {
 		return nil, err
 	}
@@ -129,10 +129,10 @@ func (r *LeadRepository) GetByStatus(status string) ([]models.Lead, error) {
 	return leads, nil
 }
 
-func (r *LeadRepository) GetBySource(source string) ([]models.Lead, error) {
+func (r *LeadRepository) GetBySource(source string, companyID string) ([]models.Lead, error) {
 	query := `SELECT id, name, phone, email, source, status, notes, assigned_to, created_at, updated_at 
-	          FROM leads WHERE source = $1 ORDER BY created_at DESC`
-	rows, err := r.db.Query(query, source)
+	          FROM leads WHERE source = $1 AND company_id = $2 ORDER BY created_at DESC`
+	rows, err := r.db.Query(query, source, companyID)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +163,7 @@ func (r *LeadRepository) GetBySource(source string) ([]models.Lead, error) {
 	return leads, nil
 }
 
-func (r *LeadRepository) GetConversionStats() (*models.LeadConversionStats, error) {
+func (r *LeadRepository) GetConversionStats(companyID string) (*models.LeadConversionStats, error) {
 	query := `
 		SELECT 
 			COUNT(*) as total_leads,
@@ -172,9 +172,10 @@ func (r *LeadRepository) GetConversionStats() (*models.LeadConversionStats, erro
 			COUNT(CASE WHEN status = 'enrolled' THEN 1 END) as enrolled_leads,
 			COUNT(CASE WHEN status = 'rejected' THEN 1 END) as rejected_leads
 		FROM leads
+		WHERE company_id = $1
 	`
 	var stats models.LeadConversionStats
-	err := r.db.QueryRow(query).Scan(&stats.TotalLeads, &stats.NewLeads,
+	err := r.db.QueryRow(query, companyID).Scan(&stats.TotalLeads, &stats.NewLeads,
 		&stats.InProgressLeads, &stats.EnrolledLeads, &stats.RejectedLeads)
 	if err != nil {
 		return nil, err

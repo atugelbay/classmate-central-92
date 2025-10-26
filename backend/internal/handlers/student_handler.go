@@ -33,7 +33,9 @@ func NewStudentHandler(
 }
 
 func (h *StudentHandler) GetAll(c *gin.Context) {
-	students, err := h.repo.GetAll()
+	companyID := c.GetString("company_id")
+
+	students, err := h.repo.GetAll(companyID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -44,8 +46,9 @@ func (h *StudentHandler) GetAll(c *gin.Context) {
 
 func (h *StudentHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
+	companyID := c.GetString("company_id")
 
-	student, err := h.repo.GetByID(id)
+	student, err := h.repo.GetByID(id, companyID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -65,7 +68,8 @@ func (h *StudentHandler) Create(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.Create(&student); err != nil {
+	companyID := c.GetString("company_id")
+	if err := h.repo.Create(&student, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -75,6 +79,7 @@ func (h *StudentHandler) Create(c *gin.Context) {
 
 func (h *StudentHandler) Update(c *gin.Context) {
 	id := c.Param("id")
+	companyID := c.GetString("company_id")
 
 	var student models.Student
 	if err := c.ShouldBindJSON(&student); err != nil {
@@ -84,7 +89,7 @@ func (h *StudentHandler) Update(c *gin.Context) {
 
 	student.ID = id
 
-	if err := h.repo.Update(&student); err != nil {
+	if err := h.repo.Update(&student, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -94,8 +99,9 @@ func (h *StudentHandler) Update(c *gin.Context) {
 
 func (h *StudentHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
+	companyID := c.GetString("company_id")
 
-	if err := h.repo.Delete(id); err != nil {
+	if err := h.repo.Delete(id, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -209,7 +215,8 @@ func (h *StudentHandler) UpdateStatus(c *gin.Context) {
 	}
 
 	// Get current student to check old status
-	student, err := h.repo.GetByID(id)
+	companyID := c.GetString("company_id")
+	student, err := h.repo.GetByID(id, companyID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -222,7 +229,7 @@ func (h *StudentHandler) UpdateStatus(c *gin.Context) {
 	oldStatus := student.Status
 
 	// Update status
-	if err := h.repo.UpdateStatus(id, request.Status); err != nil {
+	if err := h.repo.UpdateStatus(id, request.Status, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

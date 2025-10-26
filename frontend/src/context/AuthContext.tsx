@@ -59,6 +59,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     authAPI.logout();
     setUser(null);
+    // Полная перезагрузка страницы для сброса всех данных
+    window.location.href = "/login";
   };
 
   return (

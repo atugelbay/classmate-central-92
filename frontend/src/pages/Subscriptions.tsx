@@ -43,6 +43,7 @@ export default function Subscriptions() {
   const [isSubscriptionDialogOpen, setIsSubscriptionDialogOpen] = useState(false);
   const [selectedType, setSelectedType] = useState<SubscriptionType | null>(null);
   const [selectedSubscription, setSelectedSubscription] = useState<StudentSubscription | null>(null);
+  const [billingTypeFilter, setBillingTypeFilter] = useState<string>("all");
 
   // Statistics
   const activeSubscriptions = subscriptions.filter(s => s.status === "active").length;
@@ -51,6 +52,23 @@ export default function Subscriptions() {
   const totalLessonsRemaining = subscriptions
     .filter(s => s.status === "active")
     .reduce((sum, s) => sum + s.lessonsRemaining, 0);
+  
+  // Filter subscription types by billing type
+  const filteredTypes = subscriptionTypes.filter(type => 
+    billingTypeFilter === "all" || type.billingType === billingTypeFilter
+  );
+  
+  const billingTypeLabels = {
+    per_lesson: "Поурочный",
+    monthly: "Помесячный",
+    unlimited: "Безлимитный",
+  } as const;
+  
+  const billingTypeColors = {
+    per_lesson: "bg-blue-100 text-blue-800",
+    monthly: "bg-green-100 text-green-800",
+    unlimited: "bg-purple-100 text-purple-800",
+  } as const;
 
   const handleTypeSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -332,70 +350,93 @@ export default function Subscriptions() {
         <TabsContent value="types" className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">Типы абонементов</h2>
-            <Dialog open={isTypeDialogOpen} onOpenChange={(open) => { setIsTypeDialogOpen(open); if (!open) setSelectedType(null); }}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Создать тип
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{selectedType ? "Редактировать тип" : "Новый тип абонемента"}</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleTypeSubmit} className="space-y-4">
-                  <div>
-                    <Label htmlFor="name">Название</Label>
-                    <Input id="name" name="name" defaultValue={selectedType?.name} required />
-                  </div>
-                  <div>
-                    <Label htmlFor="description">Описание</Label>
-                    <Input id="description" name="description" defaultValue={selectedType?.description} />
-                  </div>
-                  <div>
-                    <Label htmlFor="lessonsCount">Количество уроков</Label>
-                    <Input id="lessonsCount" name="lessonsCount" type="number" defaultValue={selectedType?.lessonsCount} required />
-                  </div>
-                  <div>
-                    <Label htmlFor="price">Цена (₸)</Label>
-                    <Input id="price" name="price" type="number" step="0.01" defaultValue={selectedType?.price} required />
-                  </div>
-                  <div>
-                    <Label htmlFor="validityDays">Срок действия (дней, необязательно)</Label>
-                    <Input id="validityDays" name="validityDays" type="number" defaultValue={selectedType?.validityDays} placeholder="Неограничено" />
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Switch id="canFreeze" name="canFreeze" defaultChecked={selectedType?.canFreeze} />
-                    <Label htmlFor="canFreeze">Можно замораживать</Label>
-                  </div>
-                  <Button type="submit" className="w-full">{selectedType ? "Сохранить" : "Создать"}</Button>
-                </form>
-              </DialogContent>
-            </Dialog>
+            <div className="flex gap-3 items-center">
+              <Select value={billingTypeFilter} onValueChange={setBillingTypeFilter}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Все типы" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Все типы</SelectItem>
+                  <SelectItem value="per_lesson">Поурочный</SelectItem>
+                  <SelectItem value="monthly">Помесячный</SelectItem>
+                  <SelectItem value="unlimited">Безлимитный</SelectItem>
+                </SelectContent>
+              </Select>
+              <Dialog open={isTypeDialogOpen} onOpenChange={(open) => { setIsTypeDialogOpen(open); if (!open) setSelectedType(null); }}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Создать тип
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{selectedType ? "Редактировать тип" : "Новый тип абонемента"}</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleTypeSubmit} className="space-y-4">
+                    <div>
+                      <Label htmlFor="name">Название</Label>
+                      <Input id="name" name="name" defaultValue={selectedType?.name} required />
+                    </div>
+                    <div>
+                      <Label htmlFor="description">Описание</Label>
+                      <Input id="description" name="description" defaultValue={selectedType?.description} />
+                    </div>
+                    <div>
+                      <Label htmlFor="lessonsCount">Количество уроков</Label>
+                      <Input id="lessonsCount" name="lessonsCount" type="number" defaultValue={selectedType?.lessonsCount} required />
+                    </div>
+                    <div>
+                      <Label htmlFor="price">Цена (₸)</Label>
+                      <Input id="price" name="price" type="number" step="0.01" defaultValue={selectedType?.price} required />
+                    </div>
+                    <div>
+                      <Label htmlFor="validityDays">Срок действия (дней, необязательно)</Label>
+                      <Input id="validityDays" name="validityDays" type="number" defaultValue={selectedType?.validityDays} placeholder="Неограничено" />
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Switch id="canFreeze" name="canFreeze" defaultChecked={selectedType?.canFreeze} />
+                      <Label htmlFor="canFreeze">Можно замораживать</Label>
+                    </div>
+                    <Button type="submit" className="w-full">{selectedType ? "Сохранить" : "Создать"}</Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {subscriptionTypes.map(type => (
-              <Card key={type.id} className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => { setSelectedType(type); setIsTypeDialogOpen(true); }}>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    {type.name}
-                    {type.canFreeze && <Snowflake className="h-4 w-4 text-blue-500" />}
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground">{type.description}</p>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold mb-2">{type.price.toLocaleString()} ₸</div>
-                  <div className="space-y-1 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      {type.lessonsCount} уроков
+            {filteredTypes.length === 0 ? (
+              <p className="text-muted-foreground col-span-full text-center py-8">
+                {billingTypeFilter === "all" ? "Нет типов абонементов" : "Нет типов с выбранной тарификацией"}
+              </p>
+            ) : (
+              filteredTypes.map(type => (
+                <Card key={type.id} className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => { setSelectedType(type); setIsTypeDialogOpen(true); }}>
+                  <CardHeader>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${billingTypeColors[type.billingType]}`}>
+                        {billingTypeLabels[type.billingType]}
+                      </span>
+                      {type.canFreeze && <Snowflake className="h-4 w-4 text-blue-500" />}
                     </div>
-                    <div>Срок: {type.validityDays ? `${type.validityDays} дней` : "Неограничено"}</div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    <CardTitle>{type.name}</CardTitle>
+                    <p className="text-sm text-muted-foreground">{type.description}</p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold mb-2">{type.price.toLocaleString()} ₸</div>
+                    <div className="space-y-1 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {type.lessonsCount} уроков
+                      </div>
+                      <div>Цена за урок: {(type.price / type.lessonsCount).toFixed(0)} ₸</div>
+                      <div>Срок: {type.validityDays ? `${type.validityDays} дней` : "Неограничено"}</div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
         </TabsContent>
       </Tabs>

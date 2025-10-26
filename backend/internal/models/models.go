@@ -8,33 +8,45 @@ type User struct {
 	Email     string    `json:"email" db:"email"`
 	Password  string    `json:"-" db:"password"`
 	Name      string    `json:"name" db:"name"`
+	CompanyID string    `json:"companyId" db:"company_id"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 }
 
+// Company represents a company/tenant in the system
+type Company struct {
+	ID        string    `json:"id" db:"id"`
+	Name      string    `json:"name" db:"name"`
+	Status    string    `json:"status" db:"status"`
+	CreatedAt time.Time `json:"createdAt" db:"created_at"`
+	UpdatedAt time.Time `json:"updatedAt" db:"updated_at"`
+}
+
 // Teacher represents a teacher in the system
 type Teacher struct {
-	ID       string `json:"id" db:"id"`
-	Name     string `json:"name" db:"name"`
-	Subject  string `json:"subject" db:"subject"`
-	Email    string `json:"email" db:"email"`
-	Phone    string `json:"phone" db:"phone"`
-	Status   string `json:"status" db:"status"` // active, inactive
-	Avatar   string `json:"avatar,omitempty" db:"avatar"`
-	Workload int    `json:"workload" db:"workload"`
+	ID        string `json:"id" db:"id"`
+	Name      string `json:"name" db:"name"`
+	Subject   string `json:"subject" db:"subject"`
+	Email     string `json:"email" db:"email"`
+	Phone     string `json:"phone" db:"phone"`
+	Status    string `json:"status" db:"status"` // active, inactive
+	Avatar    string `json:"avatar,omitempty" db:"avatar"`
+	Workload  int    `json:"workload" db:"workload"`
+	CompanyID string `json:"companyId" db:"company_id"`
 }
 
 // Student represents a student in the system
 type Student struct {
-	ID       string   `json:"id" db:"id"`
-	Name     string   `json:"name" db:"name"`
-	Age      int      `json:"age" db:"age"`
-	Email    string   `json:"email" db:"email"`
-	Phone    string   `json:"phone" db:"phone"`
-	Status   string   `json:"status" db:"status"` // active, inactive, frozen, graduated
-	Subjects []string `json:"subjects"`
-	GroupIds []string `json:"groupIds"`
-	Avatar   string   `json:"avatar,omitempty" db:"avatar"`
+	ID        string   `json:"id" db:"id"`
+	Name      string   `json:"name" db:"name"`
+	Age       int      `json:"age" db:"age"`
+	Email     string   `json:"email" db:"email"`
+	Phone     string   `json:"phone" db:"phone"`
+	Status    string   `json:"status" db:"status"` // active, inactive, frozen, graduated
+	Subjects  []string `json:"subjects"`
+	GroupIds  []string `json:"groupIds"`
+	Avatar    string   `json:"avatar,omitempty" db:"avatar"`
+	CompanyID string   `json:"companyId" db:"company_id"`
 }
 
 // Lesson represents a lesson/class
@@ -50,16 +62,21 @@ type Lesson struct {
 	RoomID     string    `json:"roomId,omitempty" db:"room_id"`
 	Status     string    `json:"status" db:"status"` // scheduled, completed, cancelled
 	StudentIds []string  `json:"studentIds"`
+	CompanyID  string    `json:"companyId" db:"company_id"`
 }
 
 // Group represents a study group
 type Group struct {
-	ID         string   `json:"id" db:"id"`
-	Name       string   `json:"name" db:"name"`
-	Subject    string   `json:"subject" db:"subject"`
-	TeacherID  string   `json:"teacherId" db:"teacher_id"`
-	StudentIds []string `json:"studentIds"`
-	Schedule   string   `json:"schedule" db:"schedule"`
+	ID          string   `json:"id" db:"id"`
+	Name        string   `json:"name" db:"name"`
+	Subject     string   `json:"subject" db:"subject"`
+	TeacherID   string   `json:"teacherId" db:"teacher_id"`
+	StudentIds  []string `json:"studentIds"`
+	Schedule    string   `json:"schedule" db:"schedule"`
+	Description string   `json:"description" db:"description"`
+	Status      string   `json:"status" db:"status"` // active, inactive
+	Color       string   `json:"color" db:"color"`
+	CompanyID   string   `json:"companyId" db:"company_id"`
 }
 
 // Settings represents application settings
@@ -92,11 +109,12 @@ type AuthResponse struct {
 
 // Room represents a classroom/auditorium
 type Room struct {
-	ID       string `json:"id" db:"id"`
-	Name     string `json:"name" db:"name"`
-	Capacity int    `json:"capacity" db:"capacity"`
-	Color    string `json:"color" db:"color"`
-	Status   string `json:"status" db:"status"` // active, inactive
+	ID        string `json:"id" db:"id"`
+	Name      string `json:"name" db:"name"`
+	Capacity  int    `json:"capacity" db:"capacity"`
+	Color     string `json:"color" db:"color"`
+	Status    string `json:"status" db:"status"` // active, inactive
+	CompanyID string `json:"companyId" db:"company_id"`
 }
 
 // Lead represents a potential student
@@ -158,6 +176,7 @@ type PaymentTransaction struct {
 	Description   string    `json:"description" db:"description"`
 	CreatedAt     time.Time `json:"createdAt" db:"created_at"`
 	CreatedBy     *int      `json:"createdBy,omitempty" db:"created_by"`
+	CompanyID     string    `json:"companyId" db:"company_id"`
 }
 
 // StudentBalance represents a student's financial balance
@@ -187,6 +206,7 @@ type DebtRecord struct {
 	Status    string     `json:"status" db:"status"` // pending, paid
 	Notes     string     `json:"notes" db:"notes"`
 	CreatedAt time.Time  `json:"createdAt" db:"created_at"`
+	CompanyID string     `json:"companyId" db:"company_id"`
 }
 
 // ============= SUBSCRIPTION MODULE =============
@@ -199,21 +219,34 @@ type SubscriptionType struct {
 	ValidityDays *int      `json:"validityDays,omitempty" db:"validity_days"` // NULL = unlimited
 	Price        float64   `json:"price" db:"price"`
 	CanFreeze    bool      `json:"canFreeze" db:"can_freeze"`
+	BillingType  string    `json:"billingType" db:"billing_type"` // per_lesson, monthly, unlimited
 	Description  string    `json:"description" db:"description"`
 	CreatedAt    time.Time `json:"createdAt" db:"created_at"`
+	CompanyID    string    `json:"companyId" db:"company_id"`
 }
 
 // StudentSubscription represents a subscription assigned to a student
 type StudentSubscription struct {
-	ID                  string     `json:"id" db:"id"`
-	StudentID           string     `json:"studentId" db:"student_id"`
-	SubscriptionTypeID  string     `json:"subscriptionTypeId" db:"subscription_type_id"`
-	LessonsRemaining    int        `json:"lessonsRemaining" db:"lessons_remaining"`
-	StartDate           time.Time  `json:"startDate" db:"start_date"`
-	EndDate             *time.Time `json:"endDate,omitempty" db:"end_date"` // NULL if no expiry
-	Status              string     `json:"status" db:"status"`              // active, expired, frozen
-	FreezeDaysRemaining int        `json:"freezeDaysRemaining" db:"freeze_days_remaining"`
-	CreatedAt           time.Time  `json:"createdAt" db:"created_at"`
+	ID                   string     `json:"id" db:"id"`
+	StudentID            string     `json:"studentId" db:"student_id"`
+	SubscriptionTypeID   string     `json:"subscriptionTypeId,omitempty" db:"subscription_type_id"`
+	SubscriptionTypeName string     `json:"subscriptionTypeName,omitempty" db:"subscription_type_name"` // Added for display
+	BillingType          string     `json:"billingType,omitempty" db:"billing_type"`                    // Added for display
+	GroupID              *string    `json:"groupId,omitempty" db:"group_id"`
+	TeacherID            *string    `json:"teacherId,omitempty" db:"teacher_id"`
+	TotalLessons         int        `json:"totalLessons" db:"total_lessons"`
+	UsedLessons          int        `json:"usedLessons" db:"used_lessons"`
+	LessonsRemaining     int        `json:"lessonsRemaining" db:"lessons_remaining"` // Computed field
+	TotalPrice           float64    `json:"totalPrice" db:"total_price"`
+	PricePerLesson       float64    `json:"pricePerLesson" db:"price_per_lesson"`
+	StartDate            time.Time  `json:"startDate" db:"start_date"`
+	EndDate              *time.Time `json:"endDate,omitempty" db:"end_date"` // NULL if no expiry
+	PaidTill             *time.Time `json:"paidTill,omitempty" db:"paid_till"`
+	Status               string     `json:"status" db:"status"` // active, expired, frozen, completed
+	FreezeDaysRemaining  int        `json:"freezeDaysRemaining" db:"freeze_days_remaining"`
+	CreatedAt            time.Time  `json:"createdAt" db:"created_at"`
+	UpdatedAt            time.Time  `json:"updatedAt" db:"updated_at"`
+	CompanyID            string     `json:"companyId" db:"company_id"`
 }
 
 // SubscriptionFreeze represents a freeze period for a subscription
@@ -237,6 +270,7 @@ type LessonAttendance struct {
 	Notes          string    `json:"notes,omitempty" db:"notes"`
 	MarkedAt       time.Time `json:"markedAt" db:"marked_at"`
 	MarkedBy       *int      `json:"markedBy,omitempty" db:"marked_by"`
+	CompanyID      string    `json:"companyId" db:"company_id"`
 }
 
 // ============= STUDENT MANAGEMENT MODULE =============

@@ -12,11 +12,15 @@ import (
 )
 
 type AuthHandler struct {
-	userRepo *repository.UserRepository
+	userRepo    *repository.UserRepository
+	companyRepo *repository.CompanyRepository
 }
 
-func NewAuthHandler(userRepo *repository.UserRepository) *AuthHandler {
-	return &AuthHandler{userRepo: userRepo}
+func NewAuthHandler(userRepo *repository.UserRepository, companyRepo *repository.CompanyRepository) *AuthHandler {
+	return &AuthHandler{
+		userRepo:    userRepo,
+		companyRepo: companyRepo,
+	}
 }
 
 func (h *AuthHandler) Register(c *gin.Context) {
@@ -44,11 +48,23 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	// Create user
+	// Create a new company for this user
+	company := &models.Company{
+		Name:   req.Name + "'s Company", // Company name based on user's name
+		Status: "active",
+	}
+
+	if err := h.companyRepo.Create(company); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating company"})
+		return
+	}
+
+	// Create user with company_id
 	user := &models.User{
-		Email:    req.Email,
-		Password: string(hashedPassword),
-		Name:     req.Name,
+		Email:     req.Email,
+		Password:  string(hashedPassword),
+		Name:      req.Name,
+		CompanyID: company.ID,
 	}
 
 	if err := h.userRepo.Create(user); err != nil {

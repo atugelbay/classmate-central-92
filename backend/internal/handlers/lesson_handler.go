@@ -18,7 +18,8 @@ func NewLessonHandler(repo *repository.LessonRepository) *LessonHandler {
 }
 
 func (h *LessonHandler) GetAll(c *gin.Context) {
-	lessons, err := h.repo.GetAll()
+	companyID := c.GetString("company_id")
+	lessons, err := h.repo.GetAll(companyID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -29,8 +30,9 @@ func (h *LessonHandler) GetAll(c *gin.Context) {
 
 func (h *LessonHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
+	companyID := c.GetString("company_id")
 
-	lesson, err := h.repo.GetByID(id)
+	lesson, err := h.repo.GetByID(id, companyID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -50,7 +52,8 @@ func (h *LessonHandler) Create(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.Create(&lesson); err != nil {
+	companyID := c.GetString("company_id")
+	if err := h.repo.Create(&lesson, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -60,6 +63,7 @@ func (h *LessonHandler) Create(c *gin.Context) {
 
 func (h *LessonHandler) Update(c *gin.Context) {
 	id := c.Param("id")
+	companyID := c.GetString("company_id")
 
 	var lesson models.Lesson
 	if err := c.ShouldBindJSON(&lesson); err != nil {
@@ -69,7 +73,7 @@ func (h *LessonHandler) Update(c *gin.Context) {
 
 	lesson.ID = id
 
-	if err := h.repo.Update(&lesson); err != nil {
+	if err := h.repo.Update(&lesson, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -79,8 +83,9 @@ func (h *LessonHandler) Update(c *gin.Context) {
 
 func (h *LessonHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
+	companyID := c.GetString("company_id")
 
-	if err := h.repo.Delete(id); err != nil {
+	if err := h.repo.Delete(id, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

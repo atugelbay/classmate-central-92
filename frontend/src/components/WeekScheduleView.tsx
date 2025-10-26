@@ -52,7 +52,7 @@ export default function WeekScheduleView({
   // Filter lessons for the week
   const weekEnd = moment(weekStart).endOf('isoWeek');
   const filteredLessons = lessons.filter((lesson) => {
-    const lessonDate = moment(lesson.start);
+    const lessonDate = moment.utc(lesson.start).local();
     return lessonDate.isBetween(weekStart, weekEnd, 'day', '[]');
   });
 
@@ -63,7 +63,7 @@ export default function WeekScheduleView({
     rooms.forEach((room) => {
       lessonsByDayAndRoom[index][room.id] = filteredLessons.filter(
         (lesson) => {
-          const lessonDate = moment(lesson.start);
+          const lessonDate = moment.utc(lesson.start).local();
           return lessonDate.isSame(day, 'day') && lesson.roomId === room.id;
         }
       );
@@ -293,10 +293,10 @@ export default function WeekScheduleView({
                                 style={{ userSelect: 'none' }}
                               >
                                 <div className="text-xs font-semibold truncate">
-                                  {lesson.title}
+                                  {getGroupName(lesson.groupId) || lesson.title}
                                 </div>
                                 <div className="text-xs text-muted-foreground">
-                                  {moment(lesson.start).format("HH:mm")}
+                                  {moment.utc(lesson.start).local().format("HH:mm")}
                                 </div>
                               </Card>
                             </PopoverTrigger>
@@ -309,7 +309,7 @@ export default function WeekScheduleView({
                               <div className="space-y-4">
                                 <div className="flex items-start justify-between">
                                   <div className="flex-1">
-                                    <h3 className="font-semibold text-lg">{lesson.title}</h3>
+                                    <h3 className="font-semibold text-lg">{getGroupName(lesson.groupId) || lesson.title}</h3>
                                     <p className="text-sm text-muted-foreground">{lesson.subject}</p>
                                   </div>
                                   <Button
@@ -326,7 +326,7 @@ export default function WeekScheduleView({
                                   <div className="flex items-center gap-2 text-sm">
                                     <Clock className="h-4 w-4 text-muted-foreground" />
                                     <span>
-                                      {moment(lesson.start).format("HH:mm")} - {moment(lesson.end).format("HH:mm")}
+                                      {moment.utc(lesson.start).local().format("HH:mm")} - {moment.utc(lesson.end).local().format("HH:mm")}
                                     </span>
                                   </div>
 
@@ -392,10 +392,10 @@ export default function WeekScheduleView({
                                       }}
                                     >
                                       <div className="text-sm font-semibold truncate">
-                                        {lesson.title}
+                                        {getGroupName(lesson.groupId) || lesson.title}
                                       </div>
                                       <div className="text-xs text-muted-foreground">
-                                        {moment(lesson.start).format("HH:mm")} - {moment(lesson.end).format("HH:mm")}
+                                        {moment.utc(lesson.start).local().format("HH:mm")} - {moment.utc(lesson.end).local().format("HH:mm")}
                                       </div>
                                       <div className="text-xs text-muted-foreground truncate">
                                         {teacher?.name}

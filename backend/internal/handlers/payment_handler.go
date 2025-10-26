@@ -36,7 +36,8 @@ func (h *PaymentHandler) CreateTransaction(c *gin.Context) {
 		}
 	}
 
-	if err := h.repo.CreateTransaction(&tx); err != nil {
+	companyID := c.GetString("company_id")
+	if err := h.repo.CreateTransaction(&tx, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -56,8 +57,9 @@ func (h *PaymentHandler) CreateTransaction(c *gin.Context) {
 // GetTransactionsByStudent returns all transactions for a student
 func (h *PaymentHandler) GetTransactionsByStudent(c *gin.Context) {
 	studentID := c.Param("studentId")
+	companyID := c.GetString("company_id")
 
-	transactions, err := h.repo.GetTransactionsByStudent(studentID)
+	transactions, err := h.repo.GetTransactionsByStudent(studentID, companyID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -68,7 +70,8 @@ func (h *PaymentHandler) GetTransactionsByStudent(c *gin.Context) {
 
 // GetAllTransactions returns all transactions
 func (h *PaymentHandler) GetAllTransactions(c *gin.Context) {
-	transactions, err := h.repo.GetAllTransactions()
+	companyID := c.GetString("company_id")
+	transactions, err := h.repo.GetAllTransactions(companyID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -92,7 +95,8 @@ func (h *PaymentHandler) GetStudentBalance(c *gin.Context) {
 
 // GetAllBalances returns all student balances
 func (h *PaymentHandler) GetAllBalances(c *gin.Context) {
-	balances, err := h.repo.GetAllBalances()
+	companyID := c.GetString("company_id")
+	balances, err := h.repo.GetAllBalances(companyID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
