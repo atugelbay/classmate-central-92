@@ -58,6 +58,23 @@ func (s *MigrationService) RunMigration(config MigrationConfig) (*MigrationResul
 		fmt.Sprintf("DB_PASSWORD=%s", config.DBPassword),
 	}
 
+	// Also pass Railway PG* variables as fallback
+	if pgHost := os.Getenv("PGHOST"); pgHost != "" {
+		envVars = append(envVars, fmt.Sprintf("PGHOST=%s", pgHost))
+	}
+	if pgPort := os.Getenv("PGPORT"); pgPort != "" {
+		envVars = append(envVars, fmt.Sprintf("PGPORT=%s", pgPort))
+	}
+	if pgDatabase := os.Getenv("PGDATABASE"); pgDatabase != "" {
+		envVars = append(envVars, fmt.Sprintf("PGDATABASE=%s", pgDatabase))
+	}
+	if pgUser := os.Getenv("PGUSER"); pgUser != "" {
+		envVars = append(envVars, fmt.Sprintf("PGUSER=%s", pgUser))
+	}
+	if pgPassword := os.Getenv("PGPASSWORD"); pgPassword != "" {
+		envVars = append(envVars, fmt.Sprintf("PGPASSWORD=%s", pgPassword))
+	}
+
 	// Execute Node.js script
 	cmd := exec.Command("node", s.scriptPath)
 
