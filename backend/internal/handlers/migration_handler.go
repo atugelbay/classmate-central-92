@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"classmate-central/internal/repository"
@@ -145,26 +146,70 @@ func (h *MigrationHandler) runMigration(companyID string, req MigrationRequest, 
 	status.CurrentStep = "Запуск скрипта миграции"
 	status.Progress = 10
 
-	// Get database credentials (support both Railway PG* and standard DB_* env vars)
+	// Get database credentials
+	// Priority: DB_* env vars > Parse from DATABASE_URL
 	dbHost := os.Getenv("DB_HOST")
-	if dbHost == "" {
-		dbHost = os.Getenv("PGHOST")
-	}
 	dbPort := os.Getenv("DB_PORT")
-	if dbPort == "" {
-		dbPort = os.Getenv("PGPORT")
-	}
 	dbName := os.Getenv("DB_NAME")
-	if dbName == "" {
-		dbName = os.Getenv("PGDATABASE")
-	}
 	dbUser := os.Getenv("DB_USER")
-	if dbUser == "" {
-		dbUser = os.Getenv("PGUSER")
-	}
 	dbPassword := os.Getenv("DB_PASSWORD")
-	if dbPassword == "" {
-		dbPassword = os.Getenv("PGPASSWORD")
+	
+	// If not set, try to parse from DATABASE_URL (Railway format)
+	if dbHost == "" || dbPort == "" || dbName == "" || dbUser == "" || dbPassword == "" {
+		databaseURL := os.Getenv("DATABASE_URL")
+		if databaseURL != "" {
+			// Parse postgresql://user:password@host:port/database
+			// Example: postgresql://postgres:password@postgres.railway.internal:5432/railway
+			var user, pass, host, port, database string
+			
+			// Remove postgresql:// prefix
+			if len(databaseURL) > 13 && databaseURL[:13] == "postgresql://" {
+				databaseURL = databaseURL[13:]
+			} else if len(databaseURL) > 11 && databaseURL[:11] == "postgres://" {
+				databaseURL = databaseURL[11:]
+			}
+			
+			// Split by @
+			parts := strings.Split(databaseURL, "@")
+			if len(parts) == 2 {
+				// Parse user:password
+				authParts := strings.Split(parts[0], ":")
+				if len(authParts) == 2 {
+					user = authParts[0]
+					pass = authParts[1]
+				}
+				
+				// Parse host:port/database
+				hostParts := strings.Split(parts[1], "/")
+				if len(hostParts) == 2 {
+					database = hostParts[1]
+					
+					// Parse host:port
+					hostPortParts := strings.Split(hostParts[0], ":")
+					if len(hostPortParts) == 2 {
+						host = hostPortParts[0]
+						port = hostPortParts[1]
+					}
+				}
+			}
+			
+			// Use parsed values if original vars were empty
+			if dbHost == "" {
+				dbHost = host
+			}
+			if dbPort == "" {
+				dbPort = port
+			}
+			if dbName == "" {
+				dbName = database
+			}
+			if dbUser == "" {
+				dbUser = user
+			}
+			if dbPassword == "" {
+				dbPassword = pass
+			}
+		}
 	}
 
 	result, err := migrationService.RunMigration(services.MigrationConfig{
