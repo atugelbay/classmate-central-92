@@ -215,3 +215,171 @@ func (r *StudentRepository) Delete(id string) error {
 
 	return nil
 }
+
+// UpdateStatus updates the status of a student
+func (r *StudentRepository) UpdateStatus(studentID, status string) error {
+	query := `UPDATE students SET status = $1 WHERE id = $2`
+	_, err := r.db.Exec(query, status, studentID)
+	if err != nil {
+		return fmt.Errorf("error updating student status: %w", err)
+	}
+	return nil
+}
+
+// AddNote adds a note about a student
+func (r *StudentRepository) AddNote(note *models.StudentNote) error {
+	query := `
+		INSERT INTO student_notes (student_id, note, created_by, created_at)
+		VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+		RETURNING id, created_at
+	`
+	err := r.db.QueryRow(query, note.StudentID, note.Note, note.CreatedBy).Scan(&note.ID, &note.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("error adding student note: %w", err)
+	}
+	return nil
+}
+
+// GetNotes retrieves all notes for a student
+func (r *StudentRepository) GetNotes(studentID string) ([]*models.StudentNote, error) {
+	query := `
+		SELECT id, student_id, note, created_by, created_at
+		FROM student_notes
+		WHERE student_id = $1
+		ORDER BY created_at DESC
+	`
+
+	rows, err := r.db.Query(query, studentID)
+	if err != nil {
+		return nil, fmt.Errorf("error getting student notes: %w", err)
+	}
+	defer rows.Close()
+
+	notes := []*models.StudentNote{}
+	for rows.Next() {
+		note := &models.StudentNote{}
+		var createdBy sql.NullInt32
+
+		err := rows.Scan(&note.ID, &note.StudentID, &note.Note, &createdBy, &note.CreatedAt)
+		if err != nil {
+			return nil, fmt.Errorf("error scanning note: %w", err)
+		}
+
+		if createdBy.Valid {
+			val := int(createdBy.Int32)
+			note.CreatedBy = &val
+		}
+
+		notes = append(notes, note)
+	}
+
+	return notes, nil
+}
+
+// GetAttendanceStats returns attendance statistics for a student
+func (r *StudentRepository) GetAttendanceStats(studentID string) (*models.AttendanceStats, error) {
+	query := `
+		SELECT 
+			COUNT(*) as total_lessons,
+			COUNT(CASE WHEN status = 'attended' THEN 1 END) as attended,
+			COUNT(CASE WHEN status = 'missed' THEN 1 END) as missed,
+			COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled
+		FROM lesson_attendance
+		WHERE student_id = $1
+	`
+
+	stats := &models.AttendanceStats{}
+	var total, attended, missed, cancelled int
+
+	err := r.db.QueryRow(query, studentID).Scan(&total, &attended, &missed, &cancelled)
+	if err != nil {
+		return nil, fmt.Errorf("error getting attendance stats: %w", err)
+	}
+
+	stats.TotalLessons = total
+	stats.Attended = attended
+	stats.Missed = missed
+	stats.Cancelled = cancelled
+
+	if total > 0 {
+		stats.AttendanceRate = float64(attended) / float64(total) * 100
+	} else {
+		stats.AttendanceRate = 0
+	}
+
+	return stats, nil
+}
+
+// GetAttendanceJournal retrieves detailed attendance journal for a student
+func (r *StudentRepository) GetAttendanceJournal(studentID string) ([]*models.AttendanceJournalEntry, error) {
+	query := `
+		SELECT 
+			la.id,
+			la.lesson_id,
+			l.title as lesson_title,
+			l.subject,
+			t.name as teacher_name,
+			g.name as group_name,
+			l.start_time,
+			l.end_time,
+			la.status,
+			la.reason,
+			la.notes,
+			la.subscription_id,
+			la.marked_at
+		FROM lesson_attendance la
+		JOIN lessons l ON la.lesson_id = l.id
+		JOIN teachers t ON l.teacher_id = t.id
+		LEFT JOIN groups g ON l.group_id = g.id
+		WHERE la.student_id = $1
+		ORDER BY l.start_time DESC
+	`
+
+	rows, err := r.db.Query(query, studentID)
+	if err != nil {
+		return nil, fmt.Errorf("error getting attendance journal: %w", err)
+	}
+	defer rows.Close()
+
+	journal := []*models.AttendanceJournalEntry{}
+	for rows.Next() {
+		entry := &models.AttendanceJournalEntry{}
+		var groupName, reason, notes, subscriptionID sql.NullString
+
+		err := rows.Scan(
+			&entry.AttendanceID,
+			&entry.LessonID,
+			&entry.LessonTitle,
+			&entry.Subject,
+			&entry.TeacherName,
+			&groupName,
+			&entry.StartTime,
+			&entry.EndTime,
+			&entry.Status,
+			&reason,
+			&notes,
+			&subscriptionID,
+			&entry.MarkedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error scanning journal entry: %w", err)
+		}
+
+		if groupName.Valid {
+			entry.GroupName = &groupName.String
+		}
+		if reason.Valid {
+			entry.Reason = &reason.String
+		}
+		if notes.Valid {
+			entry.Notes = &notes.String
+		}
+		if subscriptionID.Valid {
+			entry.SubscriptionID = &subscriptionID.String
+		}
+
+		journal = append(journal, entry)
+	}
+
+	return journal, nil
+}

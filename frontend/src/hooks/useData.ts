@@ -26,6 +26,11 @@ import {
   StudentSubscription,
   SubscriptionFreeze,
   LessonAttendance,
+  StudentActivityLog,
+  StudentNote,
+  Notification,
+  AttendanceJournalEntry,
+  StudentStatus,
 } from "@/types";
 import { toast } from "sonner";
 
@@ -778,11 +783,11 @@ export const useUpdateFreeze = () => {
 export const useMarkAttendance = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: Omit<LessonAttendance, "id" | "markedAt">) =>
-      subscriptionsApi.markAttendance(data),
+    mutationFn: subscriptionsApi.markAttendance,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["attendance"] });
       queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+      queryClient.invalidateQueries({ queryKey: ["students"] });
       toast.success("Посещаемость отмечена");
     },
     onError: (error: any) => {
@@ -804,5 +809,91 @@ export const useStudentAttendance = (studentId: string) => {
     queryKey: ["attendance", "student", studentId],
     queryFn: () => subscriptionsApi.getAttendanceByStudent(studentId),
     enabled: !!studentId,
+  });
+};
+
+// ============= STUDENT MANAGEMENT HOOKS =============
+
+// Student Activities
+export const useStudentActivities = (studentId: string, limit = 50, offset = 0) => {
+  return useQuery({
+    queryKey: ["students", studentId, "activities", limit, offset],
+    queryFn: () => studentsAPI.getActivities(studentId, limit, offset),
+    enabled: !!studentId,
+  });
+};
+
+// Student Notes
+export const useStudentNotes = (studentId: string) => {
+  return useQuery({
+    queryKey: ["students", studentId, "notes"],
+    queryFn: () => studentsAPI.getNotes(studentId),
+    enabled: !!studentId,
+  });
+};
+
+export const useAddStudentNote = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ studentId, note }: { studentId: string; note: string }) =>
+      studentsAPI.addNote(studentId, note),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["students", variables.studentId, "notes"] });
+      queryClient.invalidateQueries({ queryKey: ["students", variables.studentId, "activities"] });
+      toast.success("Заметка добавлена");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при добавлении заметки");
+    },
+  });
+};
+
+// Student Status
+export const useUpdateStudentStatus = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ studentId, status }: { studentId: string; status: StudentStatus }) =>
+      studentsAPI.updateStatus(studentId, status),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      queryClient.invalidateQueries({ queryKey: ["students", variables.studentId] });
+      queryClient.invalidateQueries({ queryKey: ["students", variables.studentId, "activities"] });
+      toast.success("Статус ученика обновлен");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при обновлении статуса");
+    },
+  });
+};
+
+// Student Attendance Journal
+export const useStudentAttendanceJournal = (studentId: string) => {
+  return useQuery({
+    queryKey: ["students", studentId, "attendance-journal"],
+    queryFn: () => studentsAPI.getAttendanceJournal(studentId),
+    enabled: !!studentId,
+  });
+};
+
+// Student Notifications
+export const useStudentNotifications = (studentId: string) => {
+  return useQuery({
+    queryKey: ["students", studentId, "notifications"],
+    queryFn: () => studentsAPI.getNotifications(studentId),
+    enabled: !!studentId,
+  });
+};
+
+export const useMarkNotificationRead = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (notificationId: number) => studentsAPI.markNotificationRead(notificationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      toast.success("Уведомление отмечено как прочитанное");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при обновлении уведомления");
+    },
   });
 };

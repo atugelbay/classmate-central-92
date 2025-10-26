@@ -225,3 +225,77 @@ func (r *SubscriptionRepository) GetAttendanceByStudent(studentID string) ([]mod
 	}
 	return attendances, nil
 }
+
+// DeductLesson deducts a lesson from a subscription
+func (r *SubscriptionRepository) DeductLesson(subscriptionID string) error {
+	query := `
+		UPDATE student_subscriptions 
+		SET lessons_remaining = lessons_remaining - 1
+		WHERE id = $1 AND lessons_remaining > 0
+	`
+	result, err := r.db.Exec(query, subscriptionID)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
+}
+
+// GetActiveSubscription retrieves the active subscription for a student
+func (r *SubscriptionRepository) GetActiveSubscription(studentID string) (*models.StudentSubscription, error) {
+	query := `
+		SELECT id, student_id, subscription_type_id, lessons_remaining, start_date, end_date, status, freeze_days_remaining, created_at 
+		FROM student_subscriptions 
+		WHERE student_id = $1 AND status = 'active' AND lessons_remaining > 0
+		ORDER BY created_at DESC
+		LIMIT 1
+	`
+	var sub models.StudentSubscription
+	err := r.db.QueryRow(query, studentID).Scan(
+		&sub.ID, &sub.StudentID, &sub.SubscriptionTypeID,
+		&sub.LessonsRemaining, &sub.StartDate, &sub.EndDate,
+		&sub.Status, &sub.FreezeDaysRemaining, &sub.CreatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &sub, nil
+}
+
+// CheckExpiringSubscriptions returns subscriptions expiring within 7 days
+func (r *SubscriptionRepository) CheckExpiringSubscriptions() ([]*models.StudentSubscription, error) {
+	query := `
+		SELECT id, student_id, subscription_type_id, lessons_remaining, start_date, end_date, status, freeze_days_remaining, created_at 
+		FROM student_subscriptions 
+		WHERE status = 'active' 
+		AND end_date IS NOT NULL 
+		AND end_date BETWEEN CURRENT_TIMESTAMP AND CURRENT_TIMESTAMP + INTERVAL '7 days'
+	`
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	subs := []*models.StudentSubscription{}
+	for rows.Next() {
+		var sub models.StudentSubscription
+		if err := rows.Scan(&sub.ID, &sub.StudentID, &sub.SubscriptionTypeID, &sub.LessonsRemaining, &sub.StartDate, &sub.EndDate, &sub.Status, &sub.FreezeDaysRemaining, &sub.CreatedAt); err != nil {
+			return nil, err
+		}
+		subs = append(subs, &sub)
+	}
+	return subs, nil
+}

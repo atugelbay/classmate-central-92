@@ -17,20 +17,21 @@ ON CONFLICT (id) DO UPDATE SET
   workload = EXCLUDED.workload;
 
 -- Students
-INSERT INTO students (id, name, age, email, phone) VALUES
-('student-1', 'Айдар Серікбаев', 16, 'aidar.serikbayev@example.com', '+7 (701) 111-2222'),
-('student-2', 'Айгерім Қасымова', 15, 'aigerim.kassymova@example.com', '+7 (702) 222-3333'),
-('student-3', 'Нұрсұлтан Әбдіров', 17, 'nursultan.abdirov@example.com', '+7 (705) 333-4444'),
-('student-4', 'Жанна Оразбаева', 16, 'zhanna.orazbayeva@example.com', '+7 (708) 444-5555'),
-('student-5', 'Арман Тұрсынов', 15, 'arman.tursynov@example.com', '+7 (777) 555-6666'),
-('student-6', 'Камила Нұрланқызы', 16, 'kamila.nurlankzy@example.com', '+7 (701) 666-7777'),
-('student-7', 'Ілияс Бауыржанов', 17, 'iliyas.bauyrzhan@example.com', '+7 (702) 777-8888'),
-('student-8', 'Сәуле Қайратқызы', 15, 'saule.kairatkzy@example.com', '+7 (705) 888-9999')
+INSERT INTO students (id, name, age, email, phone, status) VALUES
+('student-1', 'Айдар Серікбаев', 16, 'aidar.serikbayev@example.com', '+7 (701) 111-2222', 'active'),
+('student-2', 'Айгерім Қасымова', 15, 'aigerim.kassymova@example.com', '+7 (702) 222-3333', 'active'),
+('student-3', 'Нұрсұлтан Әбдіров', 17, 'nursultan.abdirov@example.com', '+7 (705) 333-4444', 'active'),
+('student-4', 'Жанна Оразбаева', 16, 'zhanna.orazbayeva@example.com', '+7 (708) 444-5555', 'active'),
+('student-5', 'Арман Тұрсынов', 15, 'arman.tursynov@example.com', '+7 (777) 555-6666', 'active'),
+('student-6', 'Камила Нұрланқызы', 16, 'kamila.nurlankzy@example.com', '+7 (701) 666-7777', 'inactive'),
+('student-7', 'Ілияс Бауыржанов', 17, 'iliyas.bauyrzhan@example.com', '+7 (702) 777-8888', 'frozen'),
+('student-8', 'Сәуле Қайратқызы', 15, 'saule.kairatkzy@example.com', '+7 (705) 888-9999', 'active')
 ON CONFLICT (id) DO UPDATE SET
   name = EXCLUDED.name,
   age = EXCLUDED.age,
   email = EXCLUDED.email,
-  phone = EXCLUDED.phone;
+  phone = EXCLUDED.phone,
+  status = EXCLUDED.status;
 
 -- Student subjects
 INSERT INTO student_subjects (student_id, subject) VALUES
@@ -232,6 +233,157 @@ ON CONFLICT (id) DO UPDATE SET
   price = EXCLUDED.price,
   duration_days = EXCLUDED.duration_days,
   lesson_count = EXCLUDED.lesson_count;
+
+-- Subscription Types (Типы абонементов)
+INSERT INTO subscription_types (id, name, lessons_count, validity_days, price, can_freeze, description) VALUES
+('sub-type-1', 'Абонемент на 8 занятий', 8, 30, 40000.00, true, 'Стандартный абонемент на 8 занятий, действует 30 дней'),
+('sub-type-2', 'Абонемент на 12 занятий', 12, 45, 55000.00, true, 'Выгодный абонемент на 12 занятий'),
+('sub-type-3', 'Абонемент на 16 занятий', 16, 60, 70000.00, true, 'Максимальный абонемент на 16 занятий'),
+('sub-type-4', 'Безлимитный месячный', 20, 30, 80000.00, false, 'Неограниченное количество занятий в месяц')
+ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name,
+  lessons_count = EXCLUDED.lessons_count,
+  validity_days = EXCLUDED.validity_days,
+  price = EXCLUDED.price,
+  can_freeze = EXCLUDED.can_freeze,
+  description = EXCLUDED.description;
+
+-- Student Subscriptions (Абонементы учеников)
+INSERT INTO student_subscriptions (id, student_id, subscription_type_id, lessons_remaining, start_date, end_date, status, freeze_days_remaining) VALUES
+('subscription-1', 'student-1', 'sub-type-1', 5, NOW() - INTERVAL '10 days', NOW() + INTERVAL '20 days', 'active', 5),
+('subscription-2', 'student-2', 'sub-type-2', 10, NOW() - INTERVAL '5 days', NOW() + INTERVAL '40 days', 'active', 7),
+('subscription-3', 'student-3', 'sub-type-1', 8, NOW() - INTERVAL '2 days', NOW() + INTERVAL '28 days', 'active', 5),
+('subscription-4', 'student-4', 'sub-type-3', 14, NOW() - INTERVAL '15 days', NOW() + INTERVAL '45 days', 'active', 10),
+('subscription-5', 'student-5', 'sub-type-2', 2, NOW() - INTERVAL '40 days', NOW() + INTERVAL '5 days', 'active', 0),
+('subscription-6', 'student-6', 'sub-type-1', 0, NOW() - INTERVAL '60 days', NOW() - INTERVAL '30 days', 'expired', 0),
+('subscription-7', 'student-7', 'sub-type-2', 6, NOW() - INTERVAL '20 days', NOW() + INTERVAL '25 days', 'frozen', 15),
+('subscription-8', 'student-8', 'sub-type-1', 7, NOW() - INTERVAL '8 days', NOW() + INTERVAL '22 days', 'active', 5)
+ON CONFLICT (id) DO UPDATE SET
+  lessons_remaining = EXCLUDED.lessons_remaining,
+  start_date = EXCLUDED.start_date,
+  end_date = EXCLUDED.end_date,
+  status = EXCLUDED.status,
+  freeze_days_remaining = EXCLUDED.freeze_days_remaining;
+
+-- Payment Transactions (Транзакции)
+INSERT INTO payment_transactions (student_id, amount, type, payment_method, description, created_at) VALUES
+-- Студент 1
+('student-1', 40000.00, 'payment', 'card', 'Оплата абонемента на 8 занятий', NOW() - INTERVAL '10 days'),
+('student-1', 8000.00, 'payment', 'cash', 'Дополнительная оплата за материалы', NOW() - INTERVAL '3 days'),
+-- Студент 2
+('student-2', 55000.00, 'payment', 'transfer', 'Оплата абонемента на 12 занятий', NOW() - INTERVAL '5 days'),
+-- Студент 3
+('student-3', 40000.00, 'payment', 'card', 'Оплата абонемента на 8 занятий', NOW() - INTERVAL '2 days'),
+-- Студент 4
+('student-4', 70000.00, 'payment', 'card', 'Оплата абонемента на 16 занятий', NOW() - INTERVAL '15 days'),
+('student-4', 5000.00, 'payment', 'cash', 'Частичная оплата за учебные материалы', NOW() - INTERVAL '7 days'),
+-- Студент 5
+('student-5', 55000.00, 'payment', 'transfer', 'Оплата абонемента на 12 занятий', NOW() - INTERVAL '40 days'),
+('student-5', 10000.00, 'debt', 'other', 'Задолженность за следующий абонемент', NOW() - INTERVAL '2 days'),
+-- Студент 6
+('student-6', 40000.00, 'payment', 'cash', 'Оплата истекшего абонемента', NOW() - INTERVAL '60 days'),
+('student-6', 2000.00, 'refund', 'card', 'Возврат за отмененное занятие', NOW() - INTERVAL '35 days'),
+-- Студент 7
+('student-7', 55000.00, 'payment', 'card', 'Оплата абонемента на 12 занятий', NOW() - INTERVAL '20 days'),
+-- Студент 8
+('student-8', 40000.00, 'payment', 'transfer', 'Оплата абонемента на 8 занятий', NOW() - INTERVAL '8 days')
+ON CONFLICT DO NOTHING;
+
+-- Student Balance (Баланс учеников)
+INSERT INTO student_balance (student_id, balance, last_payment_date) VALUES
+('student-1', 8000.00, NOW() - INTERVAL '3 days'),
+('student-2', 5000.00, NOW() - INTERVAL '5 days'),
+('student-3', 0.00, NOW() - INTERVAL '2 days'),
+('student-4', 3000.00, NOW() - INTERVAL '7 days'),
+('student-5', -10000.00, NOW() - INTERVAL '2 days'),
+('student-6', -2000.00, NOW() - INTERVAL '35 days'),
+('student-7', 10000.00, NOW() - INTERVAL '20 days'),
+('student-8', 2000.00, NOW() - INTERVAL '8 days')
+ON CONFLICT (student_id) DO UPDATE SET
+  balance = EXCLUDED.balance,
+  last_payment_date = EXCLUDED.last_payment_date;
+
+-- Debt Records (Долги)
+INSERT INTO debt_records (student_id, amount, due_date, status, notes) VALUES
+('student-5', 10000.00, NOW() + INTERVAL '5 days', 'pending', 'Оплата за следующий абонемент скоро'),
+('student-6', 2000.00, NOW() - INTERVAL '10 days', 'pending', 'Просроченная оплата за отмененные занятия'),
+('student-4', 5000.00, NOW() + INTERVAL '15 days', 'pending', 'Оплата за дополнительные материалы')
+ON CONFLICT DO NOTHING;
+
+-- Lesson Attendance (Посещаемость)
+INSERT INTO lesson_attendance (lesson_id, student_id, subscription_id, status, reason, notes, marked_by) VALUES
+-- Прошедшие занятия с отметками
+('lesson-1', 'student-1', 'subscription-1', 'attended', NULL, 'Активное участие', NULL),
+('lesson-1', 'student-2', 'subscription-2', 'attended', NULL, 'Выполнил все задания', NULL),
+('lesson-1', 'student-5', 'subscription-5', 'missed', 'Болезнь', 'Позвонил и предупредил', NULL),
+('lesson-1', 'student-8', 'subscription-8', 'attended', NULL, 'Хороший прогресс', NULL),
+('lesson-2', 'student-2', 'subscription-2', 'attended', NULL, NULL, NULL),
+('lesson-2', 'student-4', 'subscription-4', 'missed', 'Семейные обстоятельства', NULL, NULL),
+('lesson-2', 'student-6', NULL, 'cancelled', NULL, 'Занятие отменено преподавателем', NULL),
+('lesson-5', 'student-1', 'subscription-1', 'attended', NULL, 'Отличная работа', NULL),
+('lesson-5', 'student-2', 'subscription-2', 'attended', NULL, NULL, NULL),
+('lesson-5', 'student-5', 'subscription-5', 'attended', NULL, 'Догнал пропущенный материал', NULL),
+('lesson-5', 'student-8', 'subscription-8', 'attended', NULL, NULL, NULL)
+ON CONFLICT (lesson_id, student_id) DO UPDATE SET
+  subscription_id = EXCLUDED.subscription_id,
+  status = EXCLUDED.status,
+  reason = EXCLUDED.reason,
+  notes = EXCLUDED.notes;
+
+-- Student Activity Log (История действий)
+INSERT INTO student_activity_log (student_id, activity_type, description, metadata, created_at) VALUES
+-- Действия студента 1
+('student-1', 'payment', 'Оплата: 40000.00 ₸', '{"transaction_id": 1, "amount": 40000, "type": "payment"}', NOW() - INTERVAL '10 days'),
+('student-1', 'subscription_change', 'Создан новый абонемент. Занятий: 8', '{"subscription_id": "subscription-1", "lessons_count": 8}', NOW() - INTERVAL '10 days'),
+('student-1', 'attendance', 'Посетил занятие', '{"lesson_id": "lesson-1", "status": "attended"}', NOW() - INTERVAL '8 days'),
+('student-1', 'subscription_change', 'Списано занятие. Осталось: 7', '{"subscription_id": "subscription-1", "lessons_remaining": 7}', NOW() - INTERVAL '8 days'),
+('student-1', 'attendance', 'Посетил занятие', '{"lesson_id": "lesson-5", "status": "attended"}', NOW() - INTERVAL '5 days'),
+('student-1', 'subscription_change', 'Списано занятие. Осталось: 6', '{"subscription_id": "subscription-1", "lessons_remaining": 6}', NOW() - INTERVAL '5 days'),
+('student-1', 'payment', 'Оплата: 8000.00 ₸', '{"transaction_id": 2, "amount": 8000, "type": "payment"}', NOW() - INTERVAL '3 days'),
+('student-1', 'note', 'Добавлена заметка', '{"note": "Ученик показывает отличный прогресс"}', NOW() - INTERVAL '2 days'),
+-- Действия студента 2
+('student-2', 'payment', 'Оплата: 55000.00 ₸', '{"transaction_id": 3, "amount": 55000, "type": "payment"}', NOW() - INTERVAL '5 days'),
+('student-2', 'subscription_change', 'Создан новый абонемент. Занятий: 12', '{"subscription_id": "subscription-2", "lessons_count": 12}', NOW() - INTERVAL '5 days'),
+('student-2', 'attendance', 'Посетил занятие', '{"lesson_id": "lesson-1", "status": "attended"}', NOW() - INTERVAL '4 days'),
+('student-2', 'subscription_change', 'Списано занятие. Осталось: 11', '{"subscription_id": "subscription-2", "lessons_remaining": 11}', NOW() - INTERVAL '4 days'),
+('student-2', 'attendance', 'Посетил занятие', '{"lesson_id": "lesson-2", "status": "attended"}', NOW() - INTERVAL '3 days'),
+('student-2', 'subscription_change', 'Списано занятие. Осталось: 10', '{"subscription_id": "subscription-2", "lessons_remaining": 10}', NOW() - INTERVAL '3 days'),
+-- Действия студента 5
+('student-5', 'payment', 'Оплата: 55000.00 ₸', '{"transaction_id": 7, "amount": 55000, "type": "payment"}', NOW() - INTERVAL '40 days'),
+('student-5', 'subscription_change', 'Создан новый абонемент. Занятий: 12', '{"subscription_id": "subscription-5", "lessons_count": 12}', NOW() - INTERVAL '40 days'),
+('student-5', 'attendance', 'Пропустил занятие', '{"lesson_id": "lesson-1", "status": "missed", "reason": "Болезнь"}', NOW() - INTERVAL '8 days'),
+('student-5', 'attendance', 'Посетил занятие', '{"lesson_id": "lesson-5", "status": "attended"}', NOW() - INTERVAL '5 days'),
+('student-5', 'subscription_change', 'Списано занятие. Осталось: 2', '{"subscription_id": "subscription-5", "lessons_remaining": 2}', NOW() - INTERVAL '5 days'),
+('student-5', 'debt_created', 'Создан долг: 10000.00 ₸', '{"debt_id": 1, "amount": 10000}', NOW() - INTERVAL '2 days')
+ON CONFLICT DO NOTHING;
+
+-- Student Notes (Заметки об учениках)
+INSERT INTO student_notes (student_id, note, created_at) VALUES
+('student-1', 'Ученик показывает отличный прогресс по математике. Очень внимателен и выполняет все домашние задания.', NOW() - INTERVAL '2 days'),
+('student-1', 'Родители попросили дополнительные материалы по продвинутым темам.', NOW() - INTERVAL '1 day'),
+('student-2', 'Хорошее участие на уроках английского. Нужно больше практики разговорной речи.', NOW() - INTERVAL '3 days'),
+('student-3', 'Очень талантлив в программировании. Проявляет интерес к продвинутым темам Python.', NOW() - INTERVAL '5 days'),
+('student-4', 'Пропустила занятие из-за семейных обстоятельств. Нужно наверстать тему по органической химии.', NOW() - INTERVAL '2 days'),
+('student-5', 'Болел на прошлой неделе. Быстро наверстал пропущенный материал.', NOW() - INTERVAL '4 days'),
+('student-5', 'Абонемент заканчивается. Обсудили продление с родителями.', NOW() - INTERVAL '1 day'),
+('student-7', 'Абонемент заморожен из-за семейной поездки. Возобновит занятия в следующем месяце.', NOW() - INTERVAL '10 days')
+ON CONFLICT DO NOTHING;
+
+-- Notifications (Уведомления)
+INSERT INTO notifications (student_id, type, message, is_read, created_at) VALUES
+('student-5', 'subscription_expiring', 'Ваш абонемент истекает через 5 дней. Осталось всего 2 занятия.', false, NOW() - INTERVAL '1 day'),
+('student-5', 'debt_reminder', 'Напоминание об оплате: 10000.00 ₸ через 5 дней', false, NOW() - INTERVAL '1 day'),
+('student-6', 'debt_reminder', 'Просроченный платеж: 2000.00 ₸ (просрочен на 10 дней)', false, NOW() - INTERVAL '2 days'),
+('student-6', 'subscription_expired', 'Ваш абонемент истек. Пожалуйста, продлите для продолжения занятий.', false, NOW() - INTERVAL '30 days'),
+('student-4', 'debt_reminder', 'Напоминание об оплате: 5000.00 ₸ через 15 дней', false, NOW() - INTERVAL '1 hour'),
+('student-1', 'subscription_expiring', 'Осталось 5 занятий в абонементе.', true, NOW() - INTERVAL '3 days'),
+('student-8', 'subscription_expiring', 'Осталось 7 занятий в абонементе.', false, NOW() - INTERVAL '12 hours')
+ON CONFLICT DO NOTHING;
+
+-- Subscription Freezes (Заморозки абонементов)
+INSERT INTO subscription_freezes (subscription_id, freeze_start, freeze_end, reason) VALUES
+('subscription-7', NOW() - INTERVAL '20 days', NULL, 'Семейная поездка за границу. Вернется в следующем месяце.')
+ON CONFLICT DO NOTHING;
 
 VACUUM ANALYZE;
 

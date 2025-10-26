@@ -31,6 +31,7 @@ type Student struct {
 	Age      int      `json:"age" db:"age"`
 	Email    string   `json:"email" db:"email"`
 	Phone    string   `json:"phone" db:"phone"`
+	Status   string   `json:"status" db:"status"` // active, inactive, frozen, graduated
 	Subjects []string `json:"subjects"`
 	GroupIds []string `json:"groupIds"`
 	Avatar   string   `json:"avatar,omitempty" db:"avatar"`
@@ -232,6 +233,85 @@ type LessonAttendance struct {
 	StudentID      string    `json:"studentId" db:"student_id"`
 	SubscriptionID *string   `json:"subscriptionId,omitempty" db:"subscription_id"`
 	Status         string    `json:"status" db:"status"` // attended, missed, cancelled
+	Reason         string    `json:"reason,omitempty" db:"reason"`
+	Notes          string    `json:"notes,omitempty" db:"notes"`
 	MarkedAt       time.Time `json:"markedAt" db:"marked_at"`
 	MarkedBy       *int      `json:"markedBy,omitempty" db:"marked_by"`
+}
+
+// ============= STUDENT MANAGEMENT MODULE =============
+
+// StudentActivityLog represents an activity/action performed with a student
+type StudentActivityLog struct {
+	ID           int       `json:"id" db:"id"`
+	StudentID    string    `json:"studentId" db:"student_id"`
+	ActivityType string    `json:"activityType" db:"activity_type"` // payment, attendance, subscription_change, status_change, note, debt_created, freeze
+	Description  string    `json:"description" db:"description"`
+	Metadata     *string   `json:"metadata,omitempty" db:"metadata"` // JSON string
+	CreatedBy    *int      `json:"createdBy,omitempty" db:"created_by"`
+	CreatedAt    time.Time `json:"createdAt" db:"created_at"`
+}
+
+// StudentNote represents a note about a student
+type StudentNote struct {
+	ID        int       `json:"id" db:"id"`
+	StudentID string    `json:"studentId" db:"student_id"`
+	Note      string    `json:"note" db:"note"`
+	CreatedBy *int      `json:"createdBy,omitempty" db:"created_by"`
+	CreatedAt time.Time `json:"createdAt" db:"created_at"`
+}
+
+// Notification represents a system notification
+type Notification struct {
+	ID        int       `json:"id" db:"id"`
+	StudentID string    `json:"studentId" db:"student_id"`
+	Type      string    `json:"type" db:"type"` // debt_reminder, subscription_expiring, subscription_expired
+	Message   string    `json:"message" db:"message"`
+	IsRead    bool      `json:"isRead" db:"is_read"`
+	CreatedAt time.Time `json:"createdAt" db:"created_at"`
+}
+
+// StudentDetailedInfo represents comprehensive student information
+type StudentDetailedInfo struct {
+	Student             *Student               `json:"student"`
+	Balance             *StudentBalance        `json:"balance"`
+	ActiveSubscriptions []*StudentSubscription `json:"activeSubscriptions"`
+	RecentActivities    []*StudentActivityLog  `json:"recentActivities"`
+	AttendanceStats     *AttendanceStats       `json:"attendanceStats"`
+	UnreadNotifications int                    `json:"unreadNotifications"`
+}
+
+// AttendanceStats represents attendance statistics for a student
+type AttendanceStats struct {
+	TotalLessons   int     `json:"totalLessons"`
+	Attended       int     `json:"attended"`
+	Missed         int     `json:"missed"`
+	Cancelled      int     `json:"cancelled"`
+	AttendanceRate float64 `json:"attendanceRate"`
+}
+
+// AttendanceJournalEntry represents a detailed attendance record with lesson info
+type AttendanceJournalEntry struct {
+	AttendanceID   int       `json:"attendanceId" db:"id"`
+	LessonID       string    `json:"lessonId" db:"lesson_id"`
+	LessonTitle    string    `json:"lessonTitle" db:"lesson_title"`
+	Subject        string    `json:"subject" db:"subject"`
+	TeacherName    string    `json:"teacherName" db:"teacher_name"`
+	GroupName      *string   `json:"groupName,omitempty" db:"group_name"`
+	StartTime      time.Time `json:"startTime" db:"start_time"`
+	EndTime        time.Time `json:"endTime" db:"end_time"`
+	Status         string    `json:"status" db:"status"`
+	Reason         *string   `json:"reason,omitempty" db:"reason"`
+	Notes          *string   `json:"notes,omitempty" db:"notes"`
+	SubscriptionID *string   `json:"subscriptionId,omitempty" db:"subscription_id"`
+	MarkedAt       time.Time `json:"markedAt" db:"marked_at"`
+}
+
+// MarkAttendanceRequest represents a request to mark attendance
+type MarkAttendanceRequest struct {
+	LessonID  string `json:"lessonId" binding:"required"`
+	StudentID string `json:"studentId" binding:"required"`
+	Status    string `json:"status" binding:"required"` // attended, missed, cancelled
+	Reason    string `json:"reason,omitempty"`
+	Notes     string `json:"notes,omitempty"`
 }

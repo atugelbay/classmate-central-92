@@ -5,7 +5,7 @@ import { Room, Lesson, Teacher, Group } from "@/types";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
-import { Edit2, X, Clock, User, Users } from "lucide-react";
+import { Edit2, X, Clock, User, Users, Eye } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 
 moment.locale("ru");
@@ -94,6 +94,11 @@ export default function RoomScheduleView({
   const activeRooms = rooms?.filter((room) => room.status === "active") || [];
 
   const handleSlotMouseDown = (timeSlot: string, roomId: string) => {
+    // If popover is open, don't start dragging
+    if (popoverOpen) {
+      return;
+    }
+    
     setIsDragging(true);
     setDragStart({ timeSlot, roomId });
     setDragEnd({ timeSlot, roomId });
@@ -167,7 +172,8 @@ export default function RoomScheduleView({
     setPopoverOpen(true);
   };
 
-  const handleEditClick = () => {
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (selectedLesson && onLessonClick) {
       setPopoverOpen(false);
       onLessonClick(selectedLesson);
@@ -231,11 +237,19 @@ export default function RoomScheduleView({
       return;
     }
     
-    onLessonUpdate(draggingLesson.id, {
-      start: tempLessonPosition.start,
-      end: tempLessonPosition.end,
-      roomId: tempLessonPosition.roomId,
-    });
+    // Check if the lesson was actually moved (not just clicked)
+    const startChanged = tempLessonPosition.start.getTime() !== draggingLesson.start.getTime();
+    const endChanged = tempLessonPosition.end.getTime() !== draggingLesson.end.getTime();
+    const roomChanged = tempLessonPosition.roomId !== draggingLesson.roomId;
+    
+    // Only update if position actually changed
+    if (startChanged || endChanged || roomChanged) {
+      onLessonUpdate(draggingLesson.id, {
+        start: tempLessonPosition.start,
+        end: tempLessonPosition.end,
+        roomId: tempLessonPosition.roomId,
+      });
+    }
     
     setDraggingLesson(null);
     setTempLessonPosition(null);
@@ -285,10 +299,17 @@ export default function RoomScheduleView({
       return;
     }
     
-    onLessonUpdate(resizingLesson.lesson.id, {
-      start: tempLessonPosition.start,
-      end: tempLessonPosition.end,
-    });
+    // Check if the lesson size was actually changed (not just clicked)
+    const startChanged = tempLessonPosition.start.getTime() !== resizingLesson.lesson.start.getTime();
+    const endChanged = tempLessonPosition.end.getTime() !== resizingLesson.lesson.end.getTime();
+    
+    // Only update if size actually changed
+    if (startChanged || endChanged) {
+      onLessonUpdate(resizingLesson.lesson.id, {
+        start: tempLessonPosition.start,
+        end: tempLessonPosition.end,
+      });
+    }
     
     setResizingLesson(null);
     setTempLessonPosition(null);
@@ -574,8 +595,8 @@ export default function RoomScheduleView({
                             onClick={handleEditClick}
                             className="flex-1"
                           >
-                            <Edit2 className="h-4 w-4 mr-2" />
-                            Редактировать
+                            <Eye className="h-4 w-4 mr-2" />
+                            Посмотреть
                           </Button>
                         </div>
                       </div>

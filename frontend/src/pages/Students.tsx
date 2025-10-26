@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { 
   useStudents, 
   useCreateStudent, 
@@ -7,13 +8,12 @@ import {
   useGroups,
   useStudentBalance,
   useStudentSubscriptions,
-  useStudentTransactions,
 } from "@/hooks/useData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Mail, Phone, Trash2, Edit, Loader2, DollarSign, Ticket, Receipt } from "lucide-react";
+import { Plus, Search, Mail, Phone, Trash2, Edit, Loader2, Eye, AlertCircle, Clock } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -31,6 +31,7 @@ import "moment/locale/ru";
 moment.locale("ru");
 
 export default function Students() {
+  const navigate = useNavigate();
   const { data: students = [], isLoading } = useStudents();
   const { data: groups = [] } = useGroups();
   const createStudent = useCreateStudent();
@@ -39,14 +40,7 @@ export default function Students() {
   
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
-  const [viewingStudent, setViewingStudent] = useState<Student | null>(null);
-
-  // Данные для просматриваемого студента
-  const { data: studentBalance } = useStudentBalance(viewingStudent?.id || "");
-  const { data: studentSubscriptions = [] } = useStudentSubscriptions(viewingStudent?.id || "");
-  const { data: studentTransactions = [] } = useStudentTransactions(viewingStudent?.id || "");
 
   const filteredStudents = students.filter(
     (student) =>
@@ -62,6 +56,7 @@ export default function Students() {
       age: parseInt(formData.get("age") as string),
       email: formData.get("email") as string,
       phone: formData.get("phone") as string,
+      status: "active" as const,
       subjects: (formData.get("subjects") as string).split(",").map((s) => s.trim()),
       groupIds: editingStudent?.groupIds || [],
     };
@@ -202,6 +197,20 @@ export default function Students() {
             student.groupIds && student.groupIds.includes(g.id)
           );
 
+          const statusColors: Record<string, string> = {
+            active: "bg-green-500",
+            inactive: "bg-gray-500",
+            frozen: "bg-blue-500",
+            graduated: "bg-purple-500",
+          };
+
+          const statusNames: Record<string, string> = {
+            active: "Активный",
+            inactive: "Неактивный",
+            frozen: "Заморожен",
+            graduated: "Закончил",
+          };
+
           return (
             <Card key={student.id} className="hover:shadow-md transition-shadow">
               <CardHeader>
@@ -217,6 +226,9 @@ export default function Students() {
                       </p>
                     </div>
                   </div>
+                  <Badge className={statusColors[student.status || "active"]}>
+                    {statusNames[student.status || "active"]}
+                  </Badge>
                 </div>
               </CardHeader>
               <CardContent>
@@ -256,12 +268,9 @@ export default function Students() {
                       variant="default"
                       size="sm"
                       className="flex-1"
-                      onClick={() => {
-                        setViewingStudent(student);
-                        setIsDetailsDialogOpen(true);
-                      }}
+                      onClick={() => navigate(`/students/${student.id}`)}
                     >
-                      <Receipt className="h-4 w-4 mr-1" />
+                      <Eye className="h-4 w-4 mr-1" />
                       Просмотр
                     </Button>
                     <Button
@@ -285,141 +294,6 @@ export default function Students() {
           );
         })}
       </div>
-
-      {/* Student Details Dialog */}
-      <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {viewingStudent?.name} - Детальная информация
-            </DialogTitle>
-          </DialogHeader>
-          
-          {viewingStudent && (
-            <Tabs defaultValue="balance">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="balance">
-                  <DollarSign className="h-4 w-4 mr-2" />
-                  Баланс
-                </TabsTrigger>
-                <TabsTrigger value="subscriptions">
-                  <Ticket className="h-4 w-4 mr-2" />
-                  Абонементы
-                </TabsTrigger>
-                <TabsTrigger value="transactions">
-                  <Receipt className="h-4 w-4 mr-2" />
-                  Платежи
-                </TabsTrigger>
-              </TabsList>
-
-              {/* Balance Tab */}
-              <TabsContent value="balance" className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <h3 className="text-lg font-semibold">Текущий баланс</h3>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold">
-                      {studentBalance ? (
-                        <span className={studentBalance.balance >= 0 ? "text-green-600" : "text-red-600"}>
-                          {studentBalance.balance.toLocaleString()} ₸
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">0 ₸</span>
-                      )}
-                    </div>
-                    {studentBalance?.lastPaymentDate && (
-                      <p className="text-sm text-muted-foreground mt-2">
-                        Последний платеж: {moment(studentBalance.lastPaymentDate).format("DD.MM.YYYY HH:mm")}
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              {/* Subscriptions Tab */}
-              <TabsContent value="subscriptions" className="space-y-4">
-                {studentSubscriptions.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">
-                    Нет активных абонементов
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {studentSubscriptions.map((sub) => (
-                      <Card key={sub.id}>
-                        <CardContent className="pt-6">
-                          <div className="flex justify-between items-start mb-2">
-                            <div>
-                              <h4 className="font-medium">Абонемент #{sub.id.substring(0, 8)}</h4>
-                              <p className="text-sm text-muted-foreground">
-                                Осталось уроков: {sub.lessonsRemaining}
-                              </p>
-                            </div>
-                            <Badge 
-                              variant={
-                                sub.status === "active" ? "default" : 
-                                sub.status === "frozen" ? "secondary" : 
-                                "destructive"
-                              }
-                            >
-                              {sub.status === "active" ? "Активный" : sub.status === "frozen" ? "Заморожен" : "Истёк"}
-                            </Badge>
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            <div>Начало: {moment(sub.startDate).format("DD.MM.YYYY")}</div>
-                            {sub.endDate && (
-                              <div>Окончание: {moment(sub.endDate).format("DD.MM.YYYY")}</div>
-                            )}
-                            {sub.freezeDaysRemaining > 0 && (
-                              <div className="text-blue-600">Заморозка: {sub.freezeDaysRemaining} дней</div>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
-
-              {/* Transactions Tab */}
-              <TabsContent value="transactions" className="space-y-4">
-                {studentTransactions.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">
-                    Нет истории платежей
-                  </p>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Дата</TableHead>
-                        <TableHead>Тип</TableHead>
-                        <TableHead>Способ</TableHead>
-                        <TableHead className="text-right">Сумма</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {studentTransactions.map((tx) => (
-                        <TableRow key={tx.id}>
-                          <TableCell>{moment(tx.createdAt).format("DD.MM.YYYY HH:mm")}</TableCell>
-                          <TableCell>
-                            <Badge variant={tx.type === "payment" ? "default" : tx.type === "refund" ? "destructive" : "secondary"}>
-                              {tx.type === "payment" ? "Платеж" : tx.type === "refund" ? "Возврат" : "Долг"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="capitalize">{tx.paymentMethod}</TableCell>
-                          <TableCell className="text-right font-medium">
-                            {tx.type === "payment" ? "+" : "-"}{tx.amount.toLocaleString()} ₸
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
-              </TabsContent>
-            </Tabs>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

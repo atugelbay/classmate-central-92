@@ -3,17 +3,22 @@ package handlers
 import (
 	"classmate-central/internal/models"
 	"classmate-central/internal/repository"
+	"classmate-central/internal/services"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
 type PaymentHandler struct {
-	repo *repository.PaymentRepository
+	repo            *repository.PaymentRepository
+	activityService *services.ActivityService
 }
 
-func NewPaymentHandler(repo *repository.PaymentRepository) *PaymentHandler {
-	return &PaymentHandler{repo: repo}
+func NewPaymentHandler(repo *repository.PaymentRepository, activityService *services.ActivityService) *PaymentHandler {
+	return &PaymentHandler{
+		repo:            repo,
+		activityService: activityService,
+	}
 }
 
 // CreateTransaction creates a new payment transaction
@@ -22,6 +27,13 @@ func (h *PaymentHandler) CreateTransaction(c *gin.Context) {
 	if err := c.ShouldBindJSON(&tx); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
+	}
+
+	// Get user ID from context (set by auth middleware)
+	if userID, exists := c.Get("userID"); exists {
+		if uid, ok := userID.(int); ok {
+			tx.CreatedBy = &uid
+		}
 	}
 
 	if err := h.repo.CreateTransaction(&tx); err != nil {
@@ -34,6 +46,9 @@ func (h *PaymentHandler) CreateTransaction(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update balance"})
 		return
 	}
+
+	// Log payment activity
+	_ = h.activityService.LogPayment(&tx)
 
 	c.JSON(http.StatusCreated, tx)
 }

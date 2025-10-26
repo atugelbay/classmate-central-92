@@ -2,10 +2,12 @@ import { useState } from "react";
 import moment from "moment";
 import "moment/locale/ru";
 
-import { useLessons, useCreateLesson, useUpdateLesson, useDeleteLesson, useTeachers, useGroups, useRooms, useCreateRoom } from "@/hooks/useData";
+import { useLessons, useCreateLesson, useUpdateLesson, useDeleteLesson, useTeachers, useGroups, useRooms, useCreateRoom, useStudents, useMarkAttendance } from "@/hooks/useData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Loader2, Trash2, ChevronLeft, ChevronRight, Building2, Calendar, CalendarDays, CalendarRange } from "lucide-react";
+import { Plus, Loader2, Trash2, ChevronLeft, ChevronRight, Building2, Calendar, CalendarDays, CalendarRange, CheckCircle2, XCircle, Clock, Edit, ClipboardCheck } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import RoomScheduleView from "@/components/RoomScheduleView";
 import WeekScheduleView from "@/components/WeekScheduleView";
 import MonthScheduleView from "@/components/MonthScheduleView";
@@ -46,19 +48,24 @@ export default function Schedule() {
   const { data: teachers = [] } = useTeachers();
   const { data: groups = [] } = useGroups();
   const { data: rooms = [] } = useRooms();
+  const { data: students = [] } = useStudents();
   const createLesson = useCreateLesson();
   const updateLesson = useUpdateLesson();
   const deleteLesson = useDeleteLesson();
   const createRoom = useCreateRoom();
+  const markAttendance = useMarkAttendance();
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isRoomDialogOpen, setIsRoomDialogOpen] = useState(false);
+  const [isLessonDetailsDialogOpen, setIsLessonDetailsDialogOpen] = useState(false);
+  const [isAttendanceDialogOpen, setIsAttendanceDialogOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<{ start: Date; end: Date; roomId?: string } | null>(null);
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<"day" | "week" | "month">("day");
+  const [attendanceData, setAttendanceData] = useState<Record<string, { status: string; reason: string; notes: string }>>({});
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -154,7 +161,32 @@ export default function Schedule() {
 
   const handleLessonClick = (lesson: Lesson) => {
     setSelectedLesson(lesson);
-    setIsEditDialogOpen(true);
+    setIsLessonDetailsDialogOpen(true);
+  };
+
+  const handleOpenAttendance = () => {
+    if (!selectedLesson) return;
+    
+    // Initialize attendance data for all students in the lesson
+    const initialData: Record<string, { status: string; reason: string; notes: string }> = {};
+    
+    // Get students from group or lesson
+    let lessonStudentIds: string[] = [];
+    if (selectedLesson.groupId) {
+      const group = groups.find(g => g.id === selectedLesson.groupId);
+      if (group) {
+        lessonStudentIds = group.studentIds || [];
+      }
+    }
+    lessonStudentIds = [...new Set([...lessonStudentIds, ...(selectedLesson.studentIds || [])])];
+    
+    lessonStudentIds.forEach(studentId => {
+      initialData[studentId] = { status: "attended", reason: "", notes: "" };
+    });
+    
+    setAttendanceData(initialData);
+    setIsLessonDetailsDialogOpen(false);
+    setIsAttendanceDialogOpen(true);
   };
 
   const handleSlotClick = (start: Date, end: Date, roomId: string) => {
@@ -248,6 +280,61 @@ export default function Schedule() {
     } catch (error) {
       toast.error("Ошибка при создании аудитории");
     }
+  };
+
+  const handleAttendanceSubmit = async () => {
+    if (!selectedLesson) return;
+
+    try {
+      // Mark attendance for all students
+      const promises = Object.entries(attendanceData).map(([studentId, data]) => {
+        return markAttendance.mutateAsync({
+          lessonId: selectedLesson.id,
+          studentId,
+          status: data.status as any,
+          reason: data.reason || undefined,
+          notes: data.notes || undefined,
+        } as any);
+      });
+
+      await Promise.all(promises);
+      setIsAttendanceDialogOpen(false);
+      setSelectedLesson(null);
+      setAttendanceData({});
+      toast.success("Посещаемость отмечена");
+    } catch (error) {
+      toast.error("Ошибка при отметке посещаемости");
+    }
+  };
+
+  const updateAttendanceStatus = (studentId: string, status: string) => {
+    setAttendanceData(prev => ({
+      ...prev,
+      [studentId]: {
+        ...prev[studentId],
+        status,
+      },
+    }));
+  };
+
+  const updateAttendanceReason = (studentId: string, reason: string) => {
+    setAttendanceData(prev => ({
+      ...prev,
+      [studentId]: {
+        ...prev[studentId],
+        reason,
+      },
+    }));
+  };
+
+  const updateAttendanceNotes = (studentId: string, notes: string) => {
+    setAttendanceData(prev => ({
+      ...prev,
+      [studentId]: {
+        ...prev[studentId],
+        notes,
+      },
+    }));
   };
 
   if (isLoading) {
@@ -676,6 +763,271 @@ export default function Schedule() {
                 </div>
               </div>
             </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Lesson Details Dialog */}
+      <Dialog open={isLessonDetailsDialogOpen} onOpenChange={setIsLessonDetailsDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{selectedLesson?.title}</DialogTitle>
+          </DialogHeader>
+          {selectedLesson && (
+            <div className="space-y-6">
+              {/* Lesson Information */}
+              <div className="bg-muted p-4 rounded-lg space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-sm text-muted-foreground">Дата</span>
+                    <p className="font-medium">{moment(selectedLesson.start).format("DD MMMM YYYY")}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm text-muted-foreground">Время</span>
+                    <p className="font-medium">
+                      {moment(selectedLesson.start).format("HH:mm")} - {moment(selectedLesson.end).format("HH:mm")}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-sm text-muted-foreground">Предмет</span>
+                    <p className="font-medium">{selectedLesson.subject}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm text-muted-foreground">Преподаватель</span>
+                    <p className="font-medium">
+                      {teachers.find(t => t.id === selectedLesson.teacherId)?.name || "—"}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-sm text-muted-foreground">Аудитория</span>
+                    <p className="font-medium">{selectedLesson.room || "—"}</p>
+                  </div>
+                  {selectedLesson.groupId && (
+                    <div>
+                      <span className="text-sm text-muted-foreground">Группа</span>
+                      <p className="font-medium">
+                        {groups.find(g => g.id === selectedLesson.groupId)?.name || "—"}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Students List */}
+              {(() => {
+                let lessonStudentIds: string[] = [];
+                if (selectedLesson.groupId) {
+                  const group = groups.find(g => g.id === selectedLesson.groupId);
+                  if (group) {
+                    lessonStudentIds = group.studentIds || [];
+                  }
+                }
+                lessonStudentIds = [...new Set([...lessonStudentIds, ...(selectedLesson.studentIds || [])])];
+
+                return lessonStudentIds.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-semibold mb-2">Ученики ({lessonStudentIds.length})</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {lessonStudentIds.map(studentId => {
+                        const student = students.find(s => s.id === studentId);
+                        return student ? (
+                          <div
+                            key={studentId}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-accent/10 rounded-md text-sm"
+                          >
+                            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-accent/20 text-xs font-semibold">
+                              {student.name.charAt(0)}
+                            </div>
+                            <span>{student.name}</span>
+                          </div>
+                        ) : null;
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Action Buttons */}
+              <div className="flex justify-between pt-4 border-t">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsLessonDetailsDialogOpen(false);
+                    setSelectedLesson(null);
+                  }}
+                >
+                  Закрыть
+                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsLessonDetailsDialogOpen(false);
+                      setIsEditDialogOpen(true);
+                    }}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Редактировать урок
+                  </Button>
+                  <Button onClick={handleOpenAttendance}>
+                    <ClipboardCheck className="h-4 w-4 mr-2" />
+                    Отметить посещаемость
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Attendance Dialog */}
+      <Dialog open={isAttendanceDialogOpen} onOpenChange={setIsAttendanceDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Отметка посещаемости: {selectedLesson?.title}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedLesson && (
+            <div className="space-y-4">
+              <div className="bg-muted p-4 rounded-lg">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Дата:</span>{" "}
+                    <span className="font-medium">{moment(selectedLesson.start).format("DD.MM.YYYY")}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Время:</span>{" "}
+                    <span className="font-medium">
+                      {moment(selectedLesson.start).format("HH:mm")} - {moment(selectedLesson.end).format("HH:mm")}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Предмет:</span>{" "}
+                    <span className="font-medium">{selectedLesson.subject}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Преподаватель:</span>{" "}
+                    <span className="font-medium">
+                      {teachers.find(t => t.id === selectedLesson.teacherId)?.name}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h3 className="font-semibold">Ученики ({Object.keys(attendanceData).length})</h3>
+                {Object.keys(attendanceData).length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">
+                    Нет учеников в этом уроке. Добавьте группу к уроку или добавьте учеников вручную.
+                  </p>
+                ) : (
+                  Object.keys(attendanceData).map((studentId) => {
+                    const student = students.find(s => s.id === studentId);
+                    if (!student) return null;
+
+                    const data = attendanceData[studentId];
+
+                    return (
+                      <Card key={studentId} className="p-4">
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/10 text-sm font-semibold text-accent">
+                                {student.name.charAt(0)}
+                              </div>
+                              <div>
+                                <h4 className="font-medium">{student.name}</h4>
+                                <p className="text-xs text-muted-foreground">{student.email}</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-3 gap-2">
+                            <Button
+                              variant={data.status === "attended" ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => updateAttendanceStatus(studentId, "attended")}
+                              className="w-full"
+                            >
+                              <CheckCircle2 className="h-4 w-4 mr-2" />
+                              Присутствовал
+                            </Button>
+                            <Button
+                              variant={data.status === "missed" ? "destructive" : "outline"}
+                              size="sm"
+                              onClick={() => updateAttendanceStatus(studentId, "missed")}
+                              className="w-full"
+                            >
+                              <XCircle className="h-4 w-4 mr-2" />
+                              Отсутствовал
+                            </Button>
+                            <Button
+                              variant={data.status === "cancelled" ? "secondary" : "outline"}
+                              size="sm"
+                              onClick={() => updateAttendanceStatus(studentId, "cancelled")}
+                              className="w-full"
+                            >
+                              <Clock className="h-4 w-4 mr-2" />
+                              Отменен
+                            </Button>
+                          </div>
+
+                          {data.status === "missed" && (
+                            <div className="space-y-2">
+                              <Label htmlFor={`reason-${studentId}`}>Причина пропуска</Label>
+                              <Input
+                                id={`reason-${studentId}`}
+                                placeholder="Укажите причину..."
+                                value={data.reason}
+                                onChange={(e) => updateAttendanceReason(studentId, e.target.value)}
+                              />
+                            </div>
+                          )}
+
+                          <div className="space-y-2">
+                            <Label htmlFor={`notes-${studentId}`}>Заметки (опционально)</Label>
+                            <Textarea
+                              id={`notes-${studentId}`}
+                              placeholder="Дополнительные заметки..."
+                              value={data.notes}
+                              onChange={(e) => updateAttendanceNotes(studentId, e.target.value)}
+                              rows={2}
+                            />
+                          </div>
+                        </div>
+                      </Card>
+                    );
+                  })
+                )}
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsAttendanceDialogOpen(false);
+                    setSelectedLesson(null);
+                    setAttendanceData({});
+                  }}
+                >
+                  Отмена
+                </Button>
+                <Button
+                  onClick={handleAttendanceSubmit}
+                  disabled={Object.keys(attendanceData).length === 0 || markAttendance.isPending}
+                >
+                  {markAttendance.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Сохранение...
+                    </>
+                  ) : (
+                    "Сохранить посещаемость"
+                  )}
+                </Button>
+              </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>

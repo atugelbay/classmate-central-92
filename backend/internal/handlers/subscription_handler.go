@@ -3,6 +3,7 @@ package handlers
 import (
 	"classmate-central/internal/models"
 	"classmate-central/internal/repository"
+	"classmate-central/internal/services"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -10,11 +11,21 @@ import (
 )
 
 type SubscriptionHandler struct {
-	repo *repository.SubscriptionRepository
+	repo              *repository.SubscriptionRepository
+	attendanceService *services.AttendanceService
+	activityService   *services.ActivityService
 }
 
-func NewSubscriptionHandler(repo *repository.SubscriptionRepository) *SubscriptionHandler {
-	return &SubscriptionHandler{repo: repo}
+func NewSubscriptionHandler(
+	repo *repository.SubscriptionRepository,
+	attendanceService *services.AttendanceService,
+	activityService *services.ActivityService,
+) *SubscriptionHandler {
+	return &SubscriptionHandler{
+		repo:              repo,
+		attendanceService: attendanceService,
+		activityService:   activityService,
+	}
 }
 
 // ============= Subscription Types =============
@@ -217,13 +228,23 @@ func (h *SubscriptionHandler) UpdateFreeze(c *gin.Context) {
 // ============= Lesson Attendance =============
 
 func (h *SubscriptionHandler) MarkAttendance(c *gin.Context) {
-	var attendance models.LessonAttendance
-	if err := c.ShouldBindJSON(&attendance); err != nil {
+	var req models.MarkAttendanceRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	if err := h.repo.MarkAttendance(&attendance); err != nil {
+	// Get user ID from context (set by auth middleware)
+	var markedBy *int
+	if userID, exists := c.Get("userID"); exists {
+		if uid, ok := userID.(int); ok {
+			markedBy = &uid
+		}
+	}
+
+	// Use attendance service to mark attendance with automatic deduction
+	attendance, err := h.attendanceService.MarkAttendanceWithDeduction(&req, markedBy)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

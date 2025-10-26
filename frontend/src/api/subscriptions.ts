@@ -4,6 +4,7 @@ import {
   StudentSubscription,
   SubscriptionFreeze,
   LessonAttendance,
+  MarkAttendanceRequest,
 } from "@/types";
 
 // ============= Subscription Types =============
@@ -113,7 +114,7 @@ export const updateFreeze = async (
 // ============= Lesson Attendance =============
 
 export const markAttendance = async (
-  data: Omit<LessonAttendance, "id" | "markedAt">
+  data: MarkAttendanceRequest
 ): Promise<LessonAttendance> => {
   const response = await apiClient.post("/attendance", data);
   return response.data;

@@ -8,6 +8,7 @@ import (
 	"classmate-central/internal/handlers"
 	"classmate-central/internal/middleware"
 	"classmate-central/internal/repository"
+	"classmate-central/internal/services"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -44,20 +45,27 @@ func main() {
 	tariffRepo := repository.NewTariffRepository(db.DB)
 	debtRepo := repository.NewDebtRepository(db.DB)
 	subscriptionRepo := repository.NewSubscriptionRepository(db.DB)
+	activityRepo := repository.NewActivityRepository(db.DB)
+	notificationRepo := repository.NewNotificationRepository(db.DB)
+
+	// Initialize services
+	activityService := services.NewActivityService(activityRepo)
+	_ = services.NewNotificationService(notificationRepo, debtRepo, subscriptionRepo) // Can be used for scheduled tasks
+	attendanceService := services.NewAttendanceService(subscriptionRepo, activityRepo, notificationRepo, db.DB)
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(userRepo)
 	teacherHandler := handlers.NewTeacherHandler(teacherRepo)
-	studentHandler := handlers.NewStudentHandler(studentRepo)
+	studentHandler := handlers.NewStudentHandler(studentRepo, activityRepo, notificationRepo, activityService)
 	groupHandler := handlers.NewGroupHandler(groupRepo)
 	lessonHandler := handlers.NewLessonHandler(lessonRepo)
 	settingsHandler := handlers.NewSettingsHandler(settingsRepo)
 	roomHandler := handlers.NewRoomHandler(roomRepo)
 	leadHandler := handlers.NewLeadHandler(leadRepo)
-	paymentHandler := handlers.NewPaymentHandler(paymentRepo)
+	paymentHandler := handlers.NewPaymentHandler(paymentRepo, activityService)
 	tariffHandler := handlers.NewTariffHandler(tariffRepo)
 	debtHandler := handlers.NewDebtHandler(debtRepo)
-	subscriptionHandler := handlers.NewSubscriptionHandler(subscriptionRepo)
+	subscriptionHandler := handlers.NewSubscriptionHandler(subscriptionRepo, attendanceService, activityService)
 
 	// Initialize Gin
 	router := gin.Default()
@@ -93,6 +101,15 @@ func main() {
 		api.POST("/students", studentHandler.Create)
 		api.PUT("/students/:id", studentHandler.Update)
 		api.DELETE("/students/:id", studentHandler.Delete)
+
+		// Student Activities, Notes, and Status
+		api.GET("/students/:id/activities", studentHandler.GetActivities)
+		api.POST("/students/:id/notes", studentHandler.AddNote)
+		api.GET("/students/:id/notes", studentHandler.GetNotes)
+		api.PUT("/students/:id/status", studentHandler.UpdateStatus)
+		api.GET("/students/:id/attendance", studentHandler.GetAttendanceJournal)
+		api.GET("/students/:id/notifications", studentHandler.GetNotifications)
+		api.PUT("/notifications/:notificationId/read", studentHandler.MarkNotificationRead)
 
 		// Groups
 		api.GET("/groups", groupHandler.GetAll)

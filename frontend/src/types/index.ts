@@ -9,12 +9,15 @@ export interface Teacher {
   workload: number; // lessons per week
 }
 
+export type StudentStatus = "active" | "inactive" | "frozen" | "graduated";
+
 export interface Student {
   id: string;
   name: string;
   age: number;
   email: string;
   phone: string;
+  status: StudentStatus;
   subjects: string[];
   groupIds: string[];
   avatar?: string;
@@ -186,6 +189,92 @@ export interface LessonAttendance {
   studentId: string;
   subscriptionId?: string;
   status: "attended" | "missed" | "cancelled";
+  reason?: string;
+  notes?: string;
   markedAt: string;
   markedBy?: number;
+}
+
+// ============= STUDENT MANAGEMENT MODULE =============
+
+export type StudentActivityType = 
+  | "payment"
+  | "attendance"
+  | "subscription_change"
+  | "status_change"
+  | "note"
+  | "debt_created"
+  | "freeze";
+
+export interface StudentActivityLog {
+  id: number;
+  studentId: string;
+  activityType: StudentActivityType;
+  description: string;
+  metadata?: string; // JSON string
+  createdBy?: number;
+  createdAt: string;
+}
+
+export interface StudentNote {
+  id: number;
+  studentId: string;
+  note: string;
+  createdBy?: number;
+  createdAt: string;
+}
+
+export type NotificationType = 
+  | "debt_reminder"
+  | "subscription_expiring"
+  | "subscription_expired";
+
+export interface Notification {
+  id: number;
+  studentId: string;
+  type: NotificationType;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export interface AttendanceStats {
+  totalLessons: number;
+  attended: number;
+  missed: number;
+  cancelled: number;
+  attendanceRate: number;
+}
+
+export interface AttendanceJournalEntry {
+  attendanceId: number;
+  lessonId: string;
+  lessonTitle: string;
+  subject: string;
+  teacherName: string;
+  groupName?: string;
+  startTime: string;
+  endTime: string;
+  status: "attended" | "missed" | "cancelled";
+  reason?: string;
+  notes?: string;
+  subscriptionId?: string;
+  markedAt: string;
+}
+
+export interface StudentDetailedInfo {
+  student: Student;
+  balance?: StudentBalance;
+  activeSubscriptions: StudentSubscription[];
+  recentActivities: StudentActivityLog[];
+  attendanceStats: AttendanceStats;
+  unreadNotifications: number;
+}
+
+export interface MarkAttendanceRequest {
+  lessonId: string;
+  studentId: string;
+  status: "attended" | "missed" | "cancelled";
+  reason?: string;
+  notes?: string;
 }
