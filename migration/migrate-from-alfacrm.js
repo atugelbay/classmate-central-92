@@ -36,13 +36,25 @@ const ALFACRM_API_KEY = process.env.ALFACRM_API_KEY;
 const COMPANY_ID = process.env.COMPANY_ID || uuidv4();
 const COMPANY_NAME = process.env.COMPANY_NAME || 'My Company';
 
-const pool = new Pool({
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
-  database: process.env.DB_NAME,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
+// Support both Railway (PG*) and standard (DB_*) env vars
+const dbConfig = {
+  host: process.env.DB_HOST || process.env.PGHOST,
+  port: process.env.DB_PORT || process.env.PGPORT,
+  database: process.env.DB_NAME || process.env.PGDATABASE,
+  user: process.env.DB_USER || process.env.PGUSER,
+  password: process.env.DB_PASSWORD || process.env.PGPASSWORD,
+};
+
+// Debug: log DB config (hide password)
+console.log('📊 Database config:', {
+  host: dbConfig.host,
+  port: dbConfig.port,
+  database: dbConfig.database,
+  user: dbConfig.user,
+  password: dbConfig.password ? '***' : 'NOT SET'
 });
+
+const pool = new Pool(dbConfig);
 
 let alfacrmToken = null;
 
