@@ -1,17 +1,15 @@
 import { useState } from "react";
-import { Calendar, momentLocalizer, SlotInfo, Formats, Event } from "react-big-calendar";
-import withDragAndDrop from "react-big-calendar/lib/addons/dragAndDrop";
 import moment from "moment";
 import "moment/locale/ru";
-import "react-big-calendar/lib/css/react-big-calendar.css";
-import "react-big-calendar/lib/addons/dragAndDrop/styles.css";
-import { useLessons, useCreateLesson, useUpdateLesson, useDeleteLesson, useTeachers, useGroups, useRooms } from "@/hooks/useData";
+
+import { useLessons, useCreateLesson, useUpdateLesson, useDeleteLesson, useTeachers, useGroups, useRooms, useCreateRoom } from "@/hooks/useData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Loader2, Calendar as CalendarIcon, Building2, Trash2 } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
+import { Plus, Loader2, Trash2, ChevronLeft, ChevronRight, Building2, Calendar, CalendarDays, CalendarRange } from "lucide-react";
 import RoomScheduleView from "@/components/RoomScheduleView";
+import WeekScheduleView from "@/components/WeekScheduleView";
+import MonthScheduleView from "@/components/MonthScheduleView";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -41,32 +39,7 @@ import {
 import { Lesson } from "@/types";
 import { toast } from "sonner";
 
-// Настройка русской локали и 24-часового формата
 moment.locale("ru");
-
-const localizer = momentLocalizer(moment);
-const DragAndDropCalendar = withDragAndDrop(Calendar);
-
-// 24-часовой формат времени
-const formats: Formats = {
-  timeGutterFormat: "HH:mm",
-  eventTimeRangeFormat: ({ start, end }: any) => {
-    return `${moment(start).format("HH:mm")} - ${moment(end).format("HH:mm")}`;
-  },
-  agendaTimeRangeFormat: ({ start, end }: any) => {
-    return `${moment(start).format("HH:mm")} - ${moment(end).format("HH:mm")}`;
-  },
-  dayHeaderFormat: "dddd, D MMMM",
-  dayRangeHeaderFormat: ({ start, end }: any) => {
-    return `${moment(start).format("D MMMM")} - ${moment(end).format("D MMMM")}`;
-  },
-  agendaHeaderFormat: ({ start, end }: any) => {
-    return `${moment(start).format("D MMMM")} - ${moment(end).format("D MMMM YYYY")}`;
-  },
-  monthHeaderFormat: "MMMM YYYY",
-  agendaDateFormat: "ddd D MMM",
-  weekdayFormat: "ddd",
-};
 
 export default function Schedule() {
   const { data: lessons = [], isLoading } = useLessons();
@@ -76,51 +49,16 @@ export default function Schedule() {
   const createLesson = useCreateLesson();
   const updateLesson = useUpdateLesson();
   const deleteLesson = useDeleteLesson();
+  const createRoom = useCreateRoom();
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedSlot, setSelectedSlot] = useState<{ start: Date; end: Date } | null>(null);
+  const [isRoomDialogOpen, setIsRoomDialogOpen] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState<{ start: Date; end: Date; roomId?: string } | null>(null);
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
-  const [viewMode, setViewMode] = useState<"calendar" | "rooms">("calendar");
-  const [roomViewDate, setRoomViewDate] = useState<Date>(new Date());
-
-  const events = lessons.map((lesson) => ({
-    id: lesson.id,
-    title: lesson.title,
-    start: new Date(lesson.start),
-    end: new Date(lesson.end),
-    resource: lesson,
-  }));
-
-  // Custom event component for calendar
-  const EventComponent = ({ event }: { event: Event }) => {
-    const lesson = event.resource as Lesson;
-    const teacher = teachers.find((t) => t.id === lesson.teacherId);
-    const group = groups.find((g) => g.id === lesson.groupId);
-    const room = rooms.find((r) => r.id === lesson.roomId);
-
-    return (
-      <div 
-        className="h-full p-1 overflow-hidden border-l-4 rounded-sm bg-white dark:bg-gray-800" 
-        style={{ 
-          fontSize: "0.75rem",
-          borderLeftColor: room?.color || "#8B5CF6",
-        }}
-      >
-        <div className="font-semibold truncate">{lesson.title}</div>
-        <div className="text-muted-foreground truncate text-xs">{teacher?.name}</div>
-        {group && (
-          <Badge variant="outline" className="text-xs mt-1">
-            {group.name}
-          </Badge>
-        )}
-        <div className="text-muted-foreground mt-1 text-xs">
-          {moment(lesson.start).format("HH:mm")} - {moment(lesson.end).format("HH:mm")}
-        </div>
-      </div>
-    );
-  };
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [viewMode, setViewMode] = useState<"day" | "week" | "month">("day");
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -133,6 +71,9 @@ export default function Schedule() {
     const start = new Date(`${startDate}T${startTime}`);
     const end = new Date(`${startDate}T${endTime}`);
 
+    const roomId = formData.get("roomId") as string;
+    const selectedRoom = rooms.find(r => r.id === roomId);
+
     const lessonData = {
       title: formData.get("title") as string,
       teacherId: formData.get("teacherId") as string,
@@ -140,8 +81,8 @@ export default function Schedule() {
       subject: formData.get("subject") as string,
       start,
       end,
-      room: formData.get("room") as string,
-      roomId: formData.get("roomId") as string,
+      room: selectedRoom?.name || "",
+      roomId: roomId,
       status: "scheduled" as const,
       studentIds: [],
     };
@@ -150,63 +91,12 @@ export default function Schedule() {
       await createLesson.mutateAsync(lessonData as any);
       setIsDialogOpen(false);
       setSelectedSlot(null);
+      toast.success("Урок создан");
     } catch (error) {
-      // Error is handled by the mutation
+      toast.error("Ошибка при создании урока");
     }
   };
 
-  const handleSelectSlot = (slotInfo: SlotInfo) => {
-    // Если это выделение промежутка, используем start и end из слота
-    // Если это клик, end будет равен start, добавим 2 часа
-    let start = slotInfo.start;
-    let end = slotInfo.end;
-    
-    // Проверяем если это просто клик (start === end), добавляем 2 часа
-    if (start.getTime() === end.getTime()) {
-      end = new Date(start.getTime() + 2 * 60 * 60 * 1000); // +2 часа
-    }
-    
-    setSelectedSlot({ start, end });
-    setIsDialogOpen(true);
-  };
-
-  const handleEventDrop = async ({ event, start, end }: any) => {
-    try {
-      const lesson = lessons.find(l => l.id === event.id);
-      if (!lesson) return;
-
-      await updateLesson.mutateAsync({
-        id: lesson.id,
-        data: {
-          ...lesson,
-          start: new Date(start),
-          end: new Date(end),
-        },
-      });
-      toast.success("Урок перемещен");
-    } catch (error) {
-      toast.error("Ошибка при перемещении урока");
-    }
-  };
-
-  const handleEventResize = async ({ event, start, end }: any) => {
-    try {
-      const lesson = lessons.find(l => l.id === event.id);
-      if (!lesson) return;
-
-      await updateLesson.mutateAsync({
-        id: lesson.id,
-        data: {
-          ...lesson,
-          start: new Date(start),
-          end: new Date(end),
-        },
-      });
-      toast.success("Длительность урока изменена");
-    } catch (error) {
-      toast.error("Ошибка при изменении урока");
-    }
-  };
 
   const handleEditSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -220,6 +110,9 @@ export default function Schedule() {
     const start = new Date(`${startDate}T${startTime}`);
     const end = new Date(`${startDate}T${endTime}`);
 
+    const roomId = formData.get("roomId") as string;
+    const selectedRoom = rooms.find(r => r.id === roomId);
+
     const lessonData = {
       title: formData.get("title") as string,
       teacherId: formData.get("teacherId") as string,
@@ -227,8 +120,8 @@ export default function Schedule() {
       subject: formData.get("subject") as string,
       start,
       end,
-      room: formData.get("room") as string,
-      roomId: formData.get("roomId") as string,
+      room: selectedRoom?.name || selectedLesson.room,
+      roomId: roomId,
       status: selectedLesson.status,
       studentIds: selectedLesson.studentIds,
     };
@@ -264,6 +157,99 @@ export default function Schedule() {
     setIsEditDialogOpen(true);
   };
 
+  const handleSlotClick = (start: Date, end: Date, roomId: string) => {
+    setSelectedSlot({ start, end, roomId });
+    setIsDialogOpen(true);
+  };
+
+  const handleLessonUpdate = async (lessonId: string, updates: { start: Date; end: Date; roomId?: string }) => {
+    const lesson = lessons.find(l => l.id === lessonId);
+    if (!lesson) return;
+
+    const updatedData = {
+      ...lesson,
+      start: updates.start,
+      end: updates.end,
+      roomId: updates.roomId || lesson.roomId,
+      room: updates.roomId ? rooms.find(r => r.id === updates.roomId)?.name || lesson.room : lesson.room,
+    };
+
+    try {
+      await updateLesson.mutateAsync({
+        id: lessonId,
+        data: updatedData as any,
+      });
+      toast.success("Урок обновлен");
+    } catch (error) {
+      toast.error("Ошибка при обновлении урока");
+    }
+  };
+
+  const handlePrevious = () => {
+    let newDate: Date;
+    if (viewMode === "day") {
+      newDate = moment(selectedDate).subtract(1, "day").toDate();
+    } else if (viewMode === "week") {
+      newDate = moment(selectedDate).subtract(1, "week").toDate();
+    } else {
+      newDate = moment(selectedDate).subtract(1, "month").toDate();
+    }
+    setSelectedDate(newDate);
+  };
+
+  const handleNext = () => {
+    let newDate: Date;
+    if (viewMode === "day") {
+      newDate = moment(selectedDate).add(1, "day").toDate();
+    } else if (viewMode === "week") {
+      newDate = moment(selectedDate).add(1, "week").toDate();
+    } else {
+      newDate = moment(selectedDate).add(1, "month").toDate();
+    }
+    setSelectedDate(newDate);
+  };
+
+  const handleToday = () => {
+    setSelectedDate(new Date());
+  };
+
+  const getDateRangeText = () => {
+    if (viewMode === "day") {
+      return moment(selectedDate).format("D MMMM YYYY, dddd");
+    } else if (viewMode === "week") {
+      const weekStart = moment(selectedDate).startOf('isoWeek');
+      const weekEnd = moment(selectedDate).endOf('isoWeek');
+      return `${weekStart.format("D MMM")} - ${weekEnd.format("D MMM YYYY")}`;
+    } else {
+      return moment(selectedDate).format("MMMM YYYY");
+    }
+  };
+
+  const handleDateClick = (date: Date) => {
+    setSelectedDate(date);
+    setViewMode("day");
+  };
+
+  const handleRoomSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    
+    const roomData = {
+      name: formData.get("name") as string,
+      capacity: parseInt(formData.get("capacity") as string),
+      color: formData.get("color") as string,
+      status: (formData.get("status") as "active" | "inactive") || "active",
+    };
+
+    try {
+      await createRoom.mutateAsync(roomData);
+      setIsRoomDialogOpen(false);
+      toast.success("Аудитория создана");
+    } catch (error) {
+      toast.error("Ошибка при создании аудитории");
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -273,21 +259,88 @@ export default function Schedule() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in-up">
+    <div className="space-y-6 animate-fade-in-up min-w-0">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Расписание</h1>
+          <h1 className="text-3xl font-bold">Расписание по аудиториям</h1>
           <p className="text-muted-foreground">
-            Управление учебным расписанием
+            Кликните на временной слот для создания урока
           </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Добавить урок
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Dialog open={isRoomDialogOpen} onOpenChange={setIsRoomDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Building2 className="mr-2 h-4 w-4" />
+                Добавить аудиторию
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Новая аудитория</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleRoomSubmit} className="space-y-4">
+                <div>
+                  <Label htmlFor="room-name">Название</Label>
+                  <Input
+                    id="room-name"
+                    name="name"
+                    required
+                    placeholder="Например: Аудитория 101"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="room-capacity">Вместимость</Label>
+                  <Input
+                    id="room-capacity"
+                    name="capacity"
+                    type="number"
+                    min="1"
+                    defaultValue={10}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="room-color">Цвет</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="room-color"
+                      name="color"
+                      type="color"
+                      defaultValue="#8B5CF6"
+                      className="w-20 h-10"
+                    />
+                    <span className="text-sm text-muted-foreground flex items-center">
+                      Цвет для визуального отображения
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="room-status">Статус</Label>
+                  <Select name="status" defaultValue="active">
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Активна</SelectItem>
+                      <SelectItem value="inactive">Неактивна</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button type="submit" className="w-full">
+                  Создать аудиторию
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+          
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Добавить урок
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Новый урок</DialogTitle>
@@ -376,14 +429,10 @@ export default function Schedule() {
                 </div>
               </div>
               <div>
-                <Label htmlFor="room">Название аудитории</Label>
-                <Input id="room" name="room" required placeholder="Например: Аудитория 101" />
-              </div>
-              <div>
-                <Label htmlFor="roomId">Аудитория (из списка)</Label>
-                <Select name="roomId">
+                <Label htmlFor="roomId">Аудитория</Label>
+                <Select name="roomId" required defaultValue={selectedSlot?.roomId}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Выберите аудиторию (необязательно)" />
+                    <SelectValue placeholder="Выберите аудиторию" />
                   </SelectTrigger>
                   <SelectContent>
                     {rooms && rooms.length > 0 ? (
@@ -405,84 +454,89 @@ export default function Schedule() {
               </Button>
             </form>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
-      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "calendar" | "rooms")}>
-        <TabsList className="mb-4">
-          <TabsTrigger value="calendar" className="flex items-center gap-2">
-            <CalendarIcon className="h-4 w-4" />
-            Календарь
-          </TabsTrigger>
-          <TabsTrigger value="rooms" className="flex items-center gap-2">
-            <Building2 className="h-4 w-4" />
-            По аудиториям
-          </TabsTrigger>
-        </TabsList>
+      {/* View Mode and Date Navigation */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handlePrevious}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleToday}>
+            Сегодня
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleNext}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+        
+        <h3 className="text-lg font-semibold">
+          {getDateRangeText()}
+        </h3>
+        
+        <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as "day" | "week" | "month")}>
+          <TabsList>
+            <TabsTrigger value="day" className="gap-2">
+              <Calendar className="h-4 w-4" />
+              День
+            </TabsTrigger>
+            <TabsTrigger value="week" className="gap-2">
+              <CalendarDays className="h-4 w-4" />
+              Неделя
+            </TabsTrigger>
+            <TabsTrigger value="month" className="gap-2">
+              <CalendarRange className="h-4 w-4" />
+              Месяц
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
 
-        <TabsContent value="calendar">
-          <Card>
-            <CardHeader>
-              <CardTitle>Календарь занятий</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[600px]">
-                <DragAndDropCalendar
-              localizer={localizer}
-              events={events}
-              startAccessor="start"
-              endAccessor="end"
-              style={{ height: "100%" }}
-              views={["month", "week", "day", "agenda"]}
-              defaultView="week"
-              selectable
-              onSelectSlot={handleSelectSlot}
-              onSelectEvent={(event) => {
-                const lesson = lessons.find(l => l.id === event.id);
-                if (lesson) handleLessonClick(lesson);
-              }}
-              // Drag & Drop support
-              draggableAccessor={() => true}
-              resizable
-              onEventDrop={handleEventDrop}
-              onEventResize={handleEventResize}
-              step={30}
-              showMultiDayTimes
-              // Time range: 9:00 - 22:00
-              min={new Date(1970, 1, 1, 9, 0, 0)}
-              max={new Date(1970, 1, 1, 22, 0, 0)}
-              // 24-часовой формат
-              formats={formats}
-              culture="ru"
-              // Custom event component
-              components={{
-                event: EventComponent,
-              }}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+      <Card className="min-w-0">
+        <CardHeader>
+          <CardTitle>
+            {viewMode === "day" && "Расписание по аудиториям"}
+            {viewMode === "week" && "Расписание на неделю"}
+            {viewMode === "month" && "Календарь на месяц"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="min-w-0">
+          {viewMode === "day" && (
+            <RoomScheduleView
+              rooms={rooms}
+              lessons={lessons}
+              teachers={teachers}
+              groups={groups}
+              selectedDate={selectedDate}
+              onLessonClick={handleLessonClick}
+              onSlotClick={handleSlotClick}
+              onLessonUpdate={handleLessonUpdate}
+            />
+          )}
+          {viewMode === "week" && (
+            <WeekScheduleView
+              rooms={rooms}
+              lessons={lessons}
+              teachers={teachers}
+              groups={groups}
+              selectedDate={selectedDate}
+              onLessonClick={handleLessonClick}
+              onSlotClick={handleSlotClick}
+              onLessonUpdate={handleLessonUpdate}
+            />
+          )}
+          {viewMode === "month" && (
+            <MonthScheduleView
+              lessons={lessons}
+              selectedDate={selectedDate}
+              onDateClick={handleDateClick}
+            />
+          )}
+        </CardContent>
+      </Card>
 
-        <TabsContent value="rooms">
-          <Card>
-            <CardHeader>
-              <CardTitle>Расписание по аудиториям</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <RoomScheduleView
-                rooms={rooms}
-                lessons={lessons}
-                teachers={teachers}
-                groups={groups}
-                selectedDate={roomViewDate}
-                onDateChange={setRoomViewDate}
-                onLessonClick={handleLessonClick}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
 
       {/* Edit Lesson Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
@@ -573,20 +627,10 @@ export default function Schedule() {
                 </div>
               </div>
               <div>
-                <Label htmlFor="edit-room">Название аудитории</Label>
-                <Input 
-                  id="edit-room" 
-                  name="room" 
-                  defaultValue={selectedLesson.room}
-                  required 
-                  placeholder="Например: Аудитория 101" 
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-roomId">Аудитория (из списка)</Label>
-                <Select name="roomId" defaultValue={selectedLesson.roomId}>
+                <Label htmlFor="edit-roomId">Аудитория</Label>
+                <Select name="roomId" required defaultValue={selectedLesson.roomId}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Выберите аудиторию (необязательно)" />
+                    <SelectValue placeholder="Выберите аудиторию" />
                   </SelectTrigger>
                   <SelectContent>
                     {rooms && rooms.length > 0 ? (

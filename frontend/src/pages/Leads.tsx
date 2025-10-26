@@ -89,6 +89,10 @@ export default function Leads() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [deleteLeadId, setDeleteLeadId] = useState<string | null>(null);
+  
+  // Drag and drop states
+  const [draggingLead, setDraggingLead] = useState<Lead | null>(null);
+  const [dragOverStatus, setDragOverStatus] = useState<LeadStatus | null>(null);
 
   const { data: leads = [], isLoading } = useLeads();
   const { data: stats } = useLeadStats();
@@ -117,14 +121,23 @@ export default function Leads() {
     }
   };
 
-  const handleStatusChange = async (leadId: string, newStatus: LeadStatus) => {
+  const handleStatusChange = async (lead: Lead, newStatus: LeadStatus) => {
     try {
+      // Передаем все данные лида, не только статус
       await updateLead.mutateAsync({
-        id: leadId,
-        data: { status: newStatus },
+        id: lead.id,
+        data: {
+          name: lead.name,
+          phone: lead.phone,
+          email: lead.email,
+          source: lead.source,
+          status: newStatus,
+          notes: lead.notes,
+        },
       });
+      toast.success(`Статус изменен на "${statusLabels[newStatus]}"`);
     } catch (error) {
-      // Error handled by mutation
+      toast.error("Ошибка при изменении статуса");
     }
   };
 
@@ -145,6 +158,65 @@ export default function Leads() {
   const openDetails = (lead: Lead) => {
     setSelectedLead(lead);
     setIsDetailsDialogOpen(true);
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (e: React.DragEvent, lead: Lead) => {
+    setDraggingLead(lead);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/html", e.currentTarget.innerHTML);
+  };
+
+  const handleDragEnd = () => {
+    setDraggingLead(null);
+    setDragOverStatus(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDragEnter = (status: LeadStatus) => {
+    setDragOverStatus(status);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    // Only clear if we're leaving the container, not a child
+    if (e.currentTarget === e.target) {
+      setDragOverStatus(null);
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent, newStatus: LeadStatus) => {
+    e.preventDefault();
+    
+    if (!draggingLead || draggingLead.status === newStatus) {
+      setDraggingLead(null);
+      setDragOverStatus(null);
+      return;
+    }
+
+    try {
+      // Передаем все данные лида, не только статус
+      await updateLead.mutateAsync({
+        id: draggingLead.id,
+        data: {
+          name: draggingLead.name,
+          phone: draggingLead.phone,
+          email: draggingLead.email,
+          source: draggingLead.source,
+          status: newStatus,
+          notes: draggingLead.notes,
+        },
+      });
+      toast.success(`Лид перемещен в "${statusLabels[newStatus]}"`);
+    } catch (error) {
+      toast.error("Ошибка при перемещении лида");
+    }
+
+    setDraggingLead(null);
+    setDragOverStatus(null);
   };
 
   const groupedLeads: Record<LeadStatus, Lead[]> = {
@@ -261,7 +333,16 @@ export default function Leads() {
       {/* Kanban Board */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {Object.entries(groupedLeads).map(([status, statusLeads]) => (
-          <Card key={status} className="flex flex-col">
+          <Card 
+            key={status} 
+            className={`flex flex-col transition-colors ${
+              dragOverStatus === status ? 'ring-2 ring-primary bg-primary/5' : ''
+            }`}
+            onDragOver={handleDragOver}
+            onDragEnter={() => handleDragEnter(status as LeadStatus)}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => handleDrop(e, status as LeadStatus)}
+          >
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium flex items-center justify-between">
                 <span>{statusLabels[status as LeadStatus]}</span>
@@ -272,14 +353,17 @@ export default function Leads() {
               {statusLeads.map((lead) => (
                 <Card
                   key={lead.id}
-                  className={`cursor-pointer hover:shadow-md transition-shadow border-l-4 ${
+                  draggable
+                  className={`cursor-move hover:shadow-md transition-all border-l-4 select-none ${
                     statusColors[lead.status]
-                  }`}
+                  } ${draggingLead?.id === lead.id ? 'opacity-50 scale-95' : ''}`}
                   onClick={() => openDetails(lead)}
+                  onDragStart={(e) => handleDragStart(e, lead)}
+                  onDragEnd={handleDragEnd}
                 >
                   <CardContent className="p-4 space-y-2">
                     <div className="flex items-start justify-between">
-                      <h4 className="font-semibold">{lead.name}</h4>
+                      <h4 className="font-semibold pointer-events-none">{lead.name}</h4>
                       <Button
                         size="sm"
                         variant="ghost"
@@ -287,11 +371,12 @@ export default function Leads() {
                           e.stopPropagation();
                           setDeleteLeadId(lead.id);
                         }}
+                        onDragStart={(e) => e.stopPropagation()}
                       >
                         <Trash2 className="h-4 w-4 text-red-600" />
                       </Button>
                     </div>
-                    <div className="space-y-1 text-sm text-muted-foreground">
+                    <div className="space-y-1 text-sm text-muted-foreground pointer-events-none">
                       <div className="flex items-center gap-2">
                         <Phone className="h-3 w-3" />
                         {lead.phone}
@@ -303,18 +388,18 @@ export default function Leads() {
                         </div>
                       )}
                     </div>
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="outline" className="text-xs pointer-events-none">
                       {sourceLabels[lead.source]}
                     </Badge>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-xs text-muted-foreground pointer-events-none">
                       {moment(lead.createdAt).fromNow()}
                     </div>
                     {status !== "enrolled" && status !== "rejected" && (
-                      <div className="pt-2">
+                      <div className="pt-2" onDragStart={(e) => e.stopPropagation()}>
                         <Select
                           value={lead.status}
                           onValueChange={(value) => {
-                            handleStatusChange(lead.id, value as LeadStatus);
+                            handleStatusChange(lead, value as LeadStatus);
                           }}
                         >
                           <SelectTrigger
