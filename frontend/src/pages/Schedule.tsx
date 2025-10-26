@@ -140,9 +140,8 @@ export default function Schedule() {
       });
       setIsEditDialogOpen(false);
       setSelectedLesson(null);
-      toast.success("Урок обновлен");
     } catch (error) {
-      toast.error("Ошибка при обновлении урока");
+      // Error is handled by the hook
     }
   };
 
@@ -211,9 +210,8 @@ export default function Schedule() {
         id: lessonId,
         data: updatedData as any,
       });
-      toast.success("Урок обновлен");
     } catch (error) {
-      toast.error("Ошибка при обновлении урока");
+      // Error is handled by the hook
     }
   };
 

@@ -50,7 +50,7 @@ func (r *LessonRepository) Create(lesson *models.Lesson, companyID string) error
 
 	// Insert students
 	for _, studentID := range lesson.StudentIds {
-		_, err = tx.Exec(`INSERT INTO lesson_students (lesson_id, student_id) VALUES ($1, $2)`, lesson.ID, studentID)
+		_, err = tx.Exec(`INSERT INTO lesson_students (lesson_id, student_id, company_id) VALUES ($1, $2, $3)`, lesson.ID, studentID, companyID)
 		if err != nil {
 			return fmt.Errorf("error inserting student to lesson: %w", err)
 		}
@@ -212,7 +212,7 @@ func (r *LessonRepository) Update(lesson *models.Lesson, companyID string) error
 
 	// Insert new students
 	for _, studentID := range lesson.StudentIds {
-		_, err = tx.Exec(`INSERT INTO lesson_students (lesson_id, student_id) VALUES ($1, $2)`, lesson.ID, studentID)
+		_, err = tx.Exec(`INSERT INTO lesson_students (lesson_id, student_id, company_id) VALUES ($1, $2, $3)`, lesson.ID, studentID, companyID)
 		if err != nil {
 			return fmt.Errorf("error inserting student to lesson: %w", err)
 		}

@@ -142,6 +142,12 @@ export default function AssignSubscriptionModal({
     setError("");
 
     try {
+      // Convert dates to ISO 8601 format with time (YYYY-MM-DDTHH:MM:SSZ)
+      const formatDateForBackend = (dateStr: string) => {
+        if (!dateStr) return undefined;
+        return `${dateStr}T00:00:00Z`;
+      };
+
       const data = {
         studentId: student.id,
         subscriptionTypeId: customMode ? undefined : selectedTypeId,
@@ -152,8 +158,8 @@ export default function AssignSubscriptionModal({
         usedLessons: 0,
         totalPrice,
         pricePerLesson,
-        startDate,
-        endDate: endDate || undefined,
+        startDate: formatDateForBackend(startDate),
+        endDate: formatDateForBackend(endDate),
         status: "active" as const,
         freezeDaysRemaining: 0,
       } as any;
@@ -330,12 +336,12 @@ export default function AssignSubscriptionModal({
                 <Users className="inline w-4 h-4 mr-1" />
                 Группа (опционально)
               </Label>
-              <Select value={groupId} onValueChange={setGroupId}>
+              <Select value={groupId || "none"} onValueChange={(val) => setGroupId(val === "none" ? "" : val)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Без группы" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Без группы</SelectItem>
+                  <SelectItem value="none">Без группы</SelectItem>
                   {groups.map((group) => (
                     <SelectItem key={group.id} value={group.id}>
                       {group.name} ({group.subject})
@@ -351,12 +357,12 @@ export default function AssignSubscriptionModal({
                 <User className="inline w-4 h-4 mr-1" />
                 Преподаватель (опционально)
               </Label>
-              <Select value={teacherId} onValueChange={setTeacherId}>
+              <Select value={teacherId || "none"} onValueChange={(val) => setTeacherId(val === "none" ? "" : val)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Без преподавателя" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Без преподавателя</SelectItem>
+                  <SelectItem value="none">Без преподавателя</SelectItem>
                   {teachers.filter(t => t.status === "active").map((teacher) => (
                     <SelectItem key={teacher.id} value={teacher.id}>
                       {teacher.name} ({teacher.subject})

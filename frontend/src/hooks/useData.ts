@@ -214,12 +214,40 @@ export const useUpdateLesson = () => {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Lesson> }) =>
       lessonsAPI.update(id, data),
+    // Optimistic update: update UI immediately before server responds
+    onMutate: async ({ id, data }) => {
+      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({ queryKey: ["lessons"] });
+
+      // Snapshot the previous value
+      const previousLessons = queryClient.getQueryData<Lesson[]>(["lessons"]);
+
+      // Optimistically update to the new value
+      if (previousLessons) {
+        queryClient.setQueryData<Lesson[]>(
+          ["lessons"],
+          previousLessons.map((lesson) =>
+            lesson.id === id ? { ...lesson, ...data } : lesson
+          )
+        );
+      }
+
+      // Return context with the previous value (for rollback on error)
+      return { previousLessons };
+    },
+    onError: (error: any, variables, context) => {
+      // If mutation fails, roll back to previous value
+      if (context?.previousLessons) {
+        queryClient.setQueryData(["lessons"], context.previousLessons);
+      }
+      toast.error(error.response?.data?.error || "Ошибка при обновлении урока");
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["lessons"] });
       toast.success("Урок успешно обновлен");
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Ошибка при обновлении урока");
+    // Always refetch after error or success to ensure data is in sync with server
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["lessons"] });
     },
   });
 };
@@ -464,8 +492,10 @@ export const useCreateTransaction = () => {
     mutationFn: (data: Omit<PaymentTransaction, "id" | "createdAt">) =>
       financeApi.createTransaction(data),
     onSuccess: () => {
+      // Invalidate all finance-related queries
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({ queryKey: ["balances"] });
+      queryClient.invalidateQueries({ queryKey: ["students"] });
       toast.success("Транзакция создана");
     },
     onError: (error: any) => {
@@ -572,7 +602,10 @@ export const useCreateDebt = () => {
     mutationFn: (data: Omit<DebtRecord, "id" | "createdAt">) =>
       financeApi.createDebt(data),
     onSuccess: () => {
+      // Invalidate all debt and student-related queries
       queryClient.invalidateQueries({ queryKey: ["debts"] });
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      queryClient.invalidateQueries({ queryKey: ["balances"] });
       toast.success("Долг создан");
     },
     onError: (error: any) => {
@@ -587,7 +620,10 @@ export const useUpdateDebt = () => {
     mutationFn: ({ id, data }: { id: number; data: Partial<DebtRecord> }) =>
       financeApi.updateDebt(id, data),
     onSuccess: () => {
+      // Invalidate all debt and student-related queries
       queryClient.invalidateQueries({ queryKey: ["debts"] });
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      queryClient.invalidateQueries({ queryKey: ["balances"] });
       toast.success("Долг обновлен");
     },
     onError: (error: any) => {
@@ -601,7 +637,10 @@ export const useDeleteDebt = () => {
   return useMutation({
     mutationFn: financeApi.deleteDebt,
     onSuccess: () => {
+      // Invalidate all debt and student-related queries
       queryClient.invalidateQueries({ queryKey: ["debts"] });
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      queryClient.invalidateQueries({ queryKey: ["balances"] });
       toast.success("Долг удален");
     },
     onError: (error: any) => {
@@ -702,7 +741,10 @@ export const useCreateStudentSubscription = () => {
     mutationFn: (data: Omit<StudentSubscription, "id" | "createdAt">) =>
       subscriptionsApi.createStudentSubscription(data),
     onSuccess: () => {
+      // Invalidate all subscription-related queries to ensure UI updates everywhere
       queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+      queryClient.invalidateQueries({ queryKey: ["balances"] });
+      queryClient.invalidateQueries({ queryKey: ["students"] });
       toast.success("Абонемент создан");
     },
     onError: (error: any) => {
@@ -717,7 +759,10 @@ export const useUpdateSubscription = () => {
     mutationFn: ({ id, data }: { id: string; data: Partial<StudentSubscription> }) =>
       subscriptionsApi.updateSubscription(id, data),
     onSuccess: () => {
+      // Invalidate all subscription-related queries to ensure UI updates everywhere
       queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+      queryClient.invalidateQueries({ queryKey: ["balances"] });
+      queryClient.invalidateQueries({ queryKey: ["students"] });
       toast.success("Абонемент обновлен");
     },
     onError: (error: any) => {
@@ -755,8 +800,10 @@ export const useCreateFreeze = () => {
     mutationFn: ({ subscriptionId, data }: { subscriptionId: string; data: Omit<SubscriptionFreeze, "id" | "subscriptionId" | "createdAt"> }) =>
       subscriptionsApi.createFreeze(subscriptionId, data),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["subscriptions", variables.subscriptionId, "freezes"] });
+      // Invalidate all subscription-related queries to ensure UI updates everywhere
       queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+      queryClient.invalidateQueries({ queryKey: ["balances"] });
+      queryClient.invalidateQueries({ queryKey: ["students"] });
       toast.success("Заморозка создана");
     },
     onError: (error: any) => {
@@ -770,7 +817,10 @@ export const useUpdateFreeze = () => {
   return useMutation({
     mutationFn: subscriptionsApi.updateFreeze,
     onSuccess: () => {
+      // Invalidate all subscription-related queries to ensure UI updates everywhere
       queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+      queryClient.invalidateQueries({ queryKey: ["balances"] });
+      queryClient.invalidateQueries({ queryKey: ["students"] });
       toast.success("Заморозка обновлена");
     },
     onError: (error: any) => {
@@ -785,9 +835,12 @@ export const useMarkAttendance = () => {
   return useMutation({
     mutationFn: subscriptionsApi.markAttendance,
     onSuccess: () => {
+      // Invalidate all related queries to ensure complete UI update
       queryClient.invalidateQueries({ queryKey: ["attendance"] });
       queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
       queryClient.invalidateQueries({ queryKey: ["students"] });
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["balances"] });
       toast.success("Посещаемость отмечена");
     },
     onError: (error: any) => {
