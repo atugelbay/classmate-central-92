@@ -36,14 +36,34 @@ const ALFACRM_API_KEY = process.env.ALFACRM_API_KEY;
 const COMPANY_ID = process.env.COMPANY_ID || uuidv4();
 const COMPANY_NAME = process.env.COMPANY_NAME || 'My Company';
 
-// Support both Railway (PG*) and standard (DB_*) env vars
-const dbConfig = {
+// Support both Railway (DATABASE_URL, PG*) and standard (DB_*) env vars
+let dbConfig = {
   host: process.env.DB_HOST || process.env.PGHOST,
   port: process.env.DB_PORT || process.env.PGPORT,
   database: process.env.DB_NAME || process.env.PGDATABASE,
   user: process.env.DB_USER || process.env.PGUSER,
   password: process.env.DB_PASSWORD || process.env.PGPASSWORD,
 };
+
+// If still undefined, try to parse from DATABASE_URL
+if (!dbConfig.host || !dbConfig.port || !dbConfig.database || !dbConfig.user || !dbConfig.password) {
+  const databaseURL = process.env.DATABASE_URL;
+  if (databaseURL) {
+    try {
+      // Parse postgresql://user:password@host:port/database
+      const url = new URL(databaseURL);
+      dbConfig = {
+        host: url.hostname || dbConfig.host,
+        port: url.port || dbConfig.port,
+        database: url.pathname.substring(1) || dbConfig.database, // Remove leading /
+        user: url.username || dbConfig.user,
+        password: url.password || dbConfig.password,
+      };
+    } catch (err) {
+      console.error('⚠️  Failed to parse DATABASE_URL:', err.message);
+    }
+  }
+}
 
 // Debug: log DB config (hide password)
 console.log('📊 Database config:', {

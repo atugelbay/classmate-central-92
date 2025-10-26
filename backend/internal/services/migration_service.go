@@ -58,6 +58,11 @@ func (s *MigrationService) RunMigration(config MigrationConfig) (*MigrationResul
 		fmt.Sprintf("DB_PASSWORD=%s", config.DBPassword),
 	}
 
+	// Also pass DATABASE_URL for Railway (Node.js can parse it directly)
+	if databaseURL := os.Getenv("DATABASE_URL"); databaseURL != "" {
+		envVars = append(envVars, fmt.Sprintf("DATABASE_URL=%s", databaseURL))
+	}
+	
 	// Also pass Railway PG* variables as fallback
 	if pgHost := os.Getenv("PGHOST"); pgHost != "" {
 		envVars = append(envVars, fmt.Sprintf("PGHOST=%s", pgHost))
