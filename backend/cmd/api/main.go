@@ -69,6 +69,7 @@ func main() {
 	debtHandler := handlers.NewDebtHandler(debtRepo)
 	subscriptionHandler := handlers.NewSubscriptionHandler(subscriptionRepo, attendanceService, activityService)
 	migrationHandler := handlers.NewMigrationHandler(teacherRepo, studentRepo, groupRepo, roomRepo, lessonRepo, subscriptionRepo)
+	dashboardHandler := handlers.NewDashboardHandler(lessonRepo, paymentRepo, subscriptionRepo, studentRepo, leadRepo, debtRepo)
 
 	// Initialize Gin
 	router := gin.Default()
@@ -221,6 +222,14 @@ func main() {
 		api.GET("/migration/status", migrationHandler.GetMigrationStatus)
 		api.POST("/migration/test-connection", migrationHandler.TestAlfaCRMConnection)
 		api.POST("/migration/clear-data", migrationHandler.ClearCompanyData)
+
+		// ============= DASHBOARD MODULE =============
+
+		// Dashboard analytics
+		api.GET("/dashboard/stats", dashboardHandler.GetStats)
+		api.GET("/dashboard/today-lessons", dashboardHandler.GetTodayLessons)
+		api.GET("/dashboard/revenue-chart", dashboardHandler.GetRevenueChart)
+		api.GET("/dashboard/attendance-stats", dashboardHandler.GetAttendanceStats)
 	}
 
 	// Health check

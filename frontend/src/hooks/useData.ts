@@ -8,6 +8,7 @@ import { roomsApi } from "@/api/rooms";
 import { leadsApi } from "@/api/leads";
 import * as financeApi from "@/api/finance";
 import * as subscriptionsApi from "@/api/subscriptions";
+import * as dashboardApi from "@/api/dashboard";
 import { 
   Teacher, 
   Student, 
@@ -1008,5 +1009,37 @@ export const useMarkNotificationRead = () => {
     onError: (error: any) => {
       toast.error(error.response?.data?.error || "Ошибка при обновлении уведомления");
     },
+  });
+};
+
+// ============= DASHBOARD MODULE HOOKS =============
+
+export const useDashboardStats = () => {
+  return useQuery({
+    queryKey: ["dashboard", "stats"],
+    queryFn: dashboardApi.getDashboardStats,
+    refetchInterval: 60000, // Refetch every minute
+  });
+};
+
+export const useTodayLessons = () => {
+  return useQuery({
+    queryKey: ["dashboard", "today-lessons"],
+    queryFn: dashboardApi.getTodayLessons,
+    refetchInterval: 60000,
+  });
+};
+
+export const useRevenueChart = (period: "week" | "month" | "year" = "week") => {
+  return useQuery({
+    queryKey: ["dashboard", "revenue-chart", period],
+    queryFn: () => dashboardApi.getRevenueChart(period),
+  });
+};
+
+export const useAttendanceChart = (period: "week" | "month" = "week") => {
+  return useQuery({
+    queryKey: ["dashboard", "attendance-stats", period],
+    queryFn: () => dashboardApi.getAttendanceStats(period),
   });
 };
