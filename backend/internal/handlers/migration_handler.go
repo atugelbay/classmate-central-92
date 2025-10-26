@@ -234,7 +234,7 @@ func (h *MigrationHandler) ClearCompanyData(c *gin.Context) {
 		"DELETE FROM debt_records WHERE company_id = $1",
 
 		// Delete group data
-		"DELETE FROM group_schedule WHERE company_id = $1",
+		// Note: group_schedule table doesn't exist in current schema
 		"DELETE FROM student_groups WHERE group_id IN (SELECT id FROM groups WHERE company_id = $1)",
 		"DELETE FROM groups WHERE company_id = $1",
 
