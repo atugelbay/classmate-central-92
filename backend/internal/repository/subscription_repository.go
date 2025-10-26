@@ -533,3 +533,24 @@ func (r *SubscriptionRepository) CheckExpiringSubscriptions() ([]*models.Student
 	}
 	return subs, nil
 }
+
+// GetAllAttendance returns all attendance records for a company
+func (r *SubscriptionRepository) GetAllAttendance(companyID string) ([]models.LessonAttendance, error) {
+	query := `SELECT id, lesson_id, student_id, subscription_id, status, marked_at, marked_by, company_id 
+	          FROM lesson_attendance WHERE company_id = $1 ORDER BY marked_at DESC`
+	rows, err := r.db.Query(query, companyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	attendances := []models.LessonAttendance{}
+	for rows.Next() {
+		var attendance models.LessonAttendance
+		if err := rows.Scan(&attendance.ID, &attendance.LessonID, &attendance.StudentID, &attendance.SubscriptionID, &attendance.Status, &attendance.MarkedAt, &attendance.MarkedBy, &attendance.CompanyID); err != nil {
+			return nil, err
+		}
+		attendances = append(attendances, attendance)
+	}
+	return attendances, nil
+}

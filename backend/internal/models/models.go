@@ -47,6 +47,7 @@ type Student struct {
 	GroupIds  []string `json:"groupIds"`
 	Avatar    string   `json:"avatar,omitempty" db:"avatar"`
 	CompanyID string   `json:"companyId" db:"company_id"`
+	CreatedAt string   `json:"createdAt" db:"created_at"`
 }
 
 // Lesson represents a lesson/class

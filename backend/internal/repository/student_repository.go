@@ -56,7 +56,7 @@ func (r *StudentRepository) Create(student *models.Student, companyID string) er
 }
 
 func (r *StudentRepository) GetAll(companyID string) ([]*models.Student, error) {
-	query := `SELECT id, name, age, email, phone, status, avatar FROM students WHERE company_id = $1 ORDER BY name`
+	query := `SELECT id, name, age, email, phone, status, avatar, created_at FROM students WHERE company_id = $1 ORDER BY name`
 
 	rows, err := r.db.Query(query, companyID)
 	if err != nil {
@@ -70,8 +70,9 @@ func (r *StudentRepository) GetAll(companyID string) ([]*models.Student, error) 
 		var avatar sql.NullString
 		var age sql.NullInt32
 		var status sql.NullString
+		var createdAt sql.NullString
 
-		err := rows.Scan(&student.ID, &student.Name, &age, &student.Email, &student.Phone, &status, &avatar)
+		err := rows.Scan(&student.ID, &student.Name, &age, &student.Email, &student.Phone, &status, &avatar, &createdAt)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning student: %w", err)
 		}
@@ -84,6 +85,10 @@ func (r *StudentRepository) GetAll(companyID string) ([]*models.Student, error) 
 			student.Status = status.String
 		} else {
 			student.Status = "active" // default
+		}
+
+		if createdAt.Valid {
+			student.CreatedAt = createdAt.String
 		}
 
 		if avatar.Valid {
