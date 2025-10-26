@@ -52,9 +52,19 @@ func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendan
 		CompanyID: companyID,
 	}
 
+	// Check if attendance already exists and was marked as "attended"
+	// If so, don't deduct again to prevent double charging
+	var existingStatus sql.NullString
+	err = tx.QueryRow(`
+		SELECT status FROM lesson_attendance 
+		WHERE lesson_id = $1 AND student_id = $2
+	`, req.LessonID, req.StudentID).Scan(&existingStatus)
+
+	alreadyAttended := err == nil && existingStatus.Valid && existingStatus.String == "attended"
+
 	// If student attended, try to deduct from active subscription
 	var subscriptionID *string
-	if req.Status == "attended" {
+	if req.Status == "attended" && !alreadyAttended {
 		// Get active subscription with billing type and price using transaction
 		var activeSub models.StudentSubscription
 		var billingType string

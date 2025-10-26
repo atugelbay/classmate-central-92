@@ -50,7 +50,7 @@ func (d *Database) Close() error {
 
 func (d *Database) RunMigrations() error {
 	log.Println("🔄 Starting database migrations...")
-	
+
 	// Create migrations tracking table if not exists
 	_, err := d.DB.Exec(`
 		CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -91,7 +91,7 @@ func (d *Database) RunMigrations() error {
 		if err != nil {
 			log.Printf("⚠️  Error checking migration status for %s: %v", migrationFile, err)
 		}
-		
+
 		if exists {
 			log.Printf("⏭️  Migration %s already applied, skipping", migrationFile)
 			skippedCount++
@@ -132,6 +132,6 @@ func (d *Database) RunMigrations() error {
 	}
 
 	log.Printf("🎯 Migrations completed: %d executed, %d skipped", executedCount, skippedCount)
-	
+
 	return nil
 }
