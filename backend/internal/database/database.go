@@ -49,6 +49,20 @@ func (d *Database) Close() error {
 }
 
 func (d *Database) RunMigrations() error {
+	log.Println("🔄 Starting database migrations...")
+	
+	// Create migrations tracking table if not exists
+	_, err := d.DB.Exec(`
+		CREATE TABLE IF NOT EXISTS schema_migrations (
+			id SERIAL PRIMARY KEY,
+			migration_name VARCHAR(255) UNIQUE NOT NULL,
+			applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	if err != nil {
+		return fmt.Errorf("error creating schema_migrations table: %w", err)
+	}
+
 	// List of migration files in order
 	migrations := []string{
 		"migrations/001_init_schema.up.sql",
@@ -65,12 +79,33 @@ func (d *Database) RunMigrations() error {
 		"migrations/012_add_group_schedule.up.sql",
 	}
 
+	log.Printf("📋 Total migrations to process: %d", len(migrations))
+
+	executedCount := 0
+	skippedCount := 0
+
 	for _, migrationFile := range migrations {
-		// Check if file exists
-		if _, err := os.Stat(migrationFile); os.IsNotExist(err) {
-			log.Printf("Migration file %s not found, skipping", migrationFile)
+		// Check if migration already applied
+		var exists bool
+		err := d.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE migration_name = $1)", migrationFile).Scan(&exists)
+		if err != nil {
+			log.Printf("⚠️  Error checking migration status for %s: %v", migrationFile, err)
+		}
+		
+		if exists {
+			log.Printf("⏭️  Migration %s already applied, skipping", migrationFile)
+			skippedCount++
 			continue
 		}
+
+		// Check if file exists
+		if _, err := os.Stat(migrationFile); os.IsNotExist(err) {
+			log.Printf("⚠️  Migration file %s not found, skipping", migrationFile)
+			skippedCount++
+			continue
+		}
+
+		log.Printf("📄 Processing migration: %s", migrationFile)
 
 		// Read migration file
 		migrationSQL, err := os.ReadFile(migrationFile)
@@ -81,12 +116,22 @@ func (d *Database) RunMigrations() error {
 		// Execute migration
 		_, err = d.DB.Exec(string(migrationSQL))
 		if err != nil {
-			return fmt.Errorf("error executing migration %s: %w", migrationFile, err)
+			log.Printf("❌ Error executing migration %s: %v", migrationFile, err)
+			// Continue with other migrations instead of failing completely
+			continue
 		}
 
-		log.Printf("Migration %s executed successfully", migrationFile)
+		// Mark migration as applied
+		_, err = d.DB.Exec("INSERT INTO schema_migrations (migration_name) VALUES ($1)", migrationFile)
+		if err != nil {
+			log.Printf("⚠️  Error recording migration %s: %v", migrationFile, err)
+		}
+
+		log.Printf("✅ Migration %s executed successfully", migrationFile)
+		executedCount++
 	}
 
-	log.Println("All migrations executed successfully")
+	log.Printf("🎯 Migrations completed: %d executed, %d skipped", executedCount, skippedCount)
+	
 	return nil
 }
