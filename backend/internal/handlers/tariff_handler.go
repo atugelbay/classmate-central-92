@@ -24,8 +24,9 @@ func (h *TariffHandler) Create(c *gin.Context) {
 		return
 	}
 
+	companyID := c.GetString("company_id")
 	tariff.ID = uuid.New().String()
-	if err := h.repo.Create(&tariff); err != nil {
+	if err := h.repo.Create(&tariff, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -34,7 +35,8 @@ func (h *TariffHandler) Create(c *gin.Context) {
 }
 
 func (h *TariffHandler) GetAll(c *gin.Context) {
-	tariffs, err := h.repo.GetAll()
+	companyID := c.GetString("company_id")
+	tariffs, err := h.repo.GetAll(companyID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -45,8 +47,9 @@ func (h *TariffHandler) GetAll(c *gin.Context) {
 
 func (h *TariffHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
+	companyID := c.GetString("company_id")
 
-	tariff, err := h.repo.GetByID(id)
+	tariff, err := h.repo.GetByID(id, companyID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Tariff not found"})
 		return
@@ -57,6 +60,7 @@ func (h *TariffHandler) GetByID(c *gin.Context) {
 
 func (h *TariffHandler) Update(c *gin.Context) {
 	id := c.Param("id")
+	companyID := c.GetString("company_id")
 
 	var tariff models.Tariff
 	if err := c.ShouldBindJSON(&tariff); err != nil {
@@ -65,7 +69,7 @@ func (h *TariffHandler) Update(c *gin.Context) {
 	}
 
 	tariff.ID = id
-	if err := h.repo.Update(&tariff); err != nil {
+	if err := h.repo.Update(&tariff, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -75,8 +79,9 @@ func (h *TariffHandler) Update(c *gin.Context) {
 
 func (h *TariffHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
+	companyID := c.GetString("company_id")
 
-	if err := h.repo.Delete(id); err != nil {
+	if err := h.repo.Delete(id, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

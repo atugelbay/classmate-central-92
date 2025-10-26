@@ -1,0 +1,53 @@
+# Node modules (will be installed in Docker)
+**/node_modules
+**/npm-debug.log
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+!README.md
+docs/
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+**/test
+**/*.test.js
+**/*.test.go
+**/coverage
+
+# Build artifacts
+backend/api.exe
+backend/bin/
+frontend/dist
+frontend/build
+frontend/node_modules
+
+# Environment files (these should be set in Railway)
+**/.env
+**/.env.local
+
+# Migration temporary scripts (except main script)
+migration/check-*.js
+migration/test-*.js
+migration/debug-*.js
+migration/fix-*.js
+migration/apply-*.js
+migration/create-*.js
+migration/clear-*.js
+migration/verify-*.js
+migration/*.md
+migration/*.sql
+

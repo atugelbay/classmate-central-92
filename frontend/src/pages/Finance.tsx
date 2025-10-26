@@ -283,8 +283,8 @@ export default function Finance() {
                         <TableCell>{moment(transaction.createdAt).format("DD.MM.YYYY HH:mm")}</TableCell>
                         <TableCell>{getStudentName(transaction.studentId)}</TableCell>
                         <TableCell>
-                          <Badge variant={transaction.type === "payment" ? "default" : transaction.type === "refund" ? "destructive" : "secondary"}>
-                            {transaction.type === "payment" ? "Платеж" : transaction.type === "refund" ? "Возврат" : "Долг"}
+                          <Badge variant={transaction.type === "payment" ? "default" : transaction.type === "refund" ? "destructive" : transaction.type === "deduction" ? "secondary" : "destructive"}>
+                            {transaction.type === "payment" ? "Платеж" : transaction.type === "refund" ? "Возврат" : transaction.type === "deduction" ? "Списание" : "Долг"}
                           </Badge>
                         </TableCell>
                         <TableCell className="capitalize">{transaction.paymentMethod}</TableCell>

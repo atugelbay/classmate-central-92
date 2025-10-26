@@ -28,8 +28,8 @@ func NewNotificationService(
 
 // CheckAndCreateDebtNotifications checks for pending debts and creates notifications
 func (s *NotificationService) CheckAndCreateDebtNotifications() error {
-	// Get all pending debts
-	debts, err := s.debtRepo.GetByStatus("pending")
+	// Get all pending debts (across all companies for background task)
+	debts, err := s.debtRepo.GetByStatusAllCompanies("pending")
 	if err != nil {
 		return fmt.Errorf("error getting pending debts: %w", err)
 	}

@@ -55,6 +55,12 @@ func (d *Database) RunMigrations() error {
 		"migrations/002_leads_and_rooms.up.sql",
 		"migrations/003_finance.up.sql",
 		"migrations/004_subscriptions.up.sql",
+		"migrations/005_student_enhancements.up.sql",
+		"migrations/006_add_multi_tenancy.up.sql",
+		"migrations/007_add_company_to_finance.up.sql",
+		"migrations/008_fix_missing_columns.up.sql",
+		"migrations/009_add_billing_type.up.sql",
+		"migrations/010_enhance_subscriptions.up.sql",
 	}
 
 	for _, migrationFile := range migrations {

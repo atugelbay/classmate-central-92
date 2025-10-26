@@ -37,8 +37,9 @@ func (h *SubscriptionHandler) CreateType(c *gin.Context) {
 		return
 	}
 
+	companyID := c.GetString("company_id")
 	subType.ID = uuid.New().String()
-	if err := h.repo.CreateType(&subType); err != nil {
+	if err := h.repo.CreateType(&subType, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -47,7 +48,8 @@ func (h *SubscriptionHandler) CreateType(c *gin.Context) {
 }
 
 func (h *SubscriptionHandler) GetAllTypes(c *gin.Context) {
-	types, err := h.repo.GetAllTypes()
+	companyID := c.GetString("company_id")
+	types, err := h.repo.GetAllTypes(companyID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -58,8 +60,9 @@ func (h *SubscriptionHandler) GetAllTypes(c *gin.Context) {
 
 func (h *SubscriptionHandler) GetTypeByID(c *gin.Context) {
 	id := c.Param("id")
+	companyID := c.GetString("company_id")
 
-	subType, err := h.repo.GetTypeByID(id)
+	subType, err := h.repo.GetTypeByID(id, companyID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Subscription type not found"})
 		return
@@ -70,6 +73,7 @@ func (h *SubscriptionHandler) GetTypeByID(c *gin.Context) {
 
 func (h *SubscriptionHandler) UpdateType(c *gin.Context) {
 	id := c.Param("id")
+	companyID := c.GetString("company_id")
 
 	var subType models.SubscriptionType
 	if err := c.ShouldBindJSON(&subType); err != nil {
@@ -78,7 +82,7 @@ func (h *SubscriptionHandler) UpdateType(c *gin.Context) {
 	}
 
 	subType.ID = id
-	if err := h.repo.UpdateType(&subType); err != nil {
+	if err := h.repo.UpdateType(&subType, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -88,8 +92,9 @@ func (h *SubscriptionHandler) UpdateType(c *gin.Context) {
 
 func (h *SubscriptionHandler) DeleteType(c *gin.Context) {
 	id := c.Param("id")
+	companyID := c.GetString("company_id")
 
-	if err := h.repo.DeleteType(id); err != nil {
+	if err := h.repo.DeleteType(id, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -106,8 +111,9 @@ func (h *SubscriptionHandler) CreateStudentSubscription(c *gin.Context) {
 		return
 	}
 
+	companyID := c.GetString("company_id")
 	sub.ID = uuid.New().String()
-	if err := h.repo.CreateStudentSubscription(&sub); err != nil {
+	if err := h.repo.CreateStudentSubscription(&sub, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -117,8 +123,9 @@ func (h *SubscriptionHandler) CreateStudentSubscription(c *gin.Context) {
 
 func (h *SubscriptionHandler) GetStudentSubscriptions(c *gin.Context) {
 	studentID := c.Param("studentId")
+	companyID := c.GetString("company_id")
 
-	subs, err := h.repo.GetStudentSubscriptions(studentID)
+	subs, err := h.repo.GetStudentSubscriptions(studentID, companyID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -129,8 +136,9 @@ func (h *SubscriptionHandler) GetStudentSubscriptions(c *gin.Context) {
 
 func (h *SubscriptionHandler) GetSubscriptionByID(c *gin.Context) {
 	id := c.Param("id")
+	companyID := c.GetString("company_id")
 
-	sub, err := h.repo.GetSubscriptionByID(id)
+	sub, err := h.repo.GetSubscriptionByID(id, companyID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Subscription not found"})
 		return
@@ -141,6 +149,7 @@ func (h *SubscriptionHandler) GetSubscriptionByID(c *gin.Context) {
 
 func (h *SubscriptionHandler) UpdateSubscription(c *gin.Context) {
 	id := c.Param("id")
+	companyID := c.GetString("company_id")
 
 	var sub models.StudentSubscription
 	if err := c.ShouldBindJSON(&sub); err != nil {
@@ -149,7 +158,7 @@ func (h *SubscriptionHandler) UpdateSubscription(c *gin.Context) {
 	}
 
 	sub.ID = id
-	if err := h.repo.UpdateSubscription(&sub); err != nil {
+	if err := h.repo.UpdateSubscription(&sub, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -159,8 +168,9 @@ func (h *SubscriptionHandler) UpdateSubscription(c *gin.Context) {
 
 func (h *SubscriptionHandler) DeleteSubscription(c *gin.Context) {
 	id := c.Param("id")
+	companyID := c.GetString("company_id")
 
-	if err := h.repo.DeleteSubscription(id); err != nil {
+	if err := h.repo.DeleteSubscription(id, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -169,7 +179,8 @@ func (h *SubscriptionHandler) DeleteSubscription(c *gin.Context) {
 }
 
 func (h *SubscriptionHandler) GetAllSubscriptions(c *gin.Context) {
-	subs, err := h.repo.GetAllSubscriptions()
+	companyID := c.GetString("company_id")
+	subs, err := h.repo.GetAllSubscriptions(companyID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -234,6 +245,9 @@ func (h *SubscriptionHandler) MarkAttendance(c *gin.Context) {
 		return
 	}
 
+	// Get company ID from context
+	companyID := c.GetString("company_id")
+
 	// Get user ID from context (set by auth middleware)
 	var markedBy *int
 	if userID, exists := c.Get("userID"); exists {
@@ -243,7 +257,7 @@ func (h *SubscriptionHandler) MarkAttendance(c *gin.Context) {
 	}
 
 	// Use attendance service to mark attendance with automatic deduction
-	attendance, err := h.attendanceService.MarkAttendanceWithDeduction(&req, markedBy)
+	attendance, err := h.attendanceService.MarkAttendanceWithDeduction(&req, markedBy, companyID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

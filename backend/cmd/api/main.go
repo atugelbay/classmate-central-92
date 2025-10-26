@@ -29,11 +29,13 @@ func main() {
 
 	// Run migrations
 	if err := db.RunMigrations(); err != nil {
-		log.Fatalf("Failed to run migrations: %v", err)
+		log.Printf("Warning: Failed to run migrations: %v", err)
+		log.Println("Continuing with existing database schema...")
 	}
 
 	// Initialize repositories
 	userRepo := repository.NewUserRepository(db.DB)
+	companyRepo := repository.NewCompanyRepository(db.DB)
 	teacherRepo := repository.NewTeacherRepository(db.DB)
 	studentRepo := repository.NewStudentRepository(db.DB)
 	groupRepo := repository.NewGroupRepository(db.DB)
@@ -54,7 +56,7 @@ func main() {
 	attendanceService := services.NewAttendanceService(subscriptionRepo, activityRepo, notificationRepo, db.DB)
 
 	// Initialize handlers
-	authHandler := handlers.NewAuthHandler(userRepo)
+	authHandler := handlers.NewAuthHandler(userRepo, companyRepo)
 	teacherHandler := handlers.NewTeacherHandler(teacherRepo)
 	studentHandler := handlers.NewStudentHandler(studentRepo, activityRepo, notificationRepo, activityService)
 	groupHandler := handlers.NewGroupHandler(groupRepo)
@@ -66,6 +68,7 @@ func main() {
 	tariffHandler := handlers.NewTariffHandler(tariffRepo)
 	debtHandler := handlers.NewDebtHandler(debtRepo)
 	subscriptionHandler := handlers.NewSubscriptionHandler(subscriptionRepo, attendanceService, activityService)
+	migrationHandler := handlers.NewMigrationHandler(teacherRepo, studentRepo, groupRepo, roomRepo, lessonRepo, subscriptionRepo)
 
 	// Initialize Gin
 	router := gin.Default()
@@ -84,6 +87,7 @@ func main() {
 	// Protected routes
 	api := router.Group("/api")
 	api.Use(middleware.AuthMiddleware())
+	api.Use(middleware.CompanyMiddleware(db.DB))
 	{
 		// Auth
 		api.GET("/auth/me", authHandler.Me)
@@ -204,6 +208,14 @@ func main() {
 		api.POST("/attendance", subscriptionHandler.MarkAttendance)
 		api.GET("/attendance/lesson/:lessonId", subscriptionHandler.GetAttendanceByLesson)
 		api.GET("/attendance/student/:studentId", subscriptionHandler.GetAttendanceByStudent)
+
+		// ============= MIGRATION MODULE =============
+
+		// Migration from AlfaCRM
+		api.POST("/migration/start", migrationHandler.StartMigration)
+		api.GET("/migration/status", migrationHandler.GetMigrationStatus)
+		api.POST("/migration/test-connection", migrationHandler.TestAlfaCRMConnection)
+		api.POST("/migration/clear-data", migrationHandler.ClearCompanyData)
 	}
 
 	// Health check

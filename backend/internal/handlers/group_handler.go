@@ -18,7 +18,8 @@ func NewGroupHandler(repo *repository.GroupRepository) *GroupHandler {
 }
 
 func (h *GroupHandler) GetAll(c *gin.Context) {
-	groups, err := h.repo.GetAll()
+	companyID := c.GetString("company_id")
+	groups, err := h.repo.GetAll(companyID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -29,8 +30,9 @@ func (h *GroupHandler) GetAll(c *gin.Context) {
 
 func (h *GroupHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
+	companyID := c.GetString("company_id")
 
-	group, err := h.repo.GetByID(id)
+	group, err := h.repo.GetByID(id, companyID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -50,7 +52,8 @@ func (h *GroupHandler) Create(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.Create(&group); err != nil {
+	companyID := c.GetString("company_id")
+	if err := h.repo.Create(&group, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -60,6 +63,7 @@ func (h *GroupHandler) Create(c *gin.Context) {
 
 func (h *GroupHandler) Update(c *gin.Context) {
 	id := c.Param("id")
+	companyID := c.GetString("company_id")
 
 	var group models.Group
 	if err := c.ShouldBindJSON(&group); err != nil {
@@ -69,7 +73,7 @@ func (h *GroupHandler) Update(c *gin.Context) {
 
 	group.ID = id
 
-	if err := h.repo.Update(&group); err != nil {
+	if err := h.repo.Update(&group, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -79,8 +83,9 @@ func (h *GroupHandler) Update(c *gin.Context) {
 
 func (h *GroupHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
+	companyID := c.GetString("company_id")
 
-	if err := h.repo.Delete(id); err != nil {
+	if err := h.repo.Delete(id, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

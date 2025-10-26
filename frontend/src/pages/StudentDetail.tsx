@@ -14,6 +14,7 @@ import {
   useStudentNotifications,
   useMarkNotificationRead,
 } from "@/hooks/useData";
+import AssignSubscriptionModal from "@/components/AssignSubscriptionModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -66,6 +67,9 @@ export default function StudentDetail() {
   const [newNote, setNewNote] = useState("");
   const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<string>("");
+  const [isAssignSubModalOpen, setIsAssignSubModalOpen] = useState(false);
+  const [financeStartDate, setFinanceStartDate] = useState<string>("");
+  const [financeEndDate, setFinanceEndDate] = useState<string>("");
 
   const student = students.find((s) => s.id === id);
 
@@ -417,74 +421,221 @@ export default function StudentDetail() {
 
         {/* Finance Tab */}
         <TabsContent value="finance" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Текущий баланс</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">
-                {balance ? (
-                  <span className={balance.balance >= 0 ? "text-green-600" : "text-red-600"}>
-                    {balance.balance.toLocaleString()} ₸
-                  </span>
-                ) : (
-                  <span className="text-muted-foreground">0 ₸</span>
+          {/* Financial Summary */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Текущий баланс</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {balance ? (
+                    <span className={balance.balance >= 0 ? "text-green-600" : "text-red-600"}>
+                      {balance.balance.toLocaleString()} ₸
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">0 ₸</span>
+                  )}
+                </div>
+                {balance?.lastPaymentDate && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Посл. платеж: {moment(balance.lastPaymentDate).format("DD.MM.YYYY")}
+                  </p>
                 )}
-              </div>
-              {balance?.lastPaymentDate && (
-                <p className="text-sm text-muted-foreground mt-2">
-                  Последний платеж: {moment(balance.lastPaymentDate).format("DD.MM.YYYY HH:mm")}
-                </p>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Всего оплачено</CardTitle>
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">
+                  +{transactions.filter(t => t.type === "payment").reduce((sum, t) => sum + t.amount, 0).toLocaleString()} ₸
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {transactions.filter(t => t.type === "payment").length} платежей
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Посещено уроков</CardTitle>
+                <Calendar className="h-4 w-4 text-blue-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-blue-600">
+                  {journal.filter(j => j.status === "attended").length}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Пропущено: {journal.filter(j => j.status === "missed").length}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Combined Financial History */}
           <Card>
             <CardHeader>
-              <CardTitle>История платежей</CardTitle>
+              <div className="flex flex-col gap-4">
+                <div>
+                  <CardTitle>Полная финансовая история</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Все платежи и списания за посещенные уроки
+                  </p>
+                </div>
+                
+                {/* Date Filters */}
+                <div className="flex gap-4 items-end">
+                  <div className="flex-1">
+                    <Label htmlFor="start-date" className="text-sm">С даты</Label>
+                    <input
+                      id="start-date"
+                      type="date"
+                      value={financeStartDate}
+                      onChange={(e) => setFinanceStartDate(e.target.value)}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <Label htmlFor="end-date" className="text-sm">По дату</Label>
+                    <input
+                      id="end-date"
+                      type="date"
+                      value={financeEndDate}
+                      onChange={(e) => setFinanceEndDate(e.target.value)}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    />
+                  </div>
+                  {(financeStartDate || financeEndDate) && (
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        setFinanceStartDate("");
+                        setFinanceEndDate("");
+                      }}
+                    >
+                      Сбросить
+                    </Button>
+                  )}
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Дата</TableHead>
-                    <TableHead>Тип</TableHead>
-                    <TableHead>Способ</TableHead>
+                    <TableHead>Операция</TableHead>
+                    <TableHead>Описание</TableHead>
                     <TableHead className="text-right">Сумма</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {transactions.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                        Нет истории платежей
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    transactions.map((tx) => (
-                      <TableRow key={tx.id}>
-                        <TableCell>{moment(tx.createdAt).format("DD.MM.YYYY HH:mm")}</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              tx.type === "payment"
-                                ? "default"
-                                : tx.type === "refund"
-                                ? "destructive"
-                                : "secondary"
+                  {(() => {
+                    // Combine transactions and attendance into single timeline
+                    let allOperations = [
+                      ...transactions.map(tx => ({
+                        date: tx.createdAt,
+                        type: 'transaction',
+                        operation: tx.type === "payment" ? "Оплата" : tx.type === "refund" ? "Возврат" : tx.type === "deduction" ? "Списание" : "Долг",
+                        description: tx.description || tx.paymentMethod,
+                        amount: tx.type === "payment" ? tx.amount : -tx.amount,
+                        badge: tx.type === "payment" ? "default" : (tx.type === "deduction" ? "secondary" : "destructive")
+                      })),
+                      ...journal.filter(j => j.status === "attended").map(j => {
+                        // Calculate lesson cost from subscription
+                        const sub = subscriptions.find(s => s.id === j.subscriptionId);
+                        const lessonCost = sub?.pricePerLesson || 0;
+                        return {
+                          date: j.startTime,
+                          type: 'lesson',
+                          operation: "Списание",
+                          description: `${j.lessonTitle} (${moment(j.startTime).format("HH:mm")})`,
+                          amount: -lessonCost,
+                          badge: "secondary"
+                        };
+                      })
+                    ];
+
+                    // Apply date filters
+                    if (financeStartDate) {
+                      const startDate = new Date(financeStartDate);
+                      startDate.setHours(0, 0, 0, 0);
+                      allOperations = allOperations.filter(op => new Date(op.date) >= startDate);
+                    }
+                    if (financeEndDate) {
+                      const endDate = new Date(financeEndDate);
+                      endDate.setHours(23, 59, 59, 999);
+                      allOperations = allOperations.filter(op => new Date(op.date) <= endDate);
+                    }
+
+                    // Sort by date (newest first)
+                    allOperations.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+                    if (allOperations.length === 0) {
+                      return (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                            {financeStartDate || financeEndDate 
+                              ? "Нет операций за выбранный период"
+                              : "Нет финансовой истории"
                             }
-                          >
-                            {tx.type === "payment" ? "Платеж" : tx.type === "refund" ? "Возврат" : "Долг"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="capitalize">{tx.paymentMethod}</TableCell>
-                        <TableCell className="text-right font-medium">
-                          {tx.type === "payment" ? "+" : "-"}
-                          {tx.amount.toLocaleString()} ₸
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    }
+
+                    // Calculate totals for the filtered period
+                    const totalIncome = allOperations.filter(op => op.amount > 0).reduce((sum, op) => sum + op.amount, 0);
+                    const totalExpense = allOperations.filter(op => op.amount < 0).reduce((sum, op) => sum + Math.abs(op.amount), 0);
+                    const netChange = totalIncome - totalExpense;
+
+                    return (
+                      <>
+                        {allOperations.map((op, idx) => (
+                          <TableRow key={`${op.type}-${idx}`}>
+                            <TableCell className="font-medium">
+                              {moment(op.date).format("DD.MM.YYYY HH:mm")}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={op.badge as any}>
+                                {op.operation}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="max-w-md truncate">
+                              {op.description}
+                            </TableCell>
+                            <TableCell className="text-right font-medium">
+                              <span className={op.amount > 0 ? "text-green-600" : "text-red-600"}>
+                                {op.amount > 0 ? "+" : ""}
+                                {op.amount.toLocaleString()} ₸
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        
+                        {/* Summary row */}
+                        <TableRow className="bg-muted/50 font-semibold">
+                          <TableCell colSpan={3} className="text-right">
+                            {financeStartDate || financeEndDate ? "Итого за период:" : "Итого:"}
+                            <span className="text-sm font-normal text-muted-foreground ml-2">
+                              (приход: +{totalIncome.toLocaleString()} ₸, списано: -{totalExpense.toLocaleString()} ₸)
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <span className={netChange >= 0 ? "text-green-600" : "text-red-600"}>
+                              {netChange > 0 ? "+" : ""}
+                              {netChange.toLocaleString()} ₸
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      </>
+                    );
+                  })()}
                 </TableBody>
               </Table>
             </CardContent>
@@ -493,6 +644,14 @@ export default function StudentDetail() {
 
         {/* Subscriptions Tab */}
         <TabsContent value="subscriptions" className="space-y-4">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">Абонементы студента</h3>
+            <Button onClick={() => setIsAssignSubModalOpen(true)}>
+              <BookOpen className="h-4 w-4 mr-2" />
+              Назначить абонемент
+            </Button>
+          </div>
+          
           {subscriptions.length === 0 ? (
             <Card>
               <CardContent className="py-8">
@@ -501,44 +660,105 @@ export default function StudentDetail() {
             </Card>
           ) : (
             <div className="grid gap-4">
-              {subscriptions.map((sub) => (
-                <Card key={sub.id}>
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="text-lg">Абонемент #{sub.id.substring(0, 8)}</CardTitle>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Осталось уроков: <span className="font-semibold">{sub.lessonsRemaining}</span>
-                        </p>
+              {subscriptions.map((sub) => {
+                const billingTypeLabels = {
+                  per_lesson: "Поурочный",
+                  monthly: "Помесячный",
+                  unlimited: "Безлимитный",
+                };
+                const billingTypeColors = {
+                  per_lesson: "bg-blue-100 text-blue-800",
+                  monthly: "bg-green-100 text-green-800",
+                  unlimited: "bg-purple-100 text-purple-800",
+                };
+                
+                return (
+                  <Card key={sub.id}>
+                    <CardHeader>
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <CardTitle className="text-lg">{sub.subscriptionTypeName || "Индивидуальный абонемент"}</CardTitle>
+                            {sub.billingType && (
+                              <span className={`px-2 py-1 rounded text-xs font-medium ${billingTypeColors[sub.billingType]}`}>
+                                {billingTypeLabels[sub.billingType]}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex gap-4 text-sm text-muted-foreground mt-2">
+                            <div>
+                              <span className="font-medium text-foreground">{sub.usedLessons}</span> / {sub.totalLessons} занятий
+                            </div>
+                            <div>
+                              Осталось: <span className="font-semibold text-foreground">{sub.lessonsRemaining}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <Badge
+                          variant={
+                            sub.status === "active" ? "default" : sub.status === "frozen" ? "secondary" : "destructive"
+                          }
+                        >
+                          {sub.status === "active" ? "Активный" : sub.status === "frozen" ? "Заморожен" : sub.status === "completed" ? "Завершён" : "Истёк"}
+                        </Badge>
                       </div>
-                      <Badge
-                        variant={
-                          sub.status === "active" ? "default" : sub.status === "frozen" ? "secondary" : "destructive"
-                        }
-                      >
-                        {sub.status === "active" ? "Активный" : sub.status === "frozen" ? "Заморожен" : "Истёк"}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span>Начало: {moment(sub.startDate).format("DD.MM.YYYY")}</span>
-                    </div>
-                    {sub.endDate && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span>Окончание: {moment(sub.endDate).format("DD.MM.YYYY")}</span>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="grid grid-cols-2 gap-4 pb-3 border-b">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Общая стоимость</p>
+                          <p className="text-lg font-semibold">{sub.totalPrice.toLocaleString()} ₸</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">За занятие</p>
+                          <p className="text-lg font-semibold">{sub.pricePerLesson.toFixed(0)} ₸</p>
+                        </div>
                       </div>
-                    )}
-                    {sub.freezeDaysRemaining > 0 && (
-                      <div className="text-sm text-blue-600">
-                        Дней заморозки: {sub.freezeDaysRemaining}
+                      
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <span>Начало: {moment(sub.startDate).format("DD.MM.YYYY")}</span>
+                        </div>
+                        {sub.endDate && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            <span>Окончание: {moment(sub.endDate).format("DD.MM.YYYY")}</span>
+                          </div>
+                        )}
+                        {sub.paidTill && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <DollarSign className="h-4 w-4 text-muted-foreground" />
+                            <span>Оплачено до: {moment(sub.paidTill).format("DD.MM.YYYY")}</span>
+                          </div>
+                        )}
+                        {sub.freezeDaysRemaining > 0 && (
+                          <div className="text-sm text-blue-600 flex items-center gap-2">
+                            <Clock className="h-4 w-4" />
+                            Дней заморозки: {sub.freezeDaysRemaining}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+                      
+                      {/* Progress bar */}
+                      {sub.billingType === "per_lesson" && (
+                        <div className="pt-2">
+                          <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                            <span>Прогресс</span>
+                            <span>{Math.round((sub.usedLessons / sub.totalLessons) * 100)}%</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div
+                              className="bg-primary h-2 rounded-full transition-all"
+                              style={{ width: `${(sub.usedLessons / sub.totalLessons) * 100}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </TabsContent>
@@ -587,6 +807,17 @@ export default function StudentDetail() {
           </Card>
         </TabsContent>
       </Tabs>
+      
+      {/* Assign Subscription Modal */}
+      <AssignSubscriptionModal
+        open={isAssignSubModalOpen}
+        onClose={() => setIsAssignSubModalOpen(false)}
+        student={student}
+        onSuccess={() => {
+          // Refresh subscriptions
+          window.location.reload();
+        }}
+      />
     </div>
   );
 }

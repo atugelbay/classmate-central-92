@@ -24,7 +24,8 @@ func (h *DebtHandler) Create(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.Create(&debt); err != nil {
+	companyID := c.GetString("company_id")
+	if err := h.repo.Create(&debt, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -34,8 +35,9 @@ func (h *DebtHandler) Create(c *gin.Context) {
 
 func (h *DebtHandler) GetByStudent(c *gin.Context) {
 	studentID := c.Param("studentId")
+	companyID := c.GetString("company_id")
 
-	debts, err := h.repo.GetByStudent(studentID)
+	debts, err := h.repo.GetByStudent(studentID, companyID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -45,6 +47,7 @@ func (h *DebtHandler) GetByStudent(c *gin.Context) {
 }
 
 func (h *DebtHandler) GetAll(c *gin.Context) {
+	companyID := c.GetString("company_id")
 	// Check if status filter is provided
 	status := c.Query("status")
 
@@ -52,9 +55,9 @@ func (h *DebtHandler) GetAll(c *gin.Context) {
 	var err error
 
 	if status != "" {
-		debts, err = h.repo.GetByStatus(status)
+		debts, err = h.repo.GetByStatus(status, companyID)
 	} else {
-		debts, err = h.repo.GetAll()
+		debts, err = h.repo.GetAll(companyID)
 	}
 
 	if err != nil {
@@ -72,6 +75,7 @@ func (h *DebtHandler) Update(c *gin.Context) {
 		return
 	}
 
+	companyID := c.GetString("company_id")
 	var debt models.DebtRecord
 	if err := c.ShouldBindJSON(&debt); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -79,7 +83,7 @@ func (h *DebtHandler) Update(c *gin.Context) {
 	}
 
 	debt.ID = id
-	if err := h.repo.Update(&debt); err != nil {
+	if err := h.repo.Update(&debt, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -94,7 +98,8 @@ func (h *DebtHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.Delete(id); err != nil {
+	companyID := c.GetString("company_id")
+	if err := h.repo.Delete(id, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

@@ -15,7 +15,7 @@ func NewStudentRepository(db *sql.DB) *StudentRepository {
 	return &StudentRepository{db: db}
 }
 
-func (r *StudentRepository) Create(student *models.Student) error {
+func (r *StudentRepository) Create(student *models.Student, companyID string) error {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return fmt.Errorf("error starting transaction: %w", err)
@@ -24,10 +24,14 @@ func (r *StudentRepository) Create(student *models.Student) error {
 
 	// Insert student
 	query := `
-		INSERT INTO students (id, name, age, email, phone, avatar)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO students (id, name, age, email, phone, status, avatar, company_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
-	_, err = tx.Exec(query, student.ID, student.Name, student.Age, student.Email, student.Phone, student.Avatar)
+	status := student.Status
+	if status == "" {
+		status = "active"
+	}
+	_, err = tx.Exec(query, student.ID, student.Name, student.Age, student.Email, student.Phone, status, student.Avatar, companyID)
 	if err != nil {
 		return fmt.Errorf("error creating student: %w", err)
 	}
@@ -51,10 +55,10 @@ func (r *StudentRepository) Create(student *models.Student) error {
 	return tx.Commit()
 }
 
-func (r *StudentRepository) GetAll() ([]*models.Student, error) {
-	query := `SELECT id, name, age, email, phone, avatar FROM students ORDER BY name`
+func (r *StudentRepository) GetAll(companyID string) ([]*models.Student, error) {
+	query := `SELECT id, name, age, email, phone, status, avatar FROM students WHERE company_id = $1 ORDER BY name`
 
-	rows, err := r.db.Query(query)
+	rows, err := r.db.Query(query, companyID)
 	if err != nil {
 		return nil, fmt.Errorf("error getting students: %w", err)
 	}
@@ -64,10 +68,22 @@ func (r *StudentRepository) GetAll() ([]*models.Student, error) {
 	for rows.Next() {
 		student := &models.Student{}
 		var avatar sql.NullString
+		var age sql.NullInt32
+		var status sql.NullString
 
-		err := rows.Scan(&student.ID, &student.Name, &student.Age, &student.Email, &student.Phone, &avatar)
+		err := rows.Scan(&student.ID, &student.Name, &age, &student.Email, &student.Phone, &status, &avatar)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning student: %w", err)
+		}
+
+		if age.Valid {
+			student.Age = int(age.Int32)
+		}
+
+		if status.Valid {
+			student.Status = status.String
+		} else {
+			student.Status = "active" // default
 		}
 
 		if avatar.Valid {
@@ -108,18 +124,30 @@ func (r *StudentRepository) GetAll() ([]*models.Student, error) {
 	return students, nil
 }
 
-func (r *StudentRepository) GetByID(id string) (*models.Student, error) {
+func (r *StudentRepository) GetByID(id string, companyID string) (*models.Student, error) {
 	student := &models.Student{}
 	var avatar sql.NullString
+	var age sql.NullInt32
+	var status sql.NullString
 
-	query := `SELECT id, name, age, email, phone, avatar FROM students WHERE id = $1`
+	query := `SELECT id, name, age, email, phone, status, avatar FROM students WHERE id = $1 AND company_id = $2`
 
-	err := r.db.QueryRow(query, id).Scan(&student.ID, &student.Name, &student.Age, &student.Email, &student.Phone, &avatar)
+	err := r.db.QueryRow(query, id, companyID).Scan(&student.ID, &student.Name, &age, &student.Email, &student.Phone, &status, &avatar)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, fmt.Errorf("error getting student: %w", err)
+	}
+
+	if age.Valid {
+		student.Age = int(age.Int32)
+	}
+
+	if status.Valid {
+		student.Status = status.String
+	} else {
+		student.Status = "active"
 	}
 
 	if avatar.Valid {
@@ -157,7 +185,7 @@ func (r *StudentRepository) GetByID(id string) (*models.Student, error) {
 	return student, nil
 }
 
-func (r *StudentRepository) Update(student *models.Student) error {
+func (r *StudentRepository) Update(student *models.Student, companyID string) error {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return fmt.Errorf("error starting transaction: %w", err)
@@ -167,10 +195,14 @@ func (r *StudentRepository) Update(student *models.Student) error {
 	// Update student
 	query := `
 		UPDATE students 
-		SET name = $2, age = $3, email = $4, phone = $5, avatar = $6
-		WHERE id = $1
+		SET name = $2, age = $3, email = $4, phone = $5, status = $6, avatar = $7
+		WHERE id = $1 AND company_id = $8
 	`
-	_, err = tx.Exec(query, student.ID, student.Name, student.Age, student.Email, student.Phone, student.Avatar)
+	status := student.Status
+	if status == "" {
+		status = "active"
+	}
+	_, err = tx.Exec(query, student.ID, student.Name, student.Age, student.Email, student.Phone, status, student.Avatar, companyID)
 	if err != nil {
 		return fmt.Errorf("error updating student: %w", err)
 	}
@@ -205,10 +237,10 @@ func (r *StudentRepository) Update(student *models.Student) error {
 	return tx.Commit()
 }
 
-func (r *StudentRepository) Delete(id string) error {
-	query := `DELETE FROM students WHERE id = $1`
+func (r *StudentRepository) Delete(id string, companyID string) error {
+	query := `DELETE FROM students WHERE id = $1 AND company_id = $2`
 
-	_, err := r.db.Exec(query, id)
+	_, err := r.db.Exec(query, id, companyID)
 	if err != nil {
 		return fmt.Errorf("error deleting student: %w", err)
 	}
@@ -217,9 +249,9 @@ func (r *StudentRepository) Delete(id string) error {
 }
 
 // UpdateStatus updates the status of a student
-func (r *StudentRepository) UpdateStatus(studentID, status string) error {
-	query := `UPDATE students SET status = $1 WHERE id = $2`
-	_, err := r.db.Exec(query, status, studentID)
+func (r *StudentRepository) UpdateStatus(studentID, status, companyID string) error {
+	query := `UPDATE students SET status = $1 WHERE id = $2 AND company_id = $3`
+	_, err := r.db.Exec(query, status, studentID, companyID)
 	if err != nil {
 		return fmt.Errorf("error updating student status: %w", err)
 	}

@@ -617,6 +617,7 @@ export default function Schedule() {
           {viewMode === "month" && (
             <MonthScheduleView
               lessons={lessons}
+              groups={groups}
               selectedDate={selectedDate}
               onDateClick={handleDateClick}
             />
@@ -687,7 +688,7 @@ export default function Schedule() {
                   id="edit-date"
                   name="date"
                   type="date"
-                  defaultValue={moment(selectedLesson.start).format("YYYY-MM-DD")}
+                  defaultValue={moment.utc(selectedLesson.start).local().format("YYYY-MM-DD")}
                   required
                 />
               </div>
@@ -698,7 +699,7 @@ export default function Schedule() {
                     id="edit-startTime" 
                     name="startTime" 
                     type="time"
-                    defaultValue={moment(selectedLesson.start).format("HH:mm")}
+                    defaultValue={moment.utc(selectedLesson.start).local().format("HH:mm")}
                     required 
                   />
                 </div>
@@ -708,7 +709,7 @@ export default function Schedule() {
                     id="edit-endTime" 
                     name="endTime" 
                     type="time"
-                    defaultValue={moment(selectedLesson.end).format("HH:mm")}
+                    defaultValue={moment.utc(selectedLesson.end).local().format("HH:mm")}
                     required 
                   />
                 </div>
@@ -780,12 +781,12 @@ export default function Schedule() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <span className="text-sm text-muted-foreground">Дата</span>
-                    <p className="font-medium">{moment(selectedLesson.start).format("DD MMMM YYYY")}</p>
+                    <p className="font-medium">{moment.utc(selectedLesson.start).local().format("DD MMMM YYYY")}</p>
                   </div>
                   <div>
                     <span className="text-sm text-muted-foreground">Время</span>
                     <p className="font-medium">
-                      {moment(selectedLesson.start).format("HH:mm")} - {moment(selectedLesson.end).format("HH:mm")}
+                      {moment.utc(selectedLesson.start).local().format("HH:mm")} - {moment.utc(selectedLesson.end).local().format("HH:mm")}
                     </p>
                   </div>
                   <div>
@@ -800,7 +801,7 @@ export default function Schedule() {
                   </div>
                   <div>
                     <span className="text-sm text-muted-foreground">Аудитория</span>
-                    <p className="font-medium">{selectedLesson.room || "—"}</p>
+                    <p className="font-medium">{rooms.find(r => r.id === selectedLesson.roomId)?.name || "—"}</p>
                   </div>
                   {selectedLesson.groupId && (
                     <div>
@@ -894,12 +895,12 @@ export default function Schedule() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-muted-foreground">Дата:</span>{" "}
-                    <span className="font-medium">{moment(selectedLesson.start).format("DD.MM.YYYY")}</span>
+                    <span className="font-medium">{moment.utc(selectedLesson.start).local().format("DD.MM.YYYY")}</span>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Время:</span>{" "}
                     <span className="font-medium">
-                      {moment(selectedLesson.start).format("HH:mm")} - {moment(selectedLesson.end).format("HH:mm")}
+                      {moment.utc(selectedLesson.start).local().format("HH:mm")} - {moment.utc(selectedLesson.end).local().format("HH:mm")}
                     </span>
                   </div>
                   <div>

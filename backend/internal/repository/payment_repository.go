@@ -15,17 +15,17 @@ func NewPaymentRepository(db *sql.DB) *PaymentRepository {
 
 // Payment Transactions
 
-func (r *PaymentRepository) CreateTransaction(tx *models.PaymentTransaction) error {
-	query := `INSERT INTO payment_transactions (student_id, amount, type, payment_method, description, created_by) 
-	          VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, created_at`
-	return r.db.QueryRow(query, tx.StudentID, tx.Amount, tx.Type, tx.PaymentMethod, tx.Description, tx.CreatedBy).
+func (r *PaymentRepository) CreateTransaction(tx *models.PaymentTransaction, companyID string) error {
+	query := `INSERT INTO payment_transactions (student_id, amount, type, payment_method, description, created_by, company_id) 
+	          VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, created_at`
+	return r.db.QueryRow(query, tx.StudentID, tx.Amount, tx.Type, tx.PaymentMethod, tx.Description, tx.CreatedBy, companyID).
 		Scan(&tx.ID, &tx.CreatedAt)
 }
 
-func (r *PaymentRepository) GetTransactionsByStudent(studentID string) ([]models.PaymentTransaction, error) {
+func (r *PaymentRepository) GetTransactionsByStudent(studentID string, companyID string) ([]models.PaymentTransaction, error) {
 	query := `SELECT id, student_id, amount, type, payment_method, description, created_at, created_by 
-	          FROM payment_transactions WHERE student_id = $1 ORDER BY created_at DESC`
-	rows, err := r.db.Query(query, studentID)
+	          FROM payment_transactions WHERE student_id = $1 AND company_id = $2 ORDER BY created_at DESC`
+	rows, err := r.db.Query(query, studentID, companyID)
 	if err != nil {
 		return nil, err
 	}
@@ -42,10 +42,10 @@ func (r *PaymentRepository) GetTransactionsByStudent(studentID string) ([]models
 	return transactions, nil
 }
 
-func (r *PaymentRepository) GetAllTransactions() ([]models.PaymentTransaction, error) {
+func (r *PaymentRepository) GetAllTransactions(companyID string) ([]models.PaymentTransaction, error) {
 	query := `SELECT id, student_id, amount, type, payment_method, description, created_at, created_by 
-	          FROM payment_transactions ORDER BY created_at DESC`
-	rows, err := r.db.Query(query)
+	          FROM payment_transactions WHERE company_id = $1 ORDER BY created_at DESC`
+	rows, err := r.db.Query(query, companyID)
 	if err != nil {
 		return nil, err
 	}
@@ -100,9 +100,13 @@ func (r *PaymentRepository) UpdateStudentBalance(studentID string, amount float6
 	return nil
 }
 
-func (r *PaymentRepository) GetAllBalances() ([]models.StudentBalance, error) {
-	query := `SELECT student_id, balance, last_payment_date FROM student_balance ORDER BY balance DESC`
-	rows, err := r.db.Query(query)
+func (r *PaymentRepository) GetAllBalances(companyID string) ([]models.StudentBalance, error) {
+	query := `SELECT sb.student_id, sb.balance, sb.last_payment_date 
+	          FROM student_balance sb
+	          JOIN students s ON sb.student_id = s.id
+	          WHERE s.company_id = $1
+	          ORDER BY sb.balance DESC`
+	rows, err := r.db.Query(query, companyID)
 	if err != nil {
 		return nil, err
 	}

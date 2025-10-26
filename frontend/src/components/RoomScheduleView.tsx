@@ -55,7 +55,7 @@ export default function RoomScheduleView({
 
   // Filter lessons for selected date
   const filteredLessons = lessons.filter((lesson) => {
-    const lessonDate = moment(lesson.start);
+    const lessonDate = moment.utc(lesson.start).local();
     return lessonDate.isSame(selectedDate, "day");
   });
 
@@ -68,8 +68,8 @@ export default function RoomScheduleView({
   });
 
   const getLessonPosition = (lesson: Lesson) => {
-    const startTime = moment(lesson.start);
-    const endTime = moment(lesson.end);
+    const startTime = moment.utc(lesson.start).local();
+    const endTime = moment.utc(lesson.end).local();
     
     const startHour = startTime.hour() + startTime.minute() / 60;
     const endHour = endTime.hour() + endTime.minute() / 60;
@@ -182,7 +182,7 @@ export default function RoomScheduleView({
 
   // Calculate lesson duration in minutes
   const getLessonDuration = (lesson: Lesson) => {
-    return moment(lesson.end).diff(moment(lesson.start), "minutes");
+    return moment.utc(lesson.end).diff(moment.utc(lesson.start), "minutes");
   };
 
   // Lesson drag handlers
@@ -441,6 +441,7 @@ export default function RoomScheduleView({
                 const groupName = getGroupName(lesson.groupId);
                 const duration = getLessonDuration(currentLesson);
                 const teacher = teachers.find((t) => t.id === lesson.teacherId);
+                const lessonRoom = rooms.find((r) => r.id === lesson.roomId);
 
                 // Adaptive display based on duration
                 const showFullInfo = duration >= 90; // 1.5 hours or more
@@ -489,12 +490,12 @@ export default function RoomScheduleView({
                             padding: showMinimalInfo ? "4px 6px" : "8px"
                           }}
                         >
-                          {/* Title - always shown */}
+                          {/* Group name - always shown as title */}
                           <div 
                             className="font-semibold truncate"
                             style={{ fontSize: showMinimalInfo ? "10px" : "12px" }}
                           >
-                            {lesson.title}
+                            {groupName || lesson.title}
                           </div>
 
                           {/* Teacher name - shown for 1hr+ lessons */}
@@ -504,19 +505,10 @@ export default function RoomScheduleView({
                             </div>
                           )}
 
-                          {/* Group badge - shown for 1.5hr+ lessons */}
-                          {showFullInfo && groupName && (
-                            <div className="mt-1">
-                              <Badge variant="outline" className="text-xs">
-                                {groupName}
-                              </Badge>
-                            </div>
-                          )}
-
                           {/* Time - shown for 1hr+ lessons */}
                           {showMediumInfo && (
                             <div className="text-xs text-muted-foreground mt-1">
-                              {moment(currentLesson.start).format("HH:mm")} - {moment(currentLesson.end).format("HH:mm")}
+                              {moment.utc(currentLesson.start).local().format("HH:mm")} - {moment.utc(currentLesson.end).local().format("HH:mm")}
                             </div>
                           )}
                         </Card>
@@ -557,7 +549,7 @@ export default function RoomScheduleView({
                           <div className="flex items-center gap-2 text-sm">
                             <Clock className="h-4 w-4 text-muted-foreground" />
                             <span>
-                              {moment(lesson.start).format("HH:mm")} - {moment(lesson.end).format("HH:mm")}
+                              {moment.utc(lesson.start).local().format("HH:mm")} - {moment.utc(lesson.end).local().format("HH:mm")}
                             </span>
                             <span className="text-muted-foreground">
                               ({duration} мин)
@@ -578,7 +570,7 @@ export default function RoomScheduleView({
 
                           <div className="pt-2 border-t">
                             <div className="text-sm text-muted-foreground">
-                              <span className="font-medium">Аудитория:</span> {room.name}
+                              <span className="font-medium">Аудитория:</span> {lessonRoom?.name || "Не указана"}
                             </div>
                             <div className="text-sm text-muted-foreground">
                               <span className="font-medium">Статус:</span> {

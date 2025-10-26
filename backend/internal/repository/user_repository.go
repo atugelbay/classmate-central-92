@@ -17,12 +17,12 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 
 func (r *UserRepository) Create(user *models.User) error {
 	query := `
-		INSERT INTO users (email, password, name, created_at, updated_at)
-		VALUES ($1, $2, $3, NOW(), NOW())
+		INSERT INTO users (email, password, name, company_id, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, NOW(), NOW())
 		RETURNING id, created_at, updated_at
 	`
 
-	err := r.db.QueryRow(query, user.Email, user.Password, user.Name).
+	err := r.db.QueryRow(query, user.Email, user.Password, user.Name, user.CompanyID).
 		Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("error creating user: %w", err)
@@ -33,10 +33,10 @@ func (r *UserRepository) Create(user *models.User) error {
 
 func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
 	user := &models.User{}
-	query := `SELECT id, email, password, name, created_at, updated_at FROM users WHERE email = $1`
+	query := `SELECT id, email, password, name, company_id, created_at, updated_at FROM users WHERE email = $1`
 
 	err := r.db.QueryRow(query, email).Scan(
-		&user.ID, &user.Email, &user.Password, &user.Name, &user.CreatedAt, &user.UpdatedAt,
+		&user.ID, &user.Email, &user.Password, &user.Name, &user.CompanyID, &user.CreatedAt, &user.UpdatedAt,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -50,10 +50,10 @@ func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
 
 func (r *UserRepository) GetByID(id int) (*models.User, error) {
 	user := &models.User{}
-	query := `SELECT id, email, password, name, created_at, updated_at FROM users WHERE id = $1`
+	query := `SELECT id, email, password, name, company_id, created_at, updated_at FROM users WHERE id = $1`
 
 	err := r.db.QueryRow(query, id).Scan(
-		&user.ID, &user.Email, &user.Password, &user.Name, &user.CreatedAt, &user.UpdatedAt,
+		&user.ID, &user.Email, &user.Password, &user.Name, &user.CompanyID, &user.CreatedAt, &user.UpdatedAt,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil

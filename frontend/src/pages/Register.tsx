@@ -35,7 +35,8 @@ export default function Register() {
     try {
       await register(name, email, password);
       toast.success("Регистрация успешна!");
-      navigate("/");
+      // Полная перезагрузка страницы для сброса всех данных
+      window.location.href = "/";
     } catch (error: any) {
       toast.error(error.response?.data?.error || "Ошибка регистрации");
     } finally {

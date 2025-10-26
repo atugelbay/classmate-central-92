@@ -22,7 +22,8 @@ export default function Login() {
     try {
       await login(email, password);
       toast.success("Успешный вход!");
-      navigate("/");
+      // Полная перезагрузка страницы для сброса всех данных
+      window.location.href = "/";
     } catch (error: any) {
       toast.error(error.response?.data?.error || "Ошибка входа");
     } finally {

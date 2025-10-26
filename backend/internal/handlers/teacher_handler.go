@@ -18,7 +18,8 @@ func NewTeacherHandler(repo *repository.TeacherRepository) *TeacherHandler {
 }
 
 func (h *TeacherHandler) GetAll(c *gin.Context) {
-	teachers, err := h.repo.GetAll()
+	companyID := c.GetString("company_id")
+	teachers, err := h.repo.GetAll(companyID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -29,8 +30,9 @@ func (h *TeacherHandler) GetAll(c *gin.Context) {
 
 func (h *TeacherHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
+	companyID := c.GetString("company_id")
 
-	teacher, err := h.repo.GetByID(id)
+	teacher, err := h.repo.GetByID(id, companyID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -50,7 +52,8 @@ func (h *TeacherHandler) Create(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.Create(&teacher); err != nil {
+	companyID := c.GetString("company_id")
+	if err := h.repo.Create(&teacher, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -60,6 +63,7 @@ func (h *TeacherHandler) Create(c *gin.Context) {
 
 func (h *TeacherHandler) Update(c *gin.Context) {
 	id := c.Param("id")
+	companyID := c.GetString("company_id")
 
 	var teacher models.Teacher
 	if err := c.ShouldBindJSON(&teacher); err != nil {
@@ -69,7 +73,7 @@ func (h *TeacherHandler) Update(c *gin.Context) {
 
 	teacher.ID = id
 
-	if err := h.repo.Update(&teacher); err != nil {
+	if err := h.repo.Update(&teacher, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -79,8 +83,9 @@ func (h *TeacherHandler) Update(c *gin.Context) {
 
 func (h *TeacherHandler) Delete(c *gin.Context) {
 	id := c.Param("id")
+	companyID := c.GetString("company_id")
 
-	if err := h.repo.Delete(id); err != nil {
+	if err := h.repo.Delete(id, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
