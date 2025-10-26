@@ -9,6 +9,10 @@ frontend/.vite/
 
 # Environment variables
 .env
+.env.example
+.env.development
+.env.production
+.env.company2
 .env.local
 .env.production
 .env.*.local
