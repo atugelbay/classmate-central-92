@@ -8,12 +8,14 @@ import {
   useGroups,
   useStudentBalance,
   useStudentSubscriptions,
+  useLessons,
+  useTeachers,
 } from "@/hooks/useData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Mail, Phone, Trash2, Edit, Loader2, Eye, AlertCircle, Clock } from "lucide-react";
+import { Plus, Search, Mail, Phone, Trash2, Edit, Loader2, AlertCircle, Clock } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -34,19 +36,44 @@ export default function Students() {
   const navigate = useNavigate();
   const { data: students = [], isLoading } = useStudents();
   const { data: groups = [] } = useGroups();
+  const { data: lessons = [] } = useLessons();
+  const { data: teachers = [] } = useTeachers();
   const createStudent = useCreateStudent();
   const updateStudent = useUpdateStudent();
   const deleteStudent = useDeleteStudent();
   
   const [searchQuery, setSearchQuery] = useState("");
+  const [activityFilter, setActivityFilter] = useState<"all" | "active" | "inactive">("active");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
 
-  const filteredStudents = students.filter(
-    (student) =>
+  // Check if student has upcoming lessons
+  const isStudentActive = (studentId: string) => {
+    const studentLessons = lessons.filter((l) => 
+      l.studentIds?.includes(studentId) || 
+      (l.groupId && students.find(s => s.id === studentId)?.groupIds?.includes(l.groupId))
+    );
+    const hasUpcomingLessons = studentLessons.some((l) => moment(l.start).isAfter(moment()));
+    return hasUpcomingLessons;
+  };
+
+  const filteredStudents = students.filter((student) => {
+    // Search filter
+    const matchesSearch =
       student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+      student.email.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    if (!matchesSearch) return false;
+    
+    // Activity filter
+    if (activityFilter !== "all") {
+      const isActive = isStudentActive(student.id);
+      if (activityFilter === "active" && !isActive) return false;
+      if (activityFilter === "inactive" && isActive) return false;
+    }
+    
+    return true;
+  });
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -191,28 +218,61 @@ export default function Students() {
         />
       </div>
 
+      {/* Activity Filter */}
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-medium">Статус:</span>
+        <Button
+          variant={activityFilter === "active" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setActivityFilter("active")}
+        >
+          Активные ({students.filter(s => isStudentActive(s.id)).length})
+        </Button>
+        <Button
+          variant={activityFilter === "inactive" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setActivityFilter("inactive")}
+        >
+          Неактивные ({students.filter(s => !isStudentActive(s.id)).length})
+        </Button>
+        <Button
+          variant={activityFilter === "all" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setActivityFilter("all")}
+        >
+          Все ({students.length})
+        </Button>
+      </div>
+
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {filteredStudents.map((student) => {
           const studentGroups = groups.filter((g) =>
             student.groupIds && student.groupIds.includes(g.id)
           );
 
-          const statusColors: Record<string, string> = {
-            active: "bg-green-500",
-            inactive: "bg-gray-500",
-            frozen: "bg-blue-500",
-            graduated: "bg-purple-500",
-          };
+          // Get student's upcoming lessons
+          const studentLessons = lessons.filter((l) => 
+            l.studentIds?.includes(student.id) || 
+            (l.groupId && student.groupIds?.includes(l.groupId))
+          );
+          const upcomingLessons = studentLessons
+            .filter((l) => moment(l.start).isAfter(moment()))
+            .sort((a, b) => moment(a.start).diff(moment(b.start)));
+          const nextLesson = upcomingLessons[0];
+          
+          // Get teacher info for next lesson
+          const nextLessonTeacher = nextLesson ? teachers.find((t) => t.id === nextLesson.teacherId) : null;
+          const nextLessonGroup = nextLesson?.groupId ? groups.find((g) => g.id === nextLesson.groupId) : null;
 
-          const statusNames: Record<string, string> = {
-            active: "Активный",
-            inactive: "Неактивный",
-            frozen: "Заморожен",
-            graduated: "Закончил",
-          };
+          // Determine activity status based on upcoming lessons
+          const hasUpcomingLessons = upcomingLessons.length > 0;
 
           return (
-            <Card key={student.id} className="hover:shadow-md transition-shadow">
+            <Card 
+              key={student.id} 
+              className="hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => navigate(`/students/${student.id}`)}
+            >
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
@@ -226,8 +286,8 @@ export default function Students() {
                       </p>
                     </div>
                   </div>
-                  <Badge className={statusColors[student.status || "active"]}>
-                    {statusNames[student.status || "active"]}
+                  <Badge variant={hasUpcomingLessons ? "default" : "secondary"}>
+                    {hasUpcomingLessons ? "Активный" : "Неактивный"}
                   </Badge>
                 </div>
               </CardHeader>
@@ -263,27 +323,55 @@ export default function Students() {
                       </div>
                     </div>
                   )}
+                  
+                  {/* Next Lesson Info */}
+                  {nextLesson && (
+                    <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Clock className="h-4 w-4 text-green-700" />
+                        <p className="text-sm font-medium text-green-900">Ближайшее занятие:</p>
+                      </div>
+                      <p className="text-sm text-green-800">
+                        {moment(nextLesson.start).format("DD MMMM, dddd")} в {moment(nextLesson.start).format("HH:mm")}
+                      </p>
+                      {nextLessonTeacher && (
+                        <p className="text-xs text-green-700 mt-1">
+                          Преподаватель: {nextLessonTeacher.name}
+                        </p>
+                      )}
+                      {nextLessonGroup && (
+                        <p className="text-xs text-green-700">
+                          Группа: {nextLessonGroup.name}
+                        </p>
+                      )}
+                      {!nextLessonGroup && (
+                        <p className="text-xs text-green-700">
+                          Индивидуальное занятие
+                        </p>
+                      )}
+                    </div>
+                  )}
+
                   <div className="flex gap-2 pt-4">
-                    <Button
-                      variant="default"
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => navigate(`/students/${student.id}`)}
-                    >
-                      <Eye className="h-4 w-4 mr-1" />
-                      Просмотр
-                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleEdit(student)}
+                      className="flex-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEdit(student);
+                      }}
                     >
-                      <Edit className="h-4 w-4" />
+                      <Edit className="h-4 w-4 mr-1" />
+                      Изменить
                     </Button>
                     <Button
                       variant="destructive"
                       size="sm"
-                      onClick={() => handleDelete(student.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(student.id);
+                      }}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

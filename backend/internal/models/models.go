@@ -71,6 +71,7 @@ type Group struct {
 	Name        string   `json:"name" db:"name"`
 	Subject     string   `json:"subject" db:"subject"`
 	TeacherID   string   `json:"teacherId" db:"teacher_id"`
+	RoomID      string   `json:"roomId" db:"room_id"`
 	StudentIds  []string `json:"studentIds"`
 	Schedule    string   `json:"schedule" db:"schedule"`
 	Description string   `json:"description" db:"description"`

@@ -59,8 +59,8 @@ func main() {
 	authHandler := handlers.NewAuthHandler(userRepo, companyRepo)
 	teacherHandler := handlers.NewTeacherHandler(teacherRepo)
 	studentHandler := handlers.NewStudentHandler(studentRepo, activityRepo, notificationRepo, activityService)
-	groupHandler := handlers.NewGroupHandler(groupRepo)
-	lessonHandler := handlers.NewLessonHandler(lessonRepo)
+	groupHandler := handlers.NewGroupHandler(groupRepo, lessonRepo)
+	lessonHandler := handlers.NewLessonHandler(lessonRepo, roomRepo)
 	settingsHandler := handlers.NewSettingsHandler(settingsRepo)
 	roomHandler := handlers.NewRoomHandler(roomRepo)
 	leadHandler := handlers.NewLeadHandler(leadRepo)
@@ -121,13 +121,18 @@ func main() {
 		api.POST("/groups", groupHandler.Create)
 		api.PUT("/groups/:id", groupHandler.Update)
 		api.DELETE("/groups/:id", groupHandler.Delete)
+		api.POST("/groups/:id/generate-lessons", groupHandler.GenerateLessons)
 
 		// Lessons
 		api.GET("/lessons", lessonHandler.GetAll)
+		api.GET("/lessons/individual", lessonHandler.GetIndividual)
 		api.GET("/lessons/:id", lessonHandler.GetByID)
 		api.POST("/lessons", lessonHandler.Create)
 		api.PUT("/lessons/:id", lessonHandler.Update)
 		api.DELETE("/lessons/:id", lessonHandler.Delete)
+		api.POST("/lessons/check-conflicts", lessonHandler.CheckConflicts)
+		api.GET("/lessons/teacher/:teacherId", lessonHandler.GetByTeacher)
+		api.POST("/lessons/bulk", lessonHandler.CreateBulk)
 
 		// Settings
 		api.GET("/settings", settingsHandler.Get)

@@ -29,5 +29,10 @@ export const groupsAPI = {
   delete: async (id: string): Promise<void> => {
     await apiClient.delete(`/groups/${id}`);
   },
+
+  generateLessons: async (id: string): Promise<{ message: string; count: number }> => {
+    const response = await apiClient.post(`/groups/${id}/generate-lessons`);
+    return response.data;
+  },
 };
 

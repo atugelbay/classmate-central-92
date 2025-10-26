@@ -35,6 +35,49 @@ export interface Lesson {
   roomId?: string;
   status: "scheduled" | "completed" | "cancelled";
   studentIds: string[];
+  lessonType?: "group" | "individual";
+  isRecurring?: boolean;
+}
+
+export interface ConflictInfo {
+  lessonId: string;
+  title: string;
+  start: Date;
+  end: Date;
+  teacherName?: string;
+  roomName?: string;
+  conflictType: "teacher" | "room";
+}
+
+export interface SuggestedTime {
+  start: string;
+  end: string;
+  roomId?: string;
+  roomName?: string;
+}
+
+export interface CheckConflictsRequest {
+  teacherId?: string;
+  roomId?: string;
+  start: string;
+  end: string;
+  excludeLessonId?: string;
+}
+
+export interface CheckConflictsResponse {
+  hasConflicts: boolean;
+  conflicts: ConflictInfo[];
+  suggestedTimes?: SuggestedTime[];
+}
+
+export interface BulkCreateLessonRequest {
+  lessons: Omit<Lesson, 'id'>[];
+}
+
+export interface BulkCreateLessonResponse {
+  created: number;
+  skipped: number;
+  messages?: string[];
 }
 
 export interface Group {
@@ -42,6 +85,7 @@ export interface Group {
   name: string;
   subject: string;
   teacherId: string;
+  roomId?: string;
   studentIds: string[];
   schedule: string;
 }

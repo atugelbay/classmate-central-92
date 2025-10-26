@@ -1,10 +1,16 @@
 import { useState } from "react";
-import { useTeachers, useCreateTeacher, useUpdateTeacher, useDeleteTeacher } from "@/hooks/useData";
+import { useNavigate } from "react-router-dom";
+import moment from "moment";
+import "moment/locale/ru";
+import { useTeachers, useCreateTeacher, useUpdateTeacher, useDeleteTeacher, useGroups, useRooms, useStudents, useLessons } from "@/hooks/useData";
+
+moment.locale("ru");
+import { LessonFormModal } from "@/components/LessonFormModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Mail, Phone, Trash2, Edit, Loader2 } from "lucide-react";
+import { Plus, Search, Mail, Phone, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -23,7 +29,12 @@ import {
 import { Teacher } from "@/types";
 
 export default function Teachers() {
+  const navigate = useNavigate();
   const { data: teachers = [], isLoading } = useTeachers();
+  const { data: groups = [] } = useGroups();
+  const { data: rooms = [] } = useRooms();
+  const { data: students = [] } = useStudents();
+  const { data: lessons = [] } = useLessons();
   const createTeacher = useCreateTeacher();
   const updateTeacher = useUpdateTeacher();
   const deleteTeacher = useDeleteTeacher();
@@ -32,6 +43,10 @@ export default function Teachers() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
+
+  // Lesson Form Modal state
+  const [isLessonFormOpen, setIsLessonFormOpen] = useState(false);
+  const [lessonFormData, setLessonFormData] = useState<any>(null);
 
   const filteredTeachers = teachers.filter((teacher) => {
     const matchesSearch =
@@ -80,6 +95,21 @@ export default function Teachers() {
         // Error is handled by the mutation
       }
     }
+  };
+
+  const handleCreateLesson = (teacher: Teacher) => {
+    setLessonFormData({
+      teacherId: teacher.id,
+      subject: teacher.subject,
+      date: moment().format("YYYY-MM-DD"),
+      startTime: "10:00",
+      endTime: "11:30",
+    });
+    setIsLessonFormOpen(true);
+  };
+
+  const handleViewTeacherSchedule = (teacherId: string) => {
+    navigate(`/teachers/${teacherId}`);
   };
 
   if (isLoading) {
@@ -212,71 +242,135 @@ export default function Teachers() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {filteredTeachers.map((teacher) => (
-          <Card key={teacher.id} className="hover:shadow-md transition-shadow">
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-lg font-semibold text-primary">
-                    {teacher.name.charAt(0)}
+        {filteredTeachers.map((teacher) => {
+          // Get teacher's lessons for the current week
+          const startOfWeek = moment().startOf('isoWeek');
+          const endOfWeek = moment().endOf('isoWeek');
+          const teacherLessons = lessons.filter((l) => 
+            l.teacherId === teacher.id && 
+            moment(l.start).isBetween(startOfWeek, endOfWeek, null, '[]')
+          );
+          
+          // Calculate workload in hours for current week
+          const totalMinutes = teacherLessons.reduce((sum, lesson) => {
+            const duration = moment(lesson.end).diff(moment(lesson.start), 'minutes');
+            return sum + duration;
+          }, 0);
+          const workloadHours = (totalMinutes / 60).toFixed(1);
+          
+          // Get upcoming lessons for this teacher
+          const upcomingLessons = lessons
+            .filter((l) => l.teacherId === teacher.id && moment(l.start).isAfter(moment()))
+            .sort((a, b) => moment(a.start).diff(moment(b.start)));
+          const nextLesson = upcomingLessons[0];
+          const nextLessonGroup = nextLesson?.groupId ? groups.find((g) => g.id === nextLesson.groupId) : null;
+          
+          return (
+            <Card 
+              key={teacher.id} 
+              className="hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => handleViewTeacherSchedule(teacher.id)}
+            >
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-lg font-semibold text-primary">
+                      {teacher.name.charAt(0)}
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">{teacher.name}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {teacher.subject}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-semibold">{teacher.name}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {teacher.subject}
+                  <Badge
+                    variant={teacher.status === "active" ? "default" : "secondary"}
+                  >
+                    {teacher.status === "active" ? "Активен" : "Неактивен"}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Mail className="h-4 w-4" />
+                    {teacher.email}
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Phone className="h-4 w-4" />
+                    {teacher.phone}
+                  </div>
+                  
+                  <div className="mt-4 rounded-lg bg-muted p-3">
+                    <p className="text-sm font-medium">Загруженность на неделю</p>
+                    <p className="text-2xl font-bold text-primary">
+                      {workloadHours}
+                      <span className="text-sm font-normal text-muted-foreground">
+                        {" "}
+                        ч
+                      </span>
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {teacherLessons.length} {teacherLessons.length === 1 ? 'урок' : teacherLessons.length < 5 ? 'урока' : 'уроков'}
                     </p>
                   </div>
+                  
+                  {/* Next Lesson */}
+                  {nextLesson && (
+                    <div className="mt-2 rounded-lg bg-green-50 border border-green-200 p-3">
+                      <p className="text-xs font-medium text-green-900 mb-1">Ближайший урок:</p>
+                      <p className="text-sm text-green-800">
+                        {moment(nextLesson.start).format("DD MMM, HH:mm")}
+                      </p>
+                      {nextLessonGroup && (
+                        <p className="text-xs text-green-700 mt-1">
+                          {nextLessonGroup.name}
+                        </p>
+                      )}
+                      {!nextLessonGroup && (
+                        <p className="text-xs text-green-700 mt-1">
+                          Индивидуальное
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  
+                  <div className="pt-4">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="w-full"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCreateLesson(teacher);
+                      }}
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Создать урок
+                    </Button>
+                  </div>
                 </div>
-                <Badge
-                  variant={teacher.status === "active" ? "default" : "secondary"}
-                >
-                  {teacher.status === "active" ? "Активен" : "Неактивен"}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Mail className="h-4 w-4" />
-                  {teacher.email}
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Phone className="h-4 w-4" />
-                  {teacher.phone}
-                </div>
-                <div className="mt-4 rounded-lg bg-muted p-3">
-                  <p className="text-sm font-medium">Загруженность</p>
-                  <p className="text-2xl font-bold text-primary">
-                    {teacher.workload}
-                    <span className="text-sm font-normal text-muted-foreground">
-                      {" "}
-                      ч/нед
-                    </span>
-                  </p>
-                </div>
-                <div className="flex gap-2 pt-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => handleEdit(teacher)}
-                  >
-                    <Edit className="mr-2 h-4 w-4" />
-                    Изменить
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDelete(teacher.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
+
+      {/* Lesson Form Modal */}
+      <LessonFormModal
+        open={isLessonFormOpen}
+        onOpenChange={setIsLessonFormOpen}
+        teachers={teachers}
+        groups={groups}
+        rooms={rooms}
+        students={students}
+        initialData={lessonFormData}
+        mode="create"
+        onSuccess={() => {
+          setLessonFormData(null);
+        }}
+      />
     </div>
   );
 }

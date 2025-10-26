@@ -77,6 +77,7 @@ func (d *Database) RunMigrations() error {
 		"migrations/010_enhance_subscriptions.up.sql",
 		"migrations/011_make_age_nullable.up.sql",
 		"migrations/012_add_group_schedule.up.sql",
+		"migrations/013_add_room_to_groups.up.sql",
 	}
 
 	log.Printf("📋 Total migrations to process: %d", len(migrations))
