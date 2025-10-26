@@ -61,6 +61,8 @@ func (d *Database) RunMigrations() error {
 		"migrations/008_fix_missing_columns.up.sql",
 		"migrations/009_add_billing_type.up.sql",
 		"migrations/010_enhance_subscriptions.up.sql",
+		"migrations/011_make_age_nullable.up.sql",
+		"migrations/012_add_group_schedule.up.sql",
 	}
 
 	for _, migrationFile := range migrations {

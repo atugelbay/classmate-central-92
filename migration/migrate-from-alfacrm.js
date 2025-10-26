@@ -515,6 +515,7 @@ async function migrateGroupSchedules() {
         endDate.setFullYear(endDate.getFullYear() + 1);
       }
       
+      // Create group schedule entry
       await pool.query(`
         INSERT INTO group_schedule (
           id, group_id, day_of_week, time_from, time_to,
@@ -1279,8 +1280,8 @@ async function generateLessons() {
       g.teacher_id
     FROM group_schedule gs
     JOIN groups g ON gs.group_id = g.id
-    WHERE gs.is_active = true
-  `);
+    WHERE gs.is_active = true AND gs.company_id = $1
+  `, [COMPANY_ID]);
   
   const studentGroups = await pool.query('SELECT student_id, group_id FROM student_groups');
   const groupStudents = {};
@@ -1502,6 +1503,7 @@ async function migrateIndividualLessons() {
         endDate.setFullYear(endDate.getFullYear() + 1);
       }
       
+      // Create group schedule entry for individual lesson
       await pool.query(`
         INSERT INTO group_schedule (
           id, group_id, day_of_week, time_from, time_to,
