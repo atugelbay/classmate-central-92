@@ -1409,7 +1409,7 @@ async function createCompany() {
 // === МИГРАЦИЯ ИНДИВИДУАЛЬНЫХ ЗАНЯТИЙ ===
 
 async function migrateIndividualLessons() {
-  console.log('\n👤 МИГРАЦИЯ ИНДИВИДУАЛЬНЫХ ЗАНЯТИЙ\n');
+  console.log('\n👤 МИГРАЦИЯ ИНДИВИДУАЛЬНЫХ ЗАНЯТИЙ (БЕЗ групп)\n');
   
   const regularLessons = await fetchAllPages('/v2api/regular-lesson/index');
   
@@ -1441,111 +1441,122 @@ async function migrateIndividualLessons() {
     return;
   }
   
-  const progressBar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
-  progressBar.start(individualSchedules.length, 0);
+  // Генерируем индивидуальные уроки на 3 месяца вперед
+  const startDate = new Date();
+  const endDate = new Date(startDate);
+  endDate.setMonth(endDate.getMonth() + 3);
   
-  let groupsCreated = 0;
-  let schedulesCreated = 0;
+  // Подсчитаем ожидаемое количество уроков
+  let expectedLessons = 0;
+  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+    const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay();
+    individualSchedules.forEach(schedule => {
+      const scheduleDayOfWeek = parseInt(schedule.day) || 1;
+      if (scheduleDayOfWeek === dayOfWeek) {
+        expectedLessons++;
+      }
+    });
+  }
+  
+  const progressBar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
+  progressBar.start(expectedLessons, 0);
+  
+  let lessonsCreated = 0;
   let skipped = 0;
   
-  for (const lesson of individualSchedules) {
-    try {
-      const studentId = lesson.studentId;
-      const studentName = lesson.studentName;
-      const teacherId = Array.isArray(lesson.teacher_ids) && lesson.teacher_ids.length > 0 
-        ? lesson.teacher_ids[0]?.toString() 
-        : null;
-      const roomId = lesson.room_id?.toString() || null;
-      
-      // Создаем виртуальную группу для индивидуального занятия
-      const virtualGroupId = `ind_${lesson.id}`;
-      const groupName = `${studentName} (индивид.)`;
-      
-      // Создаем виртуальную группу
-      await pool.query(`
-        INSERT INTO groups (id, name, subject, teacher_id, description, status, color, company_id)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-        ON CONFLICT (id) DO NOTHING
-      `, [
-        virtualGroupId,
-        groupName,
-        'Английский язык',
-        teacherId,
-        'Индивидуальное занятие (автоматически создано при миграции)',
-        'active',
-        '#10b981',
-        COMPANY_ID
-      ]);
-      
-      groupsCreated++;
-      
-      // Привязываем студента к виртуальной группе
-      await pool.query(`
-        INSERT INTO student_groups (student_id, group_id)
-        VALUES ($1, $2)
-        ON CONFLICT (student_id, group_id) DO NOTHING
-      `, [studentId, virtualGroupId]);
-      
-      // Создаем расписание для виртуальной группы
-      const dayOfWeek = parseInt(lesson.day) || 1;
-      const timeFrom = lesson.time_from_v || '10:00';
-      const timeTo = lesson.time_to_v || '11:00';
-      
-      let startDate = new Date();
-      let endDate = new Date();
-      
-      if (lesson.b_date) {
-        startDate = new Date(lesson.b_date);
-      }
-      if (lesson.e_date) {
-        endDate = new Date(lesson.e_date);
-      } else {
-        endDate.setFullYear(endDate.getFullYear() + 1);
-      }
-      
-      // Create group schedule entry for individual lesson
-      await pool.query(`
-        INSERT INTO group_schedule (
-          id, group_id, day_of_week, time_from, time_to,
-          teacher_id, room_id, start_date, end_date, is_active, company_id
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-        ON CONFLICT (id) DO UPDATE SET
-          day_of_week = EXCLUDED.day_of_week,
-          time_from = EXCLUDED.time_from,
-          time_to = EXCLUDED.time_to,
-          teacher_id = EXCLUDED.teacher_id,
-          room_id = EXCLUDED.room_id,
-          start_date = EXCLUDED.start_date,
-          end_date = EXCLUDED.end_date,
-          company_id = EXCLUDED.company_id
-      `, [
-        lesson.id?.toString(),
-        virtualGroupId,
-        dayOfWeek,
-        timeFrom,
-        timeTo,
-        teacherId,
-        roomId,
-        startDate,
-        endDate,
-        true,
-        COMPANY_ID
-      ]);
-      
-      schedulesCreated++;
-      
-    } catch (error) {
-      console.error(`\n   ⚠️  Ошибка для студента ${lesson.studentName}: ${error.message}`);
-      skipped++;
-    }
+  // Генерируем индивидуальные уроки напрямую (БЕЗ создания групп)
+  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+    const dayOfWeek = d.getDay() === 0 ? 7 : d.getDay();
     
-    progressBar.update(groupsCreated + skipped);
+    for (const lesson of individualSchedules) {
+      const scheduleDayOfWeek = parseInt(lesson.day) || 1;
+      if (scheduleDayOfWeek !== dayOfWeek) continue;
+      
+      try {
+        const studentId = lesson.studentId;
+        const studentName = lesson.studentName;
+        const teacherId = Array.isArray(lesson.teacher_ids) && lesson.teacher_ids.length > 0 
+          ? lesson.teacher_ids[0]?.toString() 
+          : null;
+        const roomId = lesson.room_id?.toString() || null;
+        
+        // Проверяем диапазон дат расписания
+        const lessonDate = new Date(d);
+        let scheduleStartDate = null;
+        let scheduleEndDate = null;
+        
+        if (lesson.b_date) {
+          scheduleStartDate = new Date(lesson.b_date);
+        }
+        if (lesson.e_date) {
+          scheduleEndDate = new Date(lesson.e_date);
+        }
+        
+        if (scheduleStartDate && lessonDate < scheduleStartDate) continue;
+        if (scheduleEndDate && lessonDate > scheduleEndDate) continue;
+        
+        const timeFrom = lesson.time_from_v || '10:00';
+        const timeTo = lesson.time_to_v || '11:00';
+        
+        const [startHour, startMinute] = timeFrom.split(':').map(Number);
+        const [endHour, endMinute] = timeTo.split(':').map(Number);
+        
+        // Конвертируем Almaty время в UTC (вычитаем 5 часов)
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        
+        const startHourUTC = startHour - 5;
+        const endHourUTC = endHour - 5;
+        
+        const startHourStr = String(startHourUTC).padStart(2, '0');
+        const startMinuteStr = String(startMinute).padStart(2, '0');
+        const endHourStr = String(endHourUTC).padStart(2, '0');
+        const endMinuteStr = String(endMinute).padStart(2, '0');
+        
+        const startTimeStr = `${year}-${month}-${day} ${startHourStr}:${startMinuteStr}:00`;
+        const endTimeStr = `${year}-${month}-${day} ${endHourStr}:${endMinuteStr}:00`;
+        
+        const lessonId = uuidv4();
+        
+        // Создаем ИНДИВИДУАЛЬНЫЙ урок (БЕЗ group_id!)
+        await pool.query(`
+          INSERT INTO lessons (
+            id, title, teacher_id, group_id, subject,
+            start_time, end_time, room_id, status, company_id
+          )
+          VALUES ($1, $2, $3, NULL, $4, $5::timestamp, $6::timestamp, $7, $8, $9)
+        `, [
+          lessonId,
+          `Индивидуальное: ${studentName}`,
+          teacherId,
+          'Английский язык',
+          startTimeStr,
+          endTimeStr,
+          roomId,
+          'scheduled',
+          COMPANY_ID
+        ]);
+        
+        // Связываем урок со студентом через lesson_students
+        await pool.query(`
+          INSERT INTO lesson_students (lesson_id, student_id, company_id)
+          VALUES ($1, $2, $3)
+          ON CONFLICT DO NOTHING
+        `, [lessonId, studentId, COMPANY_ID]);
+        
+        lessonsCreated++;
+        progressBar.update(lessonsCreated);
+        
+      } catch (error) {
+        console.error(`\n   ⚠️  Ошибка для студента ${lesson.studentName}: ${error.message}`);
+        skipped++;
+      }
+    }
   }
   
   progressBar.stop();
-  console.log(`✅ Создано виртуальных групп: ${groupsCreated}`);
-  console.log(`✅ Создано расписаний: ${schedulesCreated}`);
+  console.log(`✅ Создано индивидуальных уроков: ${lessonsCreated}`);
   if (skipped > 0) {
     console.log(`⚠️  Пропущено: ${skipped}`);
   }
