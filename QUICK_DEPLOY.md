@@ -11,12 +11,22 @@ git push origin main
 
 ## 2️⃣ Настройка Railway (первый раз)
 
-### Backend Service:
+### ⚠️ ВАЖНО! Настрой Dockerfile Path в Railway:
+
+1. Открой **Railway Dashboard** → твой проект
+2. **Settings** → найди "Dockerfile Path"
+3. Установи: **`Dockerfile`** (без `backend/`)
+4. Root Directory: **`/`** (корень)
+
 ```
-✅ Уже настроено через railway.json
-   Dockerfile: Dockerfile (корневой)
-   Build from: / (корень проекта)
+✅ Root Directory: /
+✅ Dockerfile Path: Dockerfile    ← БЕЗ "backend/"!
 ```
+
+**Почему это важно:**
+- Railway может автоматически найти `backend/Dockerfile` и использовать его
+- Но нам нужен **корневой** `Dockerfile` (с поддержкой миграции)
+- Явно указываем путь в настройках
 
 ### Environment Variables:
 ```bash
@@ -80,6 +90,10 @@ railway logs
 
 ## ⚠️ Если что-то не работает
 
+### Build Failed: "/migration": not found
+👉 **См. [RAILWAY_FIX.md](./RAILWAY_FIX.md)** - как настроить правильный Dockerfile
+
+### Другие проблемы:
 ```bash
 # 1. Проверь логи
 railway logs --tail 100
@@ -96,6 +110,7 @@ railway up
 
 ## 📞 Support
 
+- [RAILWAY_FIX.md](./RAILWAY_FIX.md) - исправление ошибки build ⚠️
 - [DEPLOY_TO_PRODUCTION.md](./DEPLOY_TO_PRODUCTION.md) - полная инструкция
 - [FINANCIAL_HISTORY_MIGRATION.md](./FINANCIAL_HISTORY_MIGRATION.md) - о миграции истории
 
