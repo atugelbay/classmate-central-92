@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { ThemeProvider } from "@/context/ThemeContext";
 import Dashboard from "./pages/Dashboard";
 import Leads from "./pages/Leads";
 import Teachers from "./pages/Teachers";
@@ -71,54 +72,56 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route
-              path="/login"
-              element={
-                <PublicRoute>
-                  <Login />
-                </PublicRoute>
-              }
-            />
-            <Route
-              path="/register"
-              element={
-                <PublicRoute>
-                  <Register />
-                </PublicRoute>
-              }
-            />
-            <Route
-              path="/*"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Routes>
-                      <Route path="/" element={<Dashboard />} />
-                      <Route path="/leads" element={<Leads />} />
-                      <Route path="/teachers" element={<Teachers />} />
-                      <Route path="/teachers/:id" element={<TeacherDetail />} />
-                      <Route path="/students" element={<Students />} />
-                      <Route path="/students/:id" element={<StudentDetail />} />
-                      <Route path="/schedule" element={<Schedule />} />
-                      <Route path="/groups" element={<Groups />} />
-                      <Route path="/individual-lessons" element={<IndividualLessons />} />
-                      <Route path="/finance" element={<Finance />} />
-                      <Route path="/subscriptions" element={<Subscriptions />} />
-                      <Route path="/settings" element={<Settings />} />
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+      <ThemeProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route
+                path="/login"
+                element={
+                  <PublicRoute>
+                    <Login />
+                  </PublicRoute>
+                }
+              />
+              <Route
+                path="/register"
+                element={
+                  <PublicRoute>
+                    <Register />
+                  </PublicRoute>
+                }
+              />
+              <Route
+                path="/*"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <Routes>
+                        <Route path="/" element={<Dashboard />} />
+                        <Route path="/leads" element={<Leads />} />
+                        <Route path="/teachers" element={<Teachers />} />
+                        <Route path="/teachers/:id" element={<TeacherDetail />} />
+                        <Route path="/students" element={<Students />} />
+                        <Route path="/students/:id" element={<StudentDetail />} />
+                        <Route path="/schedule" element={<Schedule />} />
+                        <Route path="/groups" element={<Groups />} />
+                        <Route path="/individual-lessons" element={<IndividualLessons />} />
+                        <Route path="/finance" element={<Finance />} />
+                        <Route path="/subscriptions" element={<Subscriptions />} />
+                        <Route path="/settings" element={<Settings />} />
+                        <Route path="*" element={<NotFound />} />
+                      </Routes>
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </ThemeProvider>
     </AuthProvider>
   </QueryClientProvider>
 );
