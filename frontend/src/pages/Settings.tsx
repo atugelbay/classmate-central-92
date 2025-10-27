@@ -1,29 +1,14 @@
 import { useState } from "react";
-import { useSettings, useUpdateSettings, useRooms, useCreateRoom, useUpdateRoom, useDeleteRoom } from "@/hooks/useData";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useSettings, useUpdateSettings } from "@/hooks/useData";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Loader2, Plus, Edit, Trash2, Building2 } from "lucide-react";
+import { Loader2, Sun, Moon, Monitor, Palette, Check } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MigrationSettings } from "@/components/MigrationSettings";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -31,20 +16,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Room } from "@/types";
+import { useThemeContext } from "@/context/ThemeContext";
+import { ColorThemeName, InterfaceSize, DataDensity } from "@/types";
+
+const COLOR_THEMES = [
+  { name: "blue" as ColorThemeName, label: "Синий", color: "#6366F1" },
+  { name: "purple" as ColorThemeName, label: "Фиолетовый", color: "#A855F7" },
+  { name: "green" as ColorThemeName, label: "Зеленый", color: "#10B981" },
+  { name: "orange" as ColorThemeName, label: "Оранжевый", color: "#F59E0B" },
+  { name: "red" as ColorThemeName, label: "Красный", color: "#EF4444" },
+  { name: "pink" as ColorThemeName, label: "Розовый", color: "#EC4899" },
+];
 
 export default function Settings() {
   const { data: settings, isLoading } = useSettings();
   const updateSettings = useUpdateSettings();
-  const { data: rooms = [], isLoading: roomsLoading } = useRooms();
-  const createRoom = useCreateRoom();
-  const updateRoom = useUpdateRoom();
-  const deleteRoom = useDeleteRoom();
-  
-  const [isRoomDialogOpen, setIsRoomDialogOpen] = useState(false);
-  const [editingRoom, setEditingRoom] = useState<Room | null>(null);
-  const [deleteRoomId, setDeleteRoomId] = useState<string | null>(null);
+  const { theme, setTheme, uiPreferences, updateUIPreference, applyColorTheme } = useThemeContext();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -60,50 +47,6 @@ export default function Settings() {
     }
   };
 
-  const handleRoomSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    
-    const roomData = {
-      name: formData.get("name") as string,
-      capacity: parseInt(formData.get("capacity") as string),
-      color: formData.get("color") as string,
-      status: formData.get("status") as "active" | "inactive",
-    };
-
-    try {
-      if (editingRoom) {
-        await updateRoom.mutateAsync({ id: editingRoom.id, data: roomData });
-      } else {
-        await createRoom.mutateAsync(roomData);
-      }
-      setIsRoomDialogOpen(false);
-      setEditingRoom(null);
-    } catch (error) {
-      // Error handled by mutation
-    }
-  };
-
-  const handleDeleteRoom = async () => {
-    if (!deleteRoomId) return;
-    try {
-      await deleteRoom.mutateAsync(deleteRoomId);
-      setDeleteRoomId(null);
-    } catch (error) {
-      // Error handled by mutation
-    }
-  };
-
-  const openEditRoom = (room: Room) => {
-    setEditingRoom(room);
-    setIsRoomDialogOpen(true);
-  };
-
-  const openCreateRoom = () => {
-    setEditingRoom(null);
-    setIsRoomDialogOpen(true);
-  };
-
   if (isLoading || !settings) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -117,60 +60,63 @@ export default function Settings() {
       <div>
         <h1 className="text-3xl font-bold">Настройки</h1>
         <p className="text-muted-foreground">
-          Конфигурация учебного центра
+          Конфигурация учебного центра и интерфейса
         </p>
       </div>
 
       <Tabs defaultValue="general" className="w-full">
         <TabsList>
-          <TabsTrigger value="general">Основные</TabsTrigger>
-          <TabsTrigger value="rooms">Аудитории</TabsTrigger>
+          <TabsTrigger value="general">Общие</TabsTrigger>
+          <TabsTrigger value="interface">Интерфейс</TabsTrigger>
           <TabsTrigger value="migration">Миграция</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="space-y-6 max-w-2xl">
           <Card>
-        <CardHeader>
-          <CardTitle>Основные настройки</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <Label htmlFor="centerName">Название учебного центра</Label>
-              <Input
-                id="centerName"
-                name="centerName"
-                defaultValue={settings.centerName}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="themeColor">Цветовая схема (основной цвет)</Label>
-              <div className="flex gap-4 items-center">
-                <Input
-                  id="themeColor"
-                  name="themeColor"
-                  type="color"
-                  defaultValue={settings.themeColor}
-                  className="h-12 w-24"
-                />
-                <Input
-                  type="text"
-                  defaultValue={settings.themeColor}
-                  disabled
-                  className="flex-1"
-                />
-              </div>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Выберите основной цвет для интерфейса
-              </p>
-            </div>
-            <Button type="submit" className="w-full">
-              Сохранить настройки
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+            <CardHeader>
+              <CardTitle>Основные настройки</CardTitle>
+              <CardDescription>
+                Общая информация об учебном центре
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div>
+                  <Label htmlFor="centerName">Название учебного центра</Label>
+                  <Input
+                    id="centerName"
+                    name="centerName"
+                    defaultValue={settings.centerName}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="themeColor">Акцентный цвет (для совместимости)</Label>
+                  <div className="flex gap-4 items-center">
+                    <Input
+                      id="themeColor"
+                      name="themeColor"
+                      type="color"
+                      defaultValue={settings.themeColor}
+                      className="h-12 w-24"
+                    />
+                    <Input
+                      type="text"
+                      defaultValue={settings.themeColor}
+                      disabled
+                      className="flex-1"
+                    />
+                  </div>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Используйте вкладку "Интерфейс" для выбора палитры
+                  </p>
+                </div>
+                <Button type="submit" className="w-full">
+                  Сохранить настройки
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
 
           <Card>
             <CardHeader>
@@ -193,154 +139,253 @@ export default function Settings() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="rooms" className="space-y-6">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              Управление аудиториями для расписания
-            </p>
-            <Dialog open={isRoomDialogOpen} onOpenChange={setIsRoomDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={openCreateRoom}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Добавить аудиторию
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingRoom ? "Редактировать аудиторию" : "Новая аудитория"}
-                  </DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleRoomSubmit} className="space-y-4">
-                  <div>
-                    <Label htmlFor="name">Название *</Label>
-                    <Input
-                      id="name"
-                      name="name"
-                      defaultValue={editingRoom?.name}
-                      required
-                      placeholder="Например: Аудитория 101"
+        <TabsContent value="interface" className="space-y-6 max-w-4xl">
+          {/* Theme Selection */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Тема оформления</CardTitle>
+              <CardDescription>
+                Выберите светлую, темную или системную тему
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RadioGroup
+                value={theme}
+                onValueChange={setTheme}
+                className="grid grid-cols-3 gap-4"
+              >
+                <div>
+                  <RadioGroupItem
+                    value="light"
+                    id="light"
+                    className="peer sr-only"
+                  />
+                  <Label
+                    htmlFor="light"
+                    className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
+                  >
+                    <Sun className="mb-3 h-6 w-6" />
+                    <span className="text-sm font-medium">Светлая</span>
+                  </Label>
+                </div>
+                <div>
+                  <RadioGroupItem
+                    value="dark"
+                    id="dark"
+                    className="peer sr-only"
+                  />
+                  <Label
+                    htmlFor="dark"
+                    className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
+                  >
+                    <Moon className="mb-3 h-6 w-6" />
+                    <span className="text-sm font-medium">Темная</span>
+                  </Label>
+                </div>
+                <div>
+                  <RadioGroupItem
+                    value="system"
+                    id="system"
+                    className="peer sr-only"
+                  />
+                  <Label
+                    htmlFor="system"
+                    className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
+                  >
+                    <Monitor className="mb-3 h-6 w-6" />
+                    <span className="text-sm font-medium">Системная</span>
+                  </Label>
+                </div>
+              </RadioGroup>
+            </CardContent>
+          </Card>
+
+          {/* Color Palette */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Цветовая палитра</CardTitle>
+              <CardDescription>
+                Выберите основной цвет для интерфейса
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {COLOR_THEMES.map((colorTheme) => (
+                  <button
+                    key={colorTheme.name}
+                    onClick={() => applyColorTheme(colorTheme.name)}
+                    className={`relative flex items-center gap-3 rounded-lg border-2 p-4 transition-all hover:border-primary ${
+                      uiPreferences.colorTheme === colorTheme.name
+                        ? "border-primary bg-primary/5"
+                        : "border-muted"
+                    }`}
+                  >
+                    <div
+                      className="h-10 w-10 rounded-full border-2 border-background shadow-sm"
+                      style={{ backgroundColor: colorTheme.color }}
                     />
-                  </div>
-                  <div>
-                    <Label htmlFor="capacity">Вместимость *</Label>
-                    <Input
-                      id="capacity"
-                      name="capacity"
-                      type="number"
-                      min="1"
-                      defaultValue={editingRoom?.capacity || 10}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="color">Цвет</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="color"
-                        name="color"
-                        type="color"
-                        defaultValue={editingRoom?.color || "#8B5CF6"}
-                        className="w-20 h-10"
-                      />
-                      <span className="text-sm text-muted-foreground flex items-center">
-                        Цвет для визуального отображения
-                      </span>
+                    <div className="flex-1 text-left">
+                      <div className="font-medium">{colorTheme.label}</div>
                     </div>
+                    {uiPreferences.colorTheme === colorTheme.name && (
+                      <Check className="h-5 w-5 text-primary" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Interface Size */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Размер интерфейса</CardTitle>
+              <CardDescription>
+                Настройте размер текста и элементов интерфейса
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RadioGroup
+                value={uiPreferences.interfaceSize}
+                onValueChange={(value) =>
+                  updateUIPreference("interfaceSize", value as InterfaceSize)
+                }
+                className="grid grid-cols-3 gap-4"
+              >
+                <div>
+                  <RadioGroupItem
+                    value="compact"
+                    id="compact"
+                    className="peer sr-only"
+                  />
+                  <Label
+                    htmlFor="compact"
+                    className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
+                  >
+                    <span className="text-xs mb-2">Aa</span>
+                    <span className="text-sm font-medium">Компактный</span>
+                  </Label>
+                </div>
+                <div>
+                  <RadioGroupItem
+                    value="normal"
+                    id="normal"
+                    className="peer sr-only"
+                  />
+                  <Label
+                    htmlFor="normal"
+                    className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
+                  >
+                    <span className="text-sm mb-2">Aa</span>
+                    <span className="text-sm font-medium">Нормальный</span>
+                  </Label>
+                </div>
+                <div>
+                  <RadioGroupItem
+                    value="comfortable"
+                    id="comfortable"
+                    className="peer sr-only"
+                  />
+                  <Label
+                    htmlFor="comfortable"
+                    className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
+                  >
+                    <span className="text-base mb-2">Aa</span>
+                    <span className="text-sm font-medium">Комфортный</span>
+                  </Label>
+                </div>
+              </RadioGroup>
+            </CardContent>
+          </Card>
+
+          {/* Animations and Data Density */}
+          <div className="grid md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Анимации</CardTitle>
+                <CardDescription>
+                  Включите или отключите анимации в интерфейсе
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="animations">Включить анимации</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Переходы и эффекты
+                    </p>
                   </div>
-                  <div>
-                    <Label htmlFor="status">Статус *</Label>
-                    <Select name="status" defaultValue={editingRoom?.status || "active"}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="active">Активна</SelectItem>
-                        <SelectItem value="inactive">Неактивна</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button type="submit" className="w-full">
-                    {editingRoom ? "Сохранить" : "Создать"}
-                  </Button>
-                </form>
-              </DialogContent>
-            </Dialog>
+                  <Switch
+                    id="animations"
+                    checked={uiPreferences.animationsEnabled}
+                    onCheckedChange={(checked) =>
+                      updateUIPreference("animationsEnabled", checked)
+                    }
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Плотность данных</CardTitle>
+                <CardDescription>
+                  Настройте отступы в таблицах и списках
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Select
+                  value={uiPreferences.dataDensity}
+                  onValueChange={(value) =>
+                    updateUIPreference("dataDensity", value as DataDensity)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="compact">Компактная</SelectItem>
+                    <SelectItem value="standard">Стандартная</SelectItem>
+                    <SelectItem value="spacious">Просторная</SelectItem>
+                  </SelectContent>
+                </Select>
+              </CardContent>
+            </Card>
           </div>
 
-          {roomsLoading ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {rooms.map((room) => (
-                <Card key={room.id} className="border-l-4" style={{ borderLeftColor: room.color }}>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-2">
-                        <Building2 className="h-5 w-5 text-muted-foreground" />
-                        <CardTitle className="text-lg">{room.name}</CardTitle>
-                      </div>
-                      <Badge variant={room.status === "active" ? "default" : "secondary"}>
-                        {room.status === "active" ? "Активна" : "Неактивна"}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="text-sm text-muted-foreground">
-                      Вместимость: <span className="font-medium text-foreground">{room.capacity} чел.</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => openEditRoom(room)}
-                        className="flex-1"
-                      >
-                        <Edit className="mr-1 h-3 w-3" />
-                        Редактировать
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setDeleteRoomId(room.id)}
-                      >
-                        <Trash2 className="h-3 w-3 text-red-600" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-              {rooms.length === 0 && (
-                <div className="col-span-full text-center py-12 text-muted-foreground">
-                  Аудитории не созданы. Добавьте первую аудиторию.
+          {/* Preview Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Предпросмотр</CardTitle>
+              <CardDescription>
+                Пример отображения с текущими настройками
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="rounded-lg border bg-card p-4">
+                  <h3 className="font-semibold mb-2">Пример заголовка</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Это пример текста с текущими настройками интерфейса. 
+                    Здесь вы можете увидеть, как будет выглядеть контент.
+                  </p>
+                  <Button>Пример кнопки</Button>
                 </div>
-              )}
-            </div>
-          )}
+                <div className="rounded-lg border bg-muted/50 p-3">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Palette className="h-4 w-4 text-primary" />
+                    <span>Акцентный элемент с основным цветом</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="migration" className="space-y-6">
           <MigrationSettings />
         </TabsContent>
       </Tabs>
-
-      {/* Delete Room Confirmation */}
-      <AlertDialog open={!!deleteRoomId} onOpenChange={() => setDeleteRoomId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Удалить аудиторию?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Это действие нельзя отменить. Аудитория будет удалена, но уроки сохранятся.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Отмена</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteRoom}>Удалить</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

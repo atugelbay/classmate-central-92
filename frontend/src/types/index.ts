@@ -337,3 +337,25 @@ export interface MarkAttendanceRequest {
   reason?: string;
   notes?: string;
 }
+
+// ============= UI/UX PREFERENCES =============
+
+export type ColorThemeName = "blue" | "purple" | "green" | "orange" | "red" | "pink";
+export type InterfaceSize = "compact" | "normal" | "comfortable";
+export type DataDensity = "compact" | "standard" | "spacious";
+
+export interface ColorTheme {
+  name: ColorThemeName;
+  label: string;
+  primary: string;
+  primaryLight: string;
+  primaryDark: string;
+  primaryForeground: string;
+}
+
+export interface UIPreferences {
+  colorTheme: ColorThemeName;
+  interfaceSize: InterfaceSize;
+  animationsEnabled: boolean;
+  dataDensity: DataDensity;
+}
