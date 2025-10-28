@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import moment from "moment";
 import "moment/locale/ru";
 import { Room, Lesson, Teacher, Group } from "@/types";
@@ -44,13 +44,14 @@ export default function RoomScheduleView({
   const [tempLessonPosition, setTempLessonPosition] = useState<{ start: Date; end: Date; roomId?: string } | null>(null);
   const [hoveredRoomId, setHoveredRoomId] = useState<string | null>(null);
   
-  // Time slots from 9:00 to 22:00 (every 30 minutes)
+  // Track container width for responsive column sizing
+  const [containerWidth, setContainerWidth] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Time slots from 8:00 to 21:00 (every hour)
   const timeSlots: string[] = [];
-  for (let hour = 9; hour <= 22; hour++) {
+  for (let hour = 8; hour <= 21; hour++) {
     timeSlots.push(`${hour.toString().padStart(2, "0")}:00`);
-    if (hour < 22) {
-      timeSlots.push(`${hour.toString().padStart(2, "0")}:30`);
-    }
   }
 
   // Filter lessons for selected date
@@ -74,7 +75,7 @@ export default function RoomScheduleView({
     const startHour = startTime.hour() + startTime.minute() / 60;
     const endHour = endTime.hour() + endTime.minute() / 60;
     
-    const startOffset = ((startHour - 9) / 13) * 100; // 13 hours from 9 to 22
+    const startOffset = ((startHour - 8) / 13) * 100; // 13 hours from 8 to 21
     const height = ((endHour - startHour) / 13) * 100;
     
     return { top: `${startOffset}%`, height: `${height}%` };
@@ -92,6 +93,25 @@ export default function RoomScheduleView({
   };
 
   const activeRooms = rooms?.filter((room) => room.status === "active") || [];
+  
+  // Calculate responsive column width
+  // Take into account: time column, gaps, padding, and ensure it fits viewport
+  const calculateColumnWidth = () => {
+    if (activeRooms.length === 0 || containerWidth === 0) return 200;
+    
+    const timeColumnWidth = containerWidth < 640 ? 48 : 64; // Responsive time column
+    const gapWidth = containerWidth < 640 ? 4 : 8; // sm: 8px (gap-2), mobile: 4px (gap-1)
+    const totalGaps = (activeRooms.length) * gapWidth;
+    const padding = 20; // Internal padding
+    
+    const availableWidth = containerWidth - timeColumnWidth - totalGaps - padding;
+    const columnWidth = Math.floor(availableWidth / activeRooms.length);
+    
+    // Ensure minimum readability but prioritize fitting in viewport
+    return Math.max(100, columnWidth);
+  };
+  
+  const columnWidth = calculateColumnWidth();
 
   const handleSlotMouseDown = (timeSlot: string, roomId: string) => {
     // If popover is open, don't start dragging
@@ -213,13 +233,13 @@ export default function RoomScheduleView({
     
     // Calculate time based on Y position
     const percentage = Math.max(0, Math.min(1, cardTopY / totalHeight));
-    const totalMinutes = 13 * 60; // 9:00 to 22:00
+    const totalMinutes = 13 * 60; // 8:00 to 21:00
     const minutesFromStart = Math.round(percentage * totalMinutes / 30) * 30; // Round to 30 min
     
     const duration = moment(draggingLesson.end).diff(moment(draggingLesson.start), 'minutes');
     
     const newStart = moment(selectedDate)
-      .hour(9)
+      .hour(8)
       .minute(0)
       .add(minutesFromStart, 'minutes')
       .toDate();
@@ -275,7 +295,7 @@ export default function RoomScheduleView({
     const minutesFromStart = Math.round(percentage * totalMinutes / 30) * 30;
     
     const newTime = moment(selectedDate)
-      .hour(9)
+      .hour(8)
       .minute(0)
       .add(minutesFromStart, 'minutes')
       .toDate();
@@ -343,21 +363,48 @@ export default function RoomScheduleView({
     }
   }, [resizingLesson, tempLessonPosition]);
 
+  // Track container resize for responsive columns
+  useEffect(() => {
+    const updateWidth = () => {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.offsetWidth);
+      }
+    };
+    
+    // Initial measurement
+    updateWidth();
+    
+    // Use ResizeObserver for better reactivity
+    const resizeObserver = new ResizeObserver(updateWidth);
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+    
+    // Fallback to window resize
+    window.addEventListener('resize', updateWidth);
+    
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateWidth);
+    };
+  }, []);
+
   return (
     <div 
-      className="relative isolate min-w-0" 
+      ref={containerRef}
+      className="relative isolate min-w-0 w-full p-2 sm:p-0" 
       style={{ userSelect: (isDragging || draggingLesson || resizingLesson) ? 'none' : 'auto' }}
     >
-      <div className="overflow-x-auto pb-4">
-        <div className="flex gap-4 min-w-max">
+      <div className="overflow-x-hidden pb-4 w-full">
+        <div className="flex gap-1 sm:gap-2">
           {/* Time Column */}
-          <div className="flex-shrink-0 w-16 sticky left-0 z-[5] bg-background">
-            <div className="h-12 border-b bg-background" /> {/* Header spacer */}
-            <div className="relative bg-background" style={{ height: "800px" }}>
+          <div className="flex-shrink-0 w-12 sm:w-16 sticky left-0 z-[5] bg-background">
+            <div className="h-10 border-b bg-background" /> {/* Header spacer */}
+            <div className="relative bg-background" style={{ height: "calc(100vh - 280px)", minHeight: "400px", maxHeight: "600px" }}>
               {timeSlots.map((time, index) => (
                 <div
                   key={time}
-                  className="absolute w-full text-xs text-muted-foreground pr-2 text-right"
+                  className="absolute w-full text-xs text-muted-foreground pr-1 sm:pr-2 text-right"
                   style={{ top: `${(index / timeSlots.length) * 100}%` }}
                 >
                   {time}
@@ -368,13 +415,19 @@ export default function RoomScheduleView({
 
           {/* Room Columns */}
           {activeRooms.map((room) => (
-            <div key={room.id} className="flex-shrink-0 w-64">
+            <div 
+              key={room.id} 
+              className="flex-shrink-0"
+              style={{
+                width: `${columnWidth}px`
+              }}
+            >
               {/* Room Header */}
-              <div className="h-12 border-b flex items-center justify-center bg-background relative z-[4]">
+              <div className="h-10 border-b flex items-center justify-center bg-background relative z-[4]">
                 <div className="text-center">
-                  <div className="font-semibold">{room.name}</div>
+                  <div className="font-semibold text-sm">{room.name}</div>
                   <div className="text-xs text-muted-foreground">
-                    Вместимость: {room.capacity}
+                    {room.capacity} мест
                   </div>
                 </div>
               </div>
@@ -386,7 +439,7 @@ export default function RoomScheduleView({
                     ? 'bg-blue-50/30'
                     : ''
                 }`}
-                style={{ height: "800px" }}
+                style={{ height: "calc(100vh - 280px)", minHeight: "400px", maxHeight: "600px" }}
                 onMouseMove={(e) => {
                   const roomElement = e.currentTarget;
                   if (draggingLesson) {
