@@ -78,16 +78,15 @@ export default function MonthScheduleView({
   }
 
   return (
-    <div className="relative min-w-0">
-      <div className="overflow-x-auto pb-4">
-        <div className="min-w-max">
+    <div className="relative min-w-0 w-full p-2 sm:p-0">
+      <div className="overflow-x-hidden pb-4 w-full">
+        <div className="w-full max-w-full">
           {/* Week days header */}
           <div className="grid grid-cols-7 border-b">
             {weekDays.map((day, index) => (
               <div 
                 key={index} 
-                className="h-12 flex items-center justify-center font-semibold text-sm border-r last:border-r-0"
-                style={{ minWidth: "140px" }}
+                className="h-8 flex items-center justify-center font-semibold text-xs border-r last:border-r-0"
               >
                 {day}
               </div>
@@ -105,17 +104,17 @@ export default function MonthScheduleView({
                 return (
                   <div
                     key={dayIndex}
-                    className={`border-r last:border-r-0 p-2 cursor-pointer transition-colors ${
+                    className={`border-r last:border-r-0 p-1 cursor-pointer transition-colors overflow-hidden ${
                       today ? 'bg-blue-50' : ''
                     } ${!currentMonth ? 'bg-gray-50/50' : 'hover:bg-gray-50'}`}
-                    style={{ minWidth: "140px", minHeight: "120px" }}
+                    style={{ minHeight: "70px", maxHeight: "90px" }}
                     onClick={() => handleDayClick(day)}
                   >
-                    <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-start justify-between mb-1">
                       <span 
-                        className={`text-sm font-semibold ${
+                        className={`text-xs font-semibold ${
                           today 
-                            ? 'bg-blue-600 text-white w-7 h-7 rounded-full flex items-center justify-center' 
+                            ? 'bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center' 
                             : !currentMonth 
                             ? 'text-muted-foreground' 
                             : ''
@@ -124,35 +123,35 @@ export default function MonthScheduleView({
                         {moment(day).format('D')}
                       </span>
                       {dayLessons.length > 0 && (
-                        <Badge variant="secondary" className="text-xs">
+                        <Badge variant="secondary" className="text-[10px] h-4 px-1">
                           {dayLessons.length}
                         </Badge>
                       )}
                     </div>
 
-                    <div className="space-y-1">
-                      {dayLessons.slice(0, 3).map((lesson) => (
+                    <div className="space-y-0.5 overflow-hidden">
+                      {dayLessons.slice(0, 2).map((lesson) => (
                         <Card 
                           key={lesson.id} 
-                          className="p-1.5 hover:shadow-md transition-shadow"
+                          className="p-1 hover:shadow-md transition-shadow overflow-hidden"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <div className="text-xs font-semibold truncate">
+                          <div className="text-[10px] font-semibold truncate leading-tight overflow-hidden text-ellipsis whitespace-nowrap">
                             {getGroupName(lesson.groupId) || lesson.title}
                           </div>
-                          <div className="text-xs text-muted-foreground">
+                          <div className="text-[9px] text-muted-foreground leading-tight truncate overflow-hidden text-ellipsis whitespace-nowrap">
                             {moment.utc(lesson.start).local().format("HH:mm")}
                           </div>
                         </Card>
                       ))}
-                      {dayLessons.length > 3 && (
+                      {dayLessons.length > 2 && (
                         <Popover>
                           <PopoverTrigger asChild>
                             <div 
-                              className="text-xs text-muted-foreground text-center pt-1 cursor-pointer hover:text-primary transition-colors"
+                              className="text-[10px] text-muted-foreground text-center pt-0.5 cursor-pointer hover:text-primary transition-colors"
                               onClick={(e) => e.stopPropagation()}
                             >
-                              +{dayLessons.length - 3} еще
+                              +{dayLessons.length - 2}
                             </div>
                           </PopoverTrigger>
                           <PopoverContent 

@@ -382,7 +382,7 @@ export default function Schedule() {
         </Tabs>
       </div>
 
-      <Card className="min-w-0">
+      <Card className="min-w-0 w-full overflow-hidden">
         <CardHeader>
           <CardTitle>
             {viewMode === "day" && "Расписание по аудиториям"}
@@ -390,7 +390,7 @@ export default function Schedule() {
             {viewMode === "month" && "Календарь на месяц"}
           </CardTitle>
         </CardHeader>
-        <CardContent className="min-w-0">
+        <CardContent className="min-w-0 w-full p-0 sm:p-6">
           {viewMode === "day" && (
             <RoomScheduleView
               rooms={rooms}

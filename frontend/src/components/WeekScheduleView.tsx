@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import moment from "moment";
 import "moment/locale/ru";
 import { Room, Lesson, Teacher, Group } from "@/types";
@@ -36,6 +36,10 @@ export default function WeekScheduleView({
   const [draggingLesson, setDraggingLesson] = useState<Lesson | null>(null);
   const [tempLessonPosition, setTempLessonPosition] = useState<{ start: Date; end: Date; roomId?: string } | null>(null);
   const [hoveredCell, setHoveredCell] = useState<{ dayIndex: number; roomId: string } | null>(null);
+  
+  // Track container width for responsive column sizing
+  const [containerWidth, setContainerWidth] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Get week days (Monday to Sunday)
   const weekStart = moment(selectedDate).startOf('isoWeek');
@@ -43,9 +47,9 @@ export default function WeekScheduleView({
     weekStart.clone().add(i, 'days').toDate()
   );
 
-  // Time slots from 9:00 to 22:00 (every hour for week view)
+  // Time slots from 8:00 to 21:00 (every hour for week view)
   const timeSlots: string[] = [];
-  for (let hour = 9; hour <= 22; hour++) {
+  for (let hour = 8; hour <= 21; hour++) {
     timeSlots.push(`${hour.toString().padStart(2, "0")}:00`);
   }
 
@@ -77,6 +81,23 @@ export default function WeekScheduleView({
   };
 
   const activeRooms = rooms?.filter((room) => room.status === "active") || [];
+  
+  // Calculate responsive column width for days
+  // Take into account: room name column, and padding to fit viewport
+  const calculateDayColumnWidth = () => {
+    if (containerWidth === 0) return 120;
+    
+    const roomColumnWidth = containerWidth < 640 ? 112 : 128;
+    const padding = 20; // Internal padding
+    
+    const availableWidth = containerWidth - roomColumnWidth - padding;
+    const columnWidth = Math.floor(availableWidth / 7); // 7 days
+    
+    // Ensure minimum readability but prioritize fitting in viewport
+    return Math.max(80, columnWidth);
+  };
+  
+  const dayColumnWidth = calculateDayColumnWidth();
 
   const handleLessonClick = (lesson: Lesson, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -175,17 +196,44 @@ export default function WeekScheduleView({
     }
   }, [draggingLesson, tempLessonPosition]);
 
+  // Track container resize for responsive columns
+  useEffect(() => {
+    const updateWidth = () => {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.offsetWidth);
+      }
+    };
+    
+    // Initial measurement
+    updateWidth();
+    
+    // Use ResizeObserver for better reactivity
+    const resizeObserver = new ResizeObserver(updateWidth);
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+    
+    // Fallback to window resize
+    window.addEventListener('resize', updateWidth);
+    
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateWidth);
+    };
+  }, []);
+
   return (
     <div 
-      className="relative isolate min-w-0" 
+      ref={containerRef}
+      className="relative isolate min-w-0 w-full p-2 sm:p-0" 
       style={{ userSelect: draggingLesson ? 'none' : 'auto' }}
     >
-      <div className="overflow-x-auto pb-4">
-        <div className="min-w-max">
+      <div className="overflow-x-hidden pb-4 w-full">
+        <div className="flex flex-col w-full">
           {/* Header with days */}
           <div className="flex gap-0 border-b">
-            <div className="flex-shrink-0 w-32 sticky left-0 z-[5] bg-background border-r">
-              <div className="h-16 flex items-center justify-center font-semibold">
+            <div className="flex-shrink-0 w-28 sm:w-32 sticky left-0 z-[5] bg-background border-r">
+              <div className="h-12 flex items-center justify-center font-semibold text-sm">
                 Аудитория
               </div>
             </div>
@@ -194,16 +242,17 @@ export default function WeekScheduleView({
               return (
                 <div 
                   key={index} 
-                  className={`flex-shrink-0 w-48 border-r ${isToday ? 'bg-blue-50' : ''}`}
+                  className={`flex-shrink-0 border-r ${isToday ? 'bg-blue-50' : ''}`}
+                  style={{ width: `${dayColumnWidth}px` }}
                 >
-                  <div className="h-16 flex flex-col items-center justify-center">
-                    <div className={`text-sm ${isToday ? 'text-blue-600 font-semibold' : 'text-muted-foreground'}`}>
+                  <div className="h-12 flex flex-col items-center justify-center gap-0 py-1">
+                    <div className={`text-[9px] leading-tight ${isToday ? 'text-blue-600 font-semibold' : 'text-muted-foreground'}`}>
                       {moment(day).format('dd')}
                     </div>
-                    <div className={`text-lg font-semibold ${isToday ? 'text-blue-600' : ''}`}>
+                    <div className={`text-sm font-semibold leading-tight ${isToday ? 'text-blue-600' : ''}`}>
                       {moment(day).format('D')}
                     </div>
-                    <div className={`text-xs ${isToday ? 'text-blue-600' : 'text-muted-foreground'}`}>
+                    <div className={`text-[9px] leading-tight ${isToday ? 'text-blue-600' : 'text-muted-foreground'}`}>
                       {moment(day).format('MMM')}
                     </div>
                   </div>
@@ -216,15 +265,15 @@ export default function WeekScheduleView({
           {activeRooms.map((room) => (
             <div key={room.id} className="flex gap-0 border-b">
               {/* Room name */}
-              <div className="flex-shrink-0 w-32 sticky left-0 z-[4] bg-background border-r">
-                <div className="h-32 flex flex-col items-center justify-center p-2 text-center">
-                  <div className="font-semibold text-sm">{room.name}</div>
+              <div className="flex-shrink-0 w-28 sm:w-32 sticky left-0 z-[4] bg-background border-r">
+                <div className="h-20 flex flex-col items-center justify-center p-1 text-center">
+                  <div className="font-semibold text-xs">{room.name}</div>
                   <div 
-                    className="w-3 h-3 rounded-full mt-1" 
+                    className="w-2 h-2 rounded-full mt-0.5" 
                     style={{ backgroundColor: room.color }}
                   />
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {room.capacity} мест
+                  <div className="text-xs text-muted-foreground">
+                    {room.capacity}
                   </div>
                 </div>
               </div>
@@ -247,10 +296,14 @@ export default function WeekScheduleView({
                 return (
                   <div 
                     key={dayIndex}
-                    className={`flex-shrink-0 w-48 border-r p-2 cursor-pointer transition-colors ${
+                    className={`flex-shrink-0 border-r p-1 cursor-pointer transition-colors overflow-hidden ${
                       isToday ? 'bg-blue-50/30' : ''
                     } ${isHovered && draggingLesson ? 'bg-blue-100/50' : 'hover:bg-gray-50'}`}
-                    style={{ minHeight: "120px" }}
+                    style={{ 
+                      minHeight: "80px",
+                      maxHeight: "100px",
+                      width: `${dayColumnWidth}px`
+                    }}
                     onClick={(e) => handleCellClick(day, room.id, e)}
                     onMouseEnter={() => {
                       if (draggingLesson) {
@@ -258,9 +311,9 @@ export default function WeekScheduleView({
                       }
                     }}
                   >
-                    <div className="space-y-1">
+                    <div className="space-y-0.5 overflow-hidden h-full">
                       {/* Lessons as list */}
-                      {sortedLessons.slice(0, 3).map((lesson) => {
+                      {sortedLessons.slice(0, 2).map((lesson) => {
                         const isDragged = draggingLesson?.id === lesson.id;
                         
                         // Hide original if being dragged to different day/room
@@ -275,7 +328,7 @@ export default function WeekScheduleView({
                           }}>
                             <PopoverTrigger asChild>
                               <Card
-                                className={`p-1.5 hover:shadow-md transition-shadow cursor-pointer select-none ${
+                                className={`p-1 hover:shadow-md transition-shadow cursor-pointer select-none overflow-hidden ${
                                   isDragged ? 'opacity-50' : ''
                                 }`}
                                 onClick={(e) => {
@@ -292,10 +345,10 @@ export default function WeekScheduleView({
                                 }}
                                 style={{ userSelect: 'none' }}
                               >
-                                <div className="text-xs font-semibold truncate">
+                                <div className="text-[10px] font-semibold truncate leading-tight overflow-hidden text-ellipsis whitespace-nowrap">
                                   {getGroupName(lesson.groupId) || lesson.title}
                                 </div>
-                                <div className="text-xs text-muted-foreground">
+                                <div className="text-[9px] text-muted-foreground truncate leading-tight overflow-hidden text-ellipsis whitespace-nowrap">
                                   {moment.utc(lesson.start).local().format("HH:mm")}
                                 </div>
                               </Card>
@@ -358,15 +411,15 @@ export default function WeekScheduleView({
                         );
                       })}
 
-                      {/* Show count if more than 3 lessons */}
-                      {sortedLessons.length > 3 && (
+                      {/* Show count if more than 2 lessons */}
+                      {sortedLessons.length > 2 && (
                         <Popover>
                           <PopoverTrigger asChild>
                             <div 
-                              className="text-xs text-muted-foreground text-center pt-1 cursor-pointer hover:text-primary transition-colors"
+                              className="text-[9px] text-blue-600 font-medium text-center pt-0.5 cursor-pointer hover:text-blue-800 transition-colors"
                               onClick={(e) => e.stopPropagation()}
                             >
-                              +{sortedLessons.length - 3} еще
+                              +{sortedLessons.length - 2} еще
                             </div>
                           </PopoverTrigger>
                           <PopoverContent 
@@ -428,8 +481,8 @@ export default function WeekScheduleView({
 
                       {/* Empty state */}
                       {sortedLessons.length === 0 && !shouldShowGhost && (
-                        <div className="flex items-center justify-center py-8">
-                          <p className="text-xs text-muted-foreground/50">Нет уроков</p>
+                        <div className="flex items-center justify-center py-2">
+                          <p className="text-[10px] text-muted-foreground/50">Нет уроков</p>
                         </div>
                       )}
                     </div>
