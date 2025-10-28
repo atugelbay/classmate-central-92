@@ -2,7 +2,7 @@ import { useState } from "react";
 import moment from "moment";
 import "moment/locale/ru";
 
-import { useLessons, useDeleteLesson, useTeachers, useGroups, useRooms, useCreateRoom, useStudents, useMarkAttendance } from "@/hooks/useData";
+import { useLessons, useDeleteLesson, useUpdateLesson, useTeachers, useGroups, useRooms, useCreateRoom, useStudents, useMarkAttendance } from "@/hooks/useData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Loader2, Trash2, ChevronLeft, ChevronRight, Building2, Calendar, CalendarDays, CalendarRange, CheckCircle2, XCircle, Clock, Edit, ClipboardCheck } from "lucide-react";
@@ -51,6 +51,7 @@ export default function Schedule() {
   const { data: rooms = [] } = useRooms();
   const { data: students = [] } = useStudents();
   const deleteLesson = useDeleteLesson();
+  const updateLesson = useUpdateLesson();
   const createRoom = useCreateRoom();
   const markAttendance = useMarkAttendance();
   
@@ -104,6 +105,32 @@ export default function Schedule() {
   const handleLessonClick = (lesson: Lesson) => {
     setSelectedLesson(lesson);
     setIsLessonDetailsDialogOpen(true);
+  };
+
+  const handleLessonUpdate = async (lessonId: string, updates: { start: Date; end: Date; roomId?: string }) => {
+    try {
+      // Find the original lesson to get all its data
+      const originalLesson = lessons.find(l => l.id === lessonId);
+      if (!originalLesson) {
+        toast.error("Урок не найден");
+        return;
+      }
+
+      // Send full lesson object with updated fields
+      await updateLesson.mutateAsync({
+        id: lessonId,
+        data: {
+          ...originalLesson,
+          start: updates.start,
+          end: updates.end,
+          roomId: updates.roomId || originalLesson.roomId,
+        },
+      });
+      toast.success("Урок обновлен");
+    } catch (error) {
+      console.error("Error updating lesson:", error);
+      toast.error("Ошибка при обновлении урока");
+    }
   };
 
   const handleOpenAttendance = () => {
@@ -400,6 +427,7 @@ export default function Schedule() {
               selectedDate={selectedDate}
               onLessonClick={handleLessonClick}
               onSlotClick={handleSlotClick}
+              onLessonUpdate={handleLessonUpdate}
             />
           )}
           {viewMode === "week" && (
@@ -411,6 +439,7 @@ export default function Schedule() {
               selectedDate={selectedDate}
               onLessonClick={handleLessonClick}
               onSlotClick={handleSlotClick}
+              onLessonUpdate={handleLessonUpdate}
             />
           )}
           {viewMode === "month" && (

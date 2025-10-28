@@ -401,15 +401,19 @@ export default function RoomScheduleView({
           <div className="flex-shrink-0 w-12 sm:w-16 sticky left-0 z-[5] bg-background">
             <div className="h-10 border-b bg-background" /> {/* Header spacer */}
             <div className="relative bg-background" style={{ height: "calc(100vh - 280px)", minHeight: "400px", maxHeight: "600px" }}>
-              {timeSlots.map((time, index) => (
-                <div
-                  key={time}
-                  className="absolute w-full text-xs text-muted-foreground pr-1 sm:pr-2 text-right"
-                  style={{ top: `${(index / timeSlots.length) * 100}%` }}
-                >
-                  {time}
-                </div>
-              ))}
+              {timeSlots.map((time) => {
+                const [hour] = time.split(':').map(Number);
+                const position = ((hour - 8) / 13) * 100; // Same formula as getLessonPosition
+                return (
+                  <div
+                    key={time}
+                    className="absolute w-full text-xs text-muted-foreground pr-1 sm:pr-2 text-right"
+                    style={{ top: `${position}%` }}
+                  >
+                    {time}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -451,19 +455,23 @@ export default function RoomScheduleView({
                 }}
               >
               {/* Time grid lines with click handlers */}
-              {timeSlots.map((time, index) => {
+              {timeSlots.map((time) => {
                 const isSelected = isSlotSelected(time, room.id);
+                const [hour] = time.split(':').map(Number);
+                const position = ((hour - 8) / 13) * 100; // Same formula as getLessonPosition
+                const slotHeight = (1 / 13) * 100; // Each hour slot is 1/13 of total height
                 return (
                   <div
                     key={time}
-                    className={`absolute w-full border-t border-gray-100 cursor-pointer transition-colors select-none ${
+                    className={`absolute w-full border-t border-gray-100 transition-colors select-none ${
                       isSelected 
-                        ? 'bg-blue-200/50' 
-                        : 'hover:bg-blue-50/30'
+                        ? 'bg-blue-200/50 cursor-pointer z-[1]' 
+                        : 'hover:bg-blue-50/30 cursor-pointer z-[1]'
                     }`}
                     style={{ 
-                      top: `${(index / timeSlots.length) * 100}%`,
-                      height: `${(1 / timeSlots.length) * 100}%`
+                      top: `${position}%`,
+                      height: `${slotHeight}%`,
+                      pointerEvents: draggingLesson || resizingLesson ? 'none' : 'auto'
                     }}
                     onMouseDown={() => {
                       if (!draggingLesson && !resizingLesson) {
@@ -507,8 +515,8 @@ export default function RoomScheduleView({
                   }}>
                     <PopoverTrigger asChild>
                       <div
-                        className={`absolute left-0 right-0 mx-1 transition-all hover:z-[3] z-[2] group select-none ${
-                          isDragged || isResized ? 'cursor-move opacity-80' : 'cursor-pointer hover:shadow-lg'
+                        className={`absolute left-0 right-0 mx-1 transition-all hover:z-[10] z-[5] group select-none ${
+                          isDragged || isResized ? 'cursor-move opacity-80 z-[15]' : 'cursor-pointer hover:shadow-lg'
                         }`}
                         style={{
                           top: position.top,
@@ -529,7 +537,7 @@ export default function RoomScheduleView({
                       >
                         {/* Top resize handle */}
                         <div
-                          className="absolute top-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-blue-400/30 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                          className="absolute top-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-blue-400/30 opacity-0 group-hover:opacity-100 transition-opacity z-[20]"
                           onMouseDown={(e) => {
                             e.stopPropagation();
                             handleResizeStart(lesson, 'top', e);
@@ -568,7 +576,7 @@ export default function RoomScheduleView({
                         
                         {/* Bottom resize handle */}
                         <div
-                          className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-blue-400/30 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                          className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-blue-400/30 opacity-0 group-hover:opacity-100 transition-opacity z-[20]"
                           onMouseDown={(e) => {
                             e.stopPropagation();
                             handleResizeStart(lesson, 'bottom', e);
@@ -653,7 +661,7 @@ export default function RoomScheduleView({
               {/* Dragged lesson from another room (ghost preview) */}
               {draggingLesson && hoveredRoomId === room.id && draggingLesson.roomId !== room.id && tempLessonPosition && (
                 <div
-                  className="absolute left-0 right-0 mx-1 pointer-events-none opacity-70 z-[2]"
+                  className="absolute left-0 right-0 mx-1 pointer-events-none opacity-70 z-[8]"
                   style={{
                     top: getLessonPosition({ 
                       ...draggingLesson, 
