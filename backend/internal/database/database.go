@@ -78,6 +78,13 @@ func (d *Database) RunMigrations() error {
 		"migrations/011_make_age_nullable.up.sql",
 		"migrations/012_add_group_schedule.up.sql",
 		"migrations/013_add_room_to_groups.up.sql",
+		"migrations/014_add_enrollment.up.sql",
+		"migrations/015_add_individual_enrollment.up.sql",
+		"migrations/016_add_schedule_rule.up.sql",
+		"migrations/017_add_lesson_occurrence.up.sql",
+		"migrations/018_add_subscription_consumption.up.sql",
+		"migrations/019_add_invoice_tables.up.sql",
+		"migrations/020_add_transaction_table.up.sql",
 	}
 
 	log.Printf("📋 Total migrations to process: %d", len(migrations))

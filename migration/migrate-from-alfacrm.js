@@ -819,13 +819,13 @@ async function migrateStudentSubscriptions() {
         startDate, endDate, status, 0, COMPANY_ID
       ]);
       
-      // Связываем студента с группой
+      // Связываем студента с группой через enrollment
       if (groupId) {
         await pool.query(`
-          INSERT INTO student_groups (student_id, group_id)
-          VALUES ($1, $2)
-          ON CONFLICT (student_id, group_id) DO NOTHING
-        `, [studentId, groupId]);
+          INSERT INTO enrollment (student_id, group_id, joined_at, company_id)
+          VALUES ($1, $2, CURRENT_TIMESTAMP, $3)
+          ON CONFLICT (student_id, group_id) WHERE left_at IS NULL DO NOTHING
+        `, [studentId, groupId, COMPANY_ID]);
       }
       
       created++;
@@ -1283,7 +1283,12 @@ async function generateLessons() {
     WHERE gs.is_active = true AND gs.company_id = $1
   `, [COMPANY_ID]);
   
-  const studentGroups = await pool.query('SELECT student_id, group_id FROM student_groups');
+  // Получаем активные записи enrollment (только текущие связи студент-группа)
+  const studentGroups = await pool.query(`
+    SELECT student_id, group_id 
+    FROM enrollment 
+    WHERE left_at IS NULL AND company_id = $1
+  `, [COMPANY_ID]);
   const groupStudents = {};
   studentGroups.rows.forEach(sg => {
     if (!groupStudents[sg.group_id]) {
@@ -1542,7 +1547,7 @@ async function migrateIndividualLessons() {
         await pool.query(`
           INSERT INTO lesson_students (lesson_id, student_id, company_id)
           VALUES ($1, $2, $3)
-          ON CONFLICT DO NOTHING
+          ON CONFLICT (lesson_id, student_id) DO NOTHING
         `, [lessonId, studentId, COMPANY_ID]);
         
         lessonsCreated++;
@@ -1641,12 +1646,12 @@ async function migrateStudentGroupLinks() {
         continue;
       }
       
-      // Вставляем связь (ON CONFLICT игнорирует дубликаты)
+      // Вставляем связь через enrollment (ON CONFLICT игнорирует дубликаты)
       await pool.query(`
-        INSERT INTO student_groups (student_id, group_id)
-        VALUES ($1, $2)
-        ON CONFLICT (student_id, group_id) DO NOTHING
-      `, [studentId, groupId]);
+        INSERT INTO enrollment (student_id, group_id, joined_at, company_id)
+        VALUES ($1, $2, CURRENT_TIMESTAMP, $3)
+        ON CONFLICT (student_id, group_id) WHERE left_at IS NULL DO NOTHING
+      `, [studentId, groupId, COMPANY_ID]);
       
       created++;
     } catch (error) {

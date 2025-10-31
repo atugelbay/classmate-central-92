@@ -293,10 +293,16 @@ func (r *LessonRepository) DeleteByGroupID(groupID string, companyID string) err
 // GetIndividualLessons returns all lessons without a group (individual lessons)
 func (r *LessonRepository) GetIndividualLessons(companyID string) ([]*models.Lesson, error) {
 	query := `
-		SELECT id, title, teacher_id, group_id, subject, start_time, end_time, room, room_id, status 
-		FROM lessons 
-		WHERE company_id = $1 AND (group_id IS NULL OR group_id = '')
-		ORDER BY start_time DESC
+		SELECT 
+			l.id, l.title, l.teacher_id, l.group_id, l.subject, 
+			l.start_time, l.end_time, l.room, l.room_id, l.status, l.company_id,
+			t.name as teacher_name,
+			rm.name as room_name
+		FROM lessons l
+		LEFT JOIN teachers t ON l.teacher_id = t.id
+		LEFT JOIN rooms rm ON l.room_id = rm.id
+		WHERE l.company_id = $1 AND (l.group_id IS NULL OR l.group_id = '')
+		ORDER BY l.start_time DESC
 	`
 
 	rows, err := r.db.Query(query, companyID)
@@ -308,16 +314,20 @@ func (r *LessonRepository) GetIndividualLessons(companyID string) ([]*models.Les
 	lessons := []*models.Lesson{}
 	for rows.Next() {
 		lesson := &models.Lesson{}
-		var teacherID, groupID, room, roomID, status sql.NullString
+		var teacherID, teacherName, groupID, room, roomID, roomName, status sql.NullString
 
 		err := rows.Scan(&lesson.ID, &lesson.Title, &teacherID, &groupID,
-			&lesson.Subject, &lesson.Start, &lesson.End, &room, &roomID, &status)
+			&lesson.Subject, &lesson.Start, &lesson.End, &room, &roomID, &status, &lesson.CompanyID,
+			&teacherName, &roomName)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning lesson: %w", err)
 		}
 
 		if teacherID.Valid {
 			lesson.TeacherID = teacherID.String
+		}
+		if teacherName.Valid {
+			lesson.TeacherName = teacherName.String
 		}
 		if groupID.Valid {
 			lesson.GroupID = groupID.String
@@ -327,6 +337,9 @@ func (r *LessonRepository) GetIndividualLessons(companyID string) ([]*models.Les
 		}
 		if roomID.Valid {
 			lesson.RoomID = roomID.String
+		}
+		if roomName.Valid {
+			lesson.RoomName = roomName.String
 		}
 		if status.Valid {
 			lesson.Status = status.String
@@ -353,7 +366,10 @@ func (r *LessonRepository) GetIndividualLessons(companyID string) ([]*models.Les
 		studentRows.Close()
 		lesson.StudentIds = studentIds
 
-		lessons = append(lessons, lesson)
+		// Only include lessons with at least one student
+		if len(studentIds) > 0 {
+			lessons = append(lessons, lesson)
+		}
 	}
 
 	return lessons, nil
