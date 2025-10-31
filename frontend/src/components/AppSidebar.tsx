@@ -1,4 +1,5 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -83,11 +84,18 @@ const navItems = [
 ];
 
 export function AppSidebar() {
-  const { state } = useSidebar();
+  const { state, setOpenMobile, isMobile } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
   const { data: settings } = useSettings();
   const { logout, user } = useAuth();
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  }, [location.pathname, isMobile, setOpenMobile]);
 
   const isActive = (path: string) => {
     if (path === "/") {

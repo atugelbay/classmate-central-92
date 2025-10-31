@@ -192,7 +192,7 @@ export default function AssignSubscriptionModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle className="text-2xl">
             Назначить абонемент: {student.name}

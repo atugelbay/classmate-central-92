@@ -586,7 +586,7 @@ export default function Schedule() {
 
       {/* Attendance Dialog */}
       <Dialog open={isAttendanceDialogOpen} onOpenChange={setIsAttendanceDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>
               Отметка посещаемости: {selectedLesson?.title}

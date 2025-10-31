@@ -111,6 +111,79 @@ export default function Groups() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTeacherId, scheduleData.roomId, scheduleData.startTime, scheduleData.endTime, JSON.stringify(scheduleData.weekdays)]);
 
+  // Extract schedule from group lessons if schedule field is empty
+  const getGroupScheduleFromLessons = (groupId: string): string => {
+    const groupLessons = lessons.filter((l) => l.groupId === groupId && l.status !== "cancelled");
+    if (groupLessons.length === 0) return "";
+    
+    // Group lessons by weekday and find most common time for each weekday
+    const weekdayMap = new Map<number, Map<string, number>>(); // weekday -> timeString -> count
+    
+    groupLessons.forEach((lesson) => {
+      const lessonDate = moment(lesson.start);
+      const weekday = lessonDate.day(); // 0 = Sunday, 1 = Monday, etc.
+      const startTime = lessonDate.format("HH:mm");
+      const endTime = moment(lesson.end).format("HH:mm");
+      const timeString = `${startTime} - ${endTime}`;
+      
+      if (!weekdayMap.has(weekday)) {
+        weekdayMap.set(weekday, new Map());
+      }
+      
+      const timeCountMap = weekdayMap.get(weekday)!;
+      timeCountMap.set(timeString, (timeCountMap.get(timeString) || 0) + 1);
+    });
+    
+    if (weekdayMap.size === 0) return "";
+    
+    // Get most common time for each weekday
+    const scheduleMap = new Map<number, { start: string; end: string }>();
+    
+    weekdayMap.forEach((timeCountMap, weekday) => {
+      let maxCount = 0;
+      let mostCommonTime = "";
+      
+      timeCountMap.forEach((count, timeString) => {
+        if (count > maxCount) {
+          maxCount = count;
+          mostCommonTime = timeString;
+        }
+      });
+      
+      if (mostCommonTime) {
+        const [start, end] = mostCommonTime.split(" - ");
+        scheduleMap.set(weekday, { start: start.trim(), end: end.trim() });
+      }
+    });
+    
+    if (scheduleMap.size === 0) return "";
+    
+    // Check if all weekdays have the same time
+    const firstEntry = Array.from(scheduleMap.values())[0];
+    const allSameTime = Array.from(scheduleMap.values()).every(
+      (entry) => entry.start === firstEntry.start && entry.end === firstEntry.end
+    );
+    
+    // Sort weekdays (0 = Sunday, 1 = Monday, etc.)
+    const sortedWeekdays = Array.from(scheduleMap.keys()).sort((a, b) => {
+      // Convert Sunday (0) to 7 for proper sorting
+      const aAdj = a === 0 ? 7 : a;
+      const bAdj = b === 0 ? 7 : b;
+      return aAdj - bAdj;
+    });
+    
+    const weekdayNames = ["ВС", "ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ"];
+    const weekdayLabels = sortedWeekdays.map(day => weekdayNames[day === 0 ? 0 : day]).join(" ");
+    
+    if (allSameTime) {
+      // All days have same time, format: "ПН СР ПТ 15:00 - 16:00"
+      return `${weekdayLabels} ${firstEntry.start} - ${firstEntry.end}`;
+    } else {
+      // Different times for different days - use first time as primary
+      return `${weekdayLabels} ${firstEntry.start} - ${firstEntry.end}`;
+    }
+  };
+  
   // Get group activity info
   const getGroupActivity = (groupId: string) => {
     const groupLessons = lessons.filter((l) => l.groupId === groupId);
@@ -128,6 +201,14 @@ export default function Groups() {
       completedLessons: completedLessons.length,
       nextLesson,
     };
+  };
+  
+  // Get schedule for a group (from schedule field or extracted from lessons)
+  const getGroupSchedule = (group: Group): string => {
+    if (group.schedule && group.schedule.trim()) {
+      return group.schedule;
+    }
+    return getGroupScheduleFromLessons(group.id);
   };
 
   const filteredGroups = groups.filter((group) => {
@@ -153,9 +234,9 @@ export default function Groups() {
     const formData = new FormData(e.currentTarget);
     
     // Format schedule string from scheduleData
-    const weekdayNames = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
+    const weekdayNames = ["ВС", "ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ"];
     const scheduleString = scheduleData.weekdays.length > 0
-      ? `${scheduleData.weekdays.map(d => weekdayNames[d]).join(", ")} ${scheduleData.startTime}-${scheduleData.endTime}`
+      ? `${scheduleData.weekdays.map(d => weekdayNames[d]).join(" ")} ${scheduleData.startTime} - ${scheduleData.endTime}`
       : "";
     
     const groupData = {
@@ -205,16 +286,16 @@ export default function Groups() {
     setSelectedTeacherId(group.teacherId || "");
     
     // Parse schedule string to extract weekdays and time
-    // Format: "Пн, Ср, Пт 20:00-21:30"
+    // Format: "ПН СР ПТ 20:00 - 21:30" or "Пн, Ср, Пт 20:00-21:30" (for backwards compatibility)
     if (group.schedule) {
       const weekdayMap: Record<string, number> = {
-        "пн": 1, "понедельник": 1,
-        "вт": 2, "вторник": 2,
-        "ср": 3, "среда": 3,
-        "чт": 4, "четверг": 4,
-        "пт": 5, "пятница": 5,
-        "сб": 6, "суббота": 6,
-        "вс": 0, "воскресенье": 0,
+        "пн": 1, "понедельник": 1, "pn": 1,
+        "вт": 2, "вторник": 2, "vt": 2,
+        "ср": 3, "среда": 3, "sr": 3,
+        "чт": 4, "четверг": 4, "cht": 4,
+        "пт": 5, "пятница": 5, "pt": 5,
+        "сб": 6, "суббота": 6, "sb": 6,
+        "вс": 0, "воскресенье": 0, "vs": 0,
       };
       
       const scheduleLower = group.schedule.toLowerCase();
@@ -228,8 +309,8 @@ export default function Groups() {
         }
       });
       
-      // Extract time
-      const timeMatch = group.schedule.match(/(\d{1,2}:\d{2})-(\d{1,2}:\d{2})/);
+      // Extract time - supports both "10:00-11:30" and "10:00 - 11:30" formats
+      const timeMatch = group.schedule.match(/(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/);
       const startTime = timeMatch?.[1] || "10:00";
       const endTime = timeMatch?.[2] || "11:30";
       
@@ -573,10 +654,12 @@ export default function Groups() {
                     </p>
                     <p className="font-medium">{teacher?.name || "Не назначен"}</p>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Clock className="h-4 w-4" />
-                    {group.schedule}
-                  </div>
+                  {getGroupSchedule(group) && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Clock className="h-4 w-4" />
+                      {getGroupSchedule(group)}
+                    </div>
+                  )}
                   {room && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <MapPin className="h-4 w-4" />
@@ -655,7 +738,7 @@ export default function Groups() {
       {/* Group Details Modal */}
       {selectedGroupForDetails && (
         <Dialog open={!!selectedGroupForDetails} onOpenChange={() => setSelectedGroupForDetails(null)}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-3xl">
             <DialogHeader>
               <DialogTitle className="text-2xl">{selectedGroupForDetails.name}</DialogTitle>
             </DialogHeader>
@@ -691,10 +774,14 @@ export default function Groups() {
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Расписание</p>
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          <p className="font-medium">{selectedGroupForDetails.schedule}</p>
-                        </div>
+                        {getGroupSchedule(selectedGroupForDetails) ? (
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                            <p className="font-medium">{getGroupSchedule(selectedGroupForDetails)}</p>
+                          </div>
+                        ) : (
+                          <p className="font-medium text-muted-foreground">Не установлено</p>
+                        )}
                       </div>
                       {room && (
                         <div>
