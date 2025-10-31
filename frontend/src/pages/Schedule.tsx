@@ -497,7 +497,7 @@ export default function Schedule() {
                   <div>
                     <span className="text-sm text-muted-foreground">Преподаватель</span>
                     <p className="font-medium">
-                      {teachers.find(t => t.id === selectedLesson.teacherId)?.name || "—"}
+                      {selectedLesson.teacherName || "—"}
                     </p>
                   </div>
                   <div>
@@ -613,7 +613,7 @@ export default function Schedule() {
                   <div>
                     <span className="text-muted-foreground">Преподаватель:</span>{" "}
                     <span className="font-medium">
-                      {teachers.find(t => t.id === selectedLesson.teacherId)?.name}
+                      {selectedLesson.teacherName}
                     </span>
                   </div>
                 </div>

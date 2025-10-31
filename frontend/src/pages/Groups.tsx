@@ -590,7 +590,7 @@ export default function Groups() {
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {filteredGroups.map((group) => {
-          const teacher = teachers.find((t) => t.id === group.teacherId);
+          // teacherName is already populated via JOIN from backend
           const groupStudents = students.filter((s) =>
             group.studentIds && group.studentIds.includes(s.id)
           );
@@ -652,7 +652,7 @@ export default function Groups() {
                     <p className="text-sm font-medium text-muted-foreground">
                       Преподаватель
                     </p>
-                    <p className="font-medium">{teacher?.name || "Не назначен"}</p>
+                    <p className="font-medium">{group.teacherName || "Не назначен"}</p>
                   </div>
                   {getGroupSchedule(group) && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -745,7 +745,7 @@ export default function Groups() {
             
             {(() => {
               const activity = getGroupActivity(selectedGroupForDetails.id);
-              const teacher = teachers.find((t) => t.id === selectedGroupForDetails.teacherId);
+              // teacherName is already populated via JOIN from backend
               const groupStudents = students.filter((s) =>
                 selectedGroupForDetails.studentIds && selectedGroupForDetails.studentIds.includes(s.id)
               );
@@ -770,7 +770,7 @@ export default function Groups() {
                     <div className="space-y-3">
                       <div>
                         <p className="text-sm text-muted-foreground">Преподаватель</p>
-                        <p className="font-semibold">{teacher?.name || "Не назначен"}</p>
+                        <p className="font-semibold">{selectedGroupForDetails.teacherName || "Не назначен"}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Расписание</p>

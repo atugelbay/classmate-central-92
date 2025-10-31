@@ -47,13 +47,14 @@ func main() {
 	tariffRepo := repository.NewTariffRepository(db.DB)
 	debtRepo := repository.NewDebtRepository(db.DB)
 	subscriptionRepo := repository.NewSubscriptionRepository(db.DB)
+	consumptionRepo := repository.NewSubscriptionConsumptionRepository(db.DB)
 	activityRepo := repository.NewActivityRepository(db.DB)
 	notificationRepo := repository.NewNotificationRepository(db.DB)
 
 	// Initialize services
 	activityService := services.NewActivityService(activityRepo)
 	_ = services.NewNotificationService(notificationRepo, debtRepo, subscriptionRepo) // Can be used for scheduled tasks
-	attendanceService := services.NewAttendanceService(subscriptionRepo, activityRepo, notificationRepo, db.DB)
+	attendanceService := services.NewAttendanceService(subscriptionRepo, consumptionRepo, activityRepo, notificationRepo, db.DB)
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(userRepo, companyRepo)

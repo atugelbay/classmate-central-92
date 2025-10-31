@@ -27,12 +27,15 @@ export interface Lesson {
   id: string;
   title: string;
   teacherId: string;
+  teacherName?: string; // Populated via JOIN from backend
   groupId?: string;
+  groupName?: string; // Populated via JOIN from backend
   subject: string;
   start: Date;
   end: Date;
   room: string;
   roomId?: string;
+  roomName?: string; // Populated via JOIN from backend
   status: "scheduled" | "completed" | "cancelled";
   studentIds: string[];
   lessonType?: "group" | "individual";
@@ -85,9 +88,14 @@ export interface Group {
   name: string;
   subject: string;
   teacherId: string;
+  teacherName?: string; // Populated via JOIN from backend
   roomId?: string;
+  roomName?: string; // Populated via JOIN from backend
   studentIds: string[];
   schedule: string;
+  description?: string;
+  status?: "active" | "inactive";
+  color?: string;
 }
 
 export interface Settings {

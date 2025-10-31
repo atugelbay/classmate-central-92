@@ -49,6 +49,8 @@ export const useCreateTeacher = () => {
     mutationFn: teachersAPI.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["teachers"] });
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
+      queryClient.invalidateQueries({ queryKey: ["lessons"] });
       toast.success("Учитель успешно добавлен");
     },
     onError: (error: any) => {
@@ -64,6 +66,8 @@ export const useUpdateTeacher = () => {
       teachersAPI.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["teachers"] });
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
+      queryClient.invalidateQueries({ queryKey: ["lessons"] });
       toast.success("Учитель успешно обновлен");
     },
     onError: (error: any) => {
@@ -78,6 +82,8 @@ export const useDeleteTeacher = () => {
     mutationFn: teachersAPI.delete,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["teachers"] });
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
+      queryClient.invalidateQueries({ queryKey: ["lessons"] });
       toast.success("Учитель успешно удален");
     },
     onError: (error: any) => {
@@ -151,6 +157,8 @@ export const useCreateGroup = () => {
     mutationFn: groupsAPI.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["groups"] });
+      queryClient.invalidateQueries({ queryKey: ["lessons"] });
+      queryClient.invalidateQueries({ queryKey: ["teachers"] });
       toast.success("Группа успешно создана");
     },
     onError: (error: any) => {
@@ -166,6 +174,8 @@ export const useUpdateGroup = () => {
       groupsAPI.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["groups"] });
+      queryClient.invalidateQueries({ queryKey: ["lessons"] });
+      queryClient.invalidateQueries({ queryKey: ["teachers"] });
       toast.success("Группа успешно обновлена");
     },
     onError: (error: any) => {
@@ -180,6 +190,8 @@ export const useDeleteGroup = () => {
     mutationFn: groupsAPI.delete,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["groups"] });
+      queryClient.invalidateQueries({ queryKey: ["lessons"] });
+      queryClient.invalidateQueries({ queryKey: ["teachers"] });
       toast.success("Группа успешно удалена");
     },
     onError: (error: any) => {

@@ -121,3 +121,91 @@ func (r *TeacherRepository) Delete(id string, companyID string) error {
 
 	return nil
 }
+
+// GetGroupsByTeacher returns all groups led by a teacher
+func (r *TeacherRepository) GetGroupsByTeacher(teacherID string, companyID string) ([]*models.Group, error) {
+	query := `
+		SELECT 
+			g.id, g.name, g.subject, g.teacher_id, g.room_id, g.schedule, 
+			g.description, g.status, g.color, g.company_id,
+			t.name as teacher_name,
+			rm.name as room_name
+		FROM groups g
+		LEFT JOIN teachers t ON g.teacher_id = t.id
+		LEFT JOIN rooms rm ON g.room_id = rm.id
+		WHERE g.teacher_id = $1 AND g.company_id = $2
+		ORDER BY g.name
+	`
+
+	rows, err := r.db.Query(query, teacherID, companyID)
+	if err != nil {
+		return nil, fmt.Errorf("error getting teacher groups: %w", err)
+	}
+	defer rows.Close()
+
+	groups := []*models.Group{}
+	for rows.Next() {
+		group := &models.Group{}
+		var teacherID sql.NullString
+		var teacherName sql.NullString
+		var roomID sql.NullString
+		var roomName sql.NullString
+		var schedule sql.NullString
+		var description sql.NullString
+		var status sql.NullString
+		var color sql.NullString
+
+		err := rows.Scan(&group.ID, &group.Name, &group.Subject, &teacherID, &roomID, &schedule, &description, &status, &color, &group.CompanyID, &teacherName, &roomName)
+		if err != nil {
+			return nil, fmt.Errorf("error scanning group: %w", err)
+		}
+
+		if teacherID.Valid {
+			group.TeacherID = teacherID.String
+		}
+		if teacherName.Valid {
+			group.TeacherName = teacherName.String
+		}
+		if roomID.Valid {
+			group.RoomID = roomID.String
+		}
+		if roomName.Valid {
+			group.RoomName = roomName.String
+		}
+		if schedule.Valid {
+			group.Schedule = schedule.String
+		}
+		if description.Valid {
+			group.Description = description.String
+		}
+		if status.Valid {
+			group.Status = status.String
+		} else {
+			group.Status = "active"
+		}
+		if color.Valid {
+			group.Color = color.String
+		} else {
+			group.Color = "#3b82f6"
+		}
+
+		// Initialize empty array for students
+		group.StudentIds = []string{}
+
+		// Get students from enrollment table (active enrollments only)
+		studentRows, err := r.db.Query(`SELECT student_id FROM enrollment WHERE group_id = $1 AND left_at IS NULL`, group.ID)
+		if err == nil {
+			defer studentRows.Close()
+			for studentRows.Next() {
+				var studentID string
+				if err := studentRows.Scan(&studentID); err == nil {
+					group.StudentIds = append(group.StudentIds, studentID)
+				}
+			}
+		}
+
+		groups = append(groups, group)
+	}
+
+	return groups, nil
+}

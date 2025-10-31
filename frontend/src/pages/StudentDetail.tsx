@@ -96,7 +96,7 @@ export default function StudentDetail() {
     .filter((l) => moment(l.start).isAfter(moment()))
     .sort((a, b) => moment(a.start).diff(moment(b.start)));
   const nextLesson = upcomingLessons[0];
-  const nextLessonTeacher = nextLesson ? teachers.find((t) => t.id === nextLesson.teacherId) : null;
+  // nextLesson.teacherName is already populated via JOIN from backend
   const nextLessonGroup = nextLesson?.groupId ? groups.find((g) => g.id === nextLesson.groupId) : null;
 
   const handleAddNote = async () => {
@@ -237,10 +237,10 @@ export default function StudentDetail() {
                 <Badge variant="secondary" className="mt-1">{nextLesson.subject}</Badge>
               </div>
             </div>
-            {nextLessonTeacher && (
+            {nextLesson?.teacherName && (
               <div>
                 <p className="text-sm text-muted-foreground">Преподаватель</p>
-                <p className="font-medium text-green-900">{nextLessonTeacher.name}</p>
+                <p className="font-medium text-green-900">{nextLesson.teacherName}</p>
               </div>
             )}
             {nextLessonGroup ? (

@@ -43,11 +43,15 @@ func (r *GroupRepository) Create(group *models.Group, companyID string) error {
 		return fmt.Errorf("error creating group: %w", err)
 	}
 
-	// Insert students
+	// Insert students using enrollment table
 	for _, studentID := range group.StudentIds {
-		_, err = tx.Exec(`INSERT INTO student_groups (student_id, group_id) VALUES ($1, $2)`, studentID, group.ID)
+		_, err = tx.Exec(`
+			INSERT INTO enrollment (student_id, group_id, joined_at, company_id)
+			VALUES ($1, $2, CURRENT_TIMESTAMP, $3)
+			ON CONFLICT (student_id, group_id) WHERE left_at IS NULL DO NOTHING
+		`, studentID, group.ID, companyID)
 		if err != nil {
-			return fmt.Errorf("error inserting student to group: %w", err)
+			return fmt.Errorf("error inserting enrollment: %w", err)
 		}
 	}
 
@@ -55,7 +59,18 @@ func (r *GroupRepository) Create(group *models.Group, companyID string) error {
 }
 
 func (r *GroupRepository) GetAll(companyID string) ([]*models.Group, error) {
-	query := `SELECT id, name, subject, teacher_id, room_id, schedule, description, status, color, company_id FROM groups WHERE company_id = $1 ORDER BY name`
+	query := `
+		SELECT 
+			g.id, g.name, g.subject, g.teacher_id, g.room_id, g.schedule, 
+			g.description, g.status, g.color, g.company_id,
+			t.name as teacher_name,
+			rm.name as room_name
+		FROM groups g
+		LEFT JOIN teachers t ON g.teacher_id = t.id
+		LEFT JOIN rooms rm ON g.room_id = rm.id
+		WHERE g.company_id = $1 
+		ORDER BY g.name
+	`
 
 	rows, err := r.db.Query(query, companyID)
 	if err != nil {
@@ -67,13 +82,15 @@ func (r *GroupRepository) GetAll(companyID string) ([]*models.Group, error) {
 	for rows.Next() {
 		group := &models.Group{}
 		var teacherID sql.NullString
+		var teacherName sql.NullString
 		var roomID sql.NullString
+		var roomName sql.NullString
 		var schedule sql.NullString
 		var description sql.NullString
 		var status sql.NullString
 		var color sql.NullString
 
-		err := rows.Scan(&group.ID, &group.Name, &group.Subject, &teacherID, &roomID, &schedule, &description, &status, &color, &group.CompanyID)
+		err := rows.Scan(&group.ID, &group.Name, &group.Subject, &teacherID, &roomID, &schedule, &description, &status, &color, &group.CompanyID, &teacherName, &roomName)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning group: %w", err)
 		}
@@ -81,8 +98,14 @@ func (r *GroupRepository) GetAll(companyID string) ([]*models.Group, error) {
 		if teacherID.Valid {
 			group.TeacherID = teacherID.String
 		}
+		if teacherName.Valid {
+			group.TeacherName = teacherName.String
+		}
 		if roomID.Valid {
 			group.RoomID = roomID.String
+		}
+		if roomName.Valid {
+			group.RoomName = roomName.String
 		}
 		if schedule.Valid {
 			group.Schedule = schedule.String
@@ -104,8 +127,8 @@ func (r *GroupRepository) GetAll(companyID string) ([]*models.Group, error) {
 		// Initialize empty array for students
 		group.StudentIds = []string{}
 
-		// Get students
-		studentRows, err := r.db.Query(`SELECT student_id FROM student_groups WHERE group_id = $1`, group.ID)
+		// Get students from enrollment table (active enrollments only)
+		studentRows, err := r.db.Query(`SELECT student_id FROM enrollment WHERE group_id = $1 AND left_at IS NULL`, group.ID)
 		if err == nil {
 			for studentRows.Next() {
 				var studentID string
@@ -125,15 +148,27 @@ func (r *GroupRepository) GetAll(companyID string) ([]*models.Group, error) {
 func (r *GroupRepository) GetByID(id string, companyID string) (*models.Group, error) {
 	group := &models.Group{}
 	var teacherID sql.NullString
+	var teacherName sql.NullString
 	var roomID sql.NullString
 	var schedule sql.NullString
 	var description sql.NullString
 	var status sql.NullString
 	var color sql.NullString
 
-	query := `SELECT id, name, subject, teacher_id, room_id, schedule, description, status, color, company_id FROM groups WHERE id = $1 AND company_id = $2`
+	query := `
+		SELECT 
+			g.id, g.name, g.subject, g.teacher_id, g.room_id, g.schedule, 
+			g.description, g.status, g.color, g.company_id,
+			t.name as teacher_name,
+			rm.name as room_name
+		FROM groups g
+		LEFT JOIN teachers t ON g.teacher_id = t.id
+		LEFT JOIN rooms rm ON g.room_id = rm.id
+		WHERE g.id = $1 AND g.company_id = $2
+	`
 
-	err := r.db.QueryRow(query, id, companyID).Scan(&group.ID, &group.Name, &group.Subject, &teacherID, &roomID, &schedule, &description, &status, &color, &group.CompanyID)
+	var roomName sql.NullString
+	err := r.db.QueryRow(query, id, companyID).Scan(&group.ID, &group.Name, &group.Subject, &teacherID, &roomID, &schedule, &description, &status, &color, &group.CompanyID, &teacherName, &roomName)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -144,8 +179,14 @@ func (r *GroupRepository) GetByID(id string, companyID string) (*models.Group, e
 	if teacherID.Valid {
 		group.TeacherID = teacherID.String
 	}
+	if teacherName.Valid {
+		group.TeacherName = teacherName.String
+	}
 	if roomID.Valid {
 		group.RoomID = roomID.String
+	}
+	if roomName.Valid {
+		group.RoomName = roomName.String
 	}
 	if schedule.Valid {
 		group.Schedule = schedule.String
@@ -167,8 +208,8 @@ func (r *GroupRepository) GetByID(id string, companyID string) (*models.Group, e
 	// Initialize empty array for students
 	group.StudentIds = []string{}
 
-	// Get students
-	studentRows, err := r.db.Query(`SELECT student_id FROM student_groups WHERE group_id = $1`, group.ID)
+	// Get students from enrollment table (active enrollments only)
+	studentRows, err := r.db.Query(`SELECT student_id FROM enrollment WHERE group_id = $1 AND left_at IS NULL`, group.ID)
 	if err == nil {
 		for studentRows.Next() {
 			var studentID string
@@ -200,17 +241,34 @@ func (r *GroupRepository) Update(group *models.Group, companyID string) error {
 		return fmt.Errorf("error updating group: %w", err)
 	}
 
-	// Delete old students
-	_, err = tx.Exec(`DELETE FROM student_groups WHERE group_id = $1`, group.ID)
+	// Mark old enrollments as left (preserve history)
+	_, err = tx.Exec(`
+		UPDATE enrollment 
+		SET left_at = CURRENT_TIMESTAMP 
+		WHERE group_id = $1 AND company_id = $2 AND left_at IS NULL
+	`, group.ID, companyID)
 	if err != nil {
-		return fmt.Errorf("error deleting old students: %w", err)
+		return fmt.Errorf("error updating old enrollments: %w", err)
 	}
 
-	// Insert new students
+	// Insert new enrollments
 	for _, studentID := range group.StudentIds {
-		_, err = tx.Exec(`INSERT INTO student_groups (student_id, group_id) VALUES ($1, $2)`, studentID, group.ID)
+		_, err = tx.Exec(`
+			INSERT INTO enrollment (student_id, group_id, joined_at, company_id)
+			VALUES ($1, $2, CURRENT_TIMESTAMP, $3)
+			ON CONFLICT (student_id, group_id) WHERE left_at IS NULL DO NOTHING
+		`, studentID, group.ID, companyID)
 		if err != nil {
-			return fmt.Errorf("error inserting student to group: %w", err)
+			return fmt.Errorf("error inserting enrollment: %w", err)
+		}
+		// If enrollment exists but was left, reactivate it
+		_, err = tx.Exec(`
+			UPDATE enrollment 
+			SET left_at = NULL, joined_at = CURRENT_TIMESTAMP 
+			WHERE student_id = $1 AND group_id = $2 AND company_id = $3 AND left_at IS NOT NULL
+		`, studentID, group.ID, companyID)
+		if err != nil {
+			return fmt.Errorf("error reactivating enrollment: %w", err)
 		}
 	}
 

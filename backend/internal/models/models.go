@@ -55,12 +55,15 @@ type Lesson struct {
 	ID         string    `json:"id" db:"id"`
 	Title      string    `json:"title" db:"title"`
 	TeacherID  string    `json:"teacherId" db:"teacher_id"`
+	TeacherName string   `json:"teacherName,omitempty" db:"teacher_name"` // Populated via JOIN
 	GroupID    string    `json:"groupId,omitempty" db:"group_id"`
+	GroupName  string    `json:"groupName,omitempty" db:"group_name"` // Populated via JOIN
 	Subject    string    `json:"subject" db:"subject"`
 	Start      time.Time `json:"start" db:"start_time"`
 	End        time.Time `json:"end" db:"end_time"`
 	Room       string    `json:"room" db:"room"`
 	RoomID     string    `json:"roomId,omitempty" db:"room_id"`
+	RoomName   string    `json:"roomName,omitempty" db:"room_name"` // Populated via JOIN
 	Status     string    `json:"status" db:"status"` // scheduled, completed, cancelled
 	StudentIds []string  `json:"studentIds"`
 	CompanyID  string    `json:"companyId" db:"company_id"`
@@ -72,7 +75,9 @@ type Group struct {
 	Name        string   `json:"name" db:"name"`
 	Subject     string   `json:"subject" db:"subject"`
 	TeacherID   string   `json:"teacherId" db:"teacher_id"`
+	TeacherName string   `json:"teacherName,omitempty" db:"teacher_name"` // Populated via JOIN
 	RoomID      string   `json:"roomId" db:"room_id"`
+	RoomName    string   `json:"roomName,omitempty" db:"room_name"` // Populated via JOIN
 	StudentIds  []string `json:"studentIds"`
 	Schedule    string   `json:"schedule" db:"schedule"`
 	Description string   `json:"description" db:"description"`
@@ -350,4 +355,110 @@ type MarkAttendanceRequest struct {
 	Status    string `json:"status" binding:"required"` // attended, missed, cancelled
 	Reason    string `json:"reason,omitempty"`
 	Notes     string `json:"notes,omitempty"`
+}
+
+// ============= ENROLLMENT MODULE =============
+
+// Enrollment represents a student's enrollment in a group
+type Enrollment struct {
+	ID        int64      `json:"id" db:"id"`
+	StudentID string     `json:"studentId" db:"student_id"`
+	GroupID   string     `json:"groupId" db:"group_id"`
+	JoinedAt  time.Time  `json:"joinedAt" db:"joined_at"`
+	LeftAt    *time.Time `json:"leftAt,omitempty" db:"left_at"`
+	CompanyID string     `json:"companyId" db:"company_id"`
+	CreatedAt time.Time  `json:"createdAt" db:"created_at"`
+}
+
+// IndividualEnrollment represents a student's individual enrollment with a teacher
+type IndividualEnrollment struct {
+	ID        int64      `json:"id" db:"id"`
+	StudentID string     `json:"studentId" db:"student_id"`
+	TeacherID string     `json:"teacherId" db:"teacher_id"`
+	StartedAt time.Time  `json:"startedAt" db:"started_at"`
+	EndedAt   *time.Time `json:"endedAt,omitempty" db:"ended_at"`
+	CompanyID string     `json:"companyId" db:"company_id"`
+	CreatedAt time.Time  `json:"createdAt" db:"created_at"`
+}
+
+// ============= SCHEDULE RULE MODULE =============
+
+// ScheduleRule represents a recurring schedule rule (RRULE format)
+type ScheduleRule struct {
+	ID              int64      `json:"id" db:"id"`
+	OwnerType       string     `json:"ownerType" db:"owner_type"` // 'group' or 'individual'
+	OwnerID         string     `json:"ownerId" db:"owner_id"`
+	RRule           string     `json:"rrule" db:"rrule"` // RFC 5545 RRULE format
+	DTStart         time.Time  `json:"dtstart" db:"dtstart"`
+	DTEnd            *time.Time `json:"dtend,omitempty" db:"dtend"`
+	DurationMinutes int        `json:"durationMinutes" db:"duration_minutes"`
+	Timezone        string     `json:"timezone" db:"timezone"`
+	Location        *string    `json:"location,omitempty" db:"location"`
+	CompanyID       string     `json:"companyId" db:"company_id"`
+	CreatedAt       time.Time  `json:"createdAt" db:"created_at"`
+	UpdatedAt        time.Time  `json:"updatedAt" db:"updated_at"`
+}
+
+// LessonOccurrence represents a materialized lesson generated from a schedule rule
+type LessonOccurrence struct {
+	ID        int64     `json:"id" db:"id"`
+	RuleID    int64     `json:"ruleId" db:"rule_id"`
+	StartsAt  time.Time `json:"startsAt" db:"starts_at"`
+	EndsAt    time.Time `json:"endsAt" db:"ends_at"`
+	Status    string    `json:"status" db:"status"` // scheduled, moved, cancelled, done
+	CompanyID string    `json:"companyId" db:"company_id"`
+	CreatedAt time.Time `json:"createdAt" db:"created_at"`
+	UpdatedAt time.Time `json:"updatedAt" db:"updated_at"`
+}
+
+// ============= SUBSCRIPTION CONSUMPTION MODULE =============
+
+// SubscriptionConsumption represents a lesson deduction from a subscription
+type SubscriptionConsumption struct {
+	ID             int64     `json:"id" db:"id"`
+	SubscriptionID string    `json:"subscriptionId" db:"subscription_id"`
+	AttendanceID   int       `json:"attendanceId" db:"attendance_id"`
+	Units          int       `json:"units" db:"units"`
+	CreatedAt      time.Time `json:"createdAt" db:"created_at"`
+	CompanyID      string    `json:"companyId" db:"company_id"`
+}
+
+// ============= INVOICE MODULE =============
+
+// Invoice represents a bill/invoice for a student
+type Invoice struct {
+	ID        int64      `json:"id" db:"id"`
+	StudentID string     `json:"studentId" db:"student_id"`
+	IssuedAt  time.Time  `json:"issuedAt" db:"issued_at"`
+	DueAt     *time.Time `json:"dueAt,omitempty" db:"due_at"`
+	Status    string     `json:"status" db:"status"` // unpaid, partially, paid, void
+	CompanyID string     `json:"companyId" db:"company_id"`
+	CreatedAt time.Time  `json:"createdAt" db:"created_at"`
+	UpdatedAt time.Time  `json:"updatedAt" db:"updated_at"`
+}
+
+// InvoiceItem represents a line item in an invoice
+type InvoiceItem struct {
+	ID          int64   `json:"id" db:"id"`
+	InvoiceID   int64   `json:"invoiceId" db:"invoice_id"`
+	Description string  `json:"description" db:"description"`
+	Quantity    int     `json:"quantity" db:"quantity"`
+	UnitPrice   float64 `json:"unitPrice" db:"unit_price"`
+	Meta        *string `json:"meta,omitempty" db:"meta"` // JSONB stored as string
+	CompanyID   string  `json:"companyId" db:"company_id"`
+	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
+}
+
+// ============= TRANSACTION MODULE =============
+
+// Transaction represents a unified financial transaction
+type Transaction struct {
+	ID            int64      `json:"id" db:"id"`
+	PaymentID     *int       `json:"paymentId,omitempty" db:"payment_id"`
+	InvoiceID     *int64     `json:"invoiceId,omitempty" db:"invoice_id"`
+	SubscriptionID *string   `json:"subscriptionId,omitempty" db:"subscription_id"`
+	Amount        float64    `json:"amount" db:"amount"`
+	Kind          string     `json:"kind" db:"kind"` // pay_invoice, buy_subscription, refund, deduction, payment
+	CreatedAt     time.Time  `json:"createdAt" db:"created_at"`
+	CompanyID     string     `json:"companyId" db:"company_id"`
 }

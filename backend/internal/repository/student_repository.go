@@ -44,11 +44,15 @@ func (r *StudentRepository) Create(student *models.Student, companyID string) er
 		}
 	}
 
-	// Insert groups
+	// Insert groups using enrollment table
 	for _, groupID := range student.GroupIds {
-		_, err = tx.Exec(`INSERT INTO student_groups (student_id, group_id) VALUES ($1, $2)`, student.ID, groupID)
+		_, err = tx.Exec(`
+			INSERT INTO enrollment (student_id, group_id, joined_at, company_id)
+			VALUES ($1, $2, CURRENT_TIMESTAMP, $3)
+			ON CONFLICT (student_id, group_id) WHERE left_at IS NULL DO NOTHING
+		`, student.ID, groupID, companyID)
 		if err != nil {
-			return fmt.Errorf("error inserting group: %w", err)
+			return fmt.Errorf("error inserting enrollment: %w", err)
 		}
 	}
 
@@ -111,8 +115,8 @@ func (r *StudentRepository) GetAll(companyID string) ([]*models.Student, error) 
 			}
 		}
 
-		// Get groups
-		groupRows, err := r.db.Query(`SELECT group_id FROM student_groups WHERE student_id = $1`, student.ID)
+		// Get groups from enrollment (active enrollments only)
+		groupRows, err := r.db.Query(`SELECT group_id FROM enrollment WHERE student_id = $1 AND left_at IS NULL`, student.ID)
 		if err == nil {
 			defer groupRows.Close()
 			for groupRows.Next() {
@@ -175,8 +179,8 @@ func (r *StudentRepository) GetByID(id string, companyID string) (*models.Studen
 		}
 	}
 
-	// Get groups
-	groupRows, err := r.db.Query(`SELECT group_id FROM student_groups WHERE student_id = $1`, student.ID)
+	// Get groups from enrollment (active enrollments only)
+	groupRows, err := r.db.Query(`SELECT group_id FROM enrollment WHERE student_id = $1 AND left_at IS NULL`, student.ID)
 	if err == nil {
 		defer groupRows.Close()
 		for groupRows.Next() {
@@ -212,15 +216,20 @@ func (r *StudentRepository) Update(student *models.Student, companyID string) er
 		return fmt.Errorf("error updating student: %w", err)
 	}
 
-	// Delete old subjects and groups
+	// Delete old subjects
 	_, err = tx.Exec(`DELETE FROM student_subjects WHERE student_id = $1`, student.ID)
 	if err != nil {
 		return fmt.Errorf("error deleting old subjects: %w", err)
 	}
 
-	_, err = tx.Exec(`DELETE FROM student_groups WHERE student_id = $1`, student.ID)
+	// Mark old enrollments as left (don't delete them, preserve history)
+	_, err = tx.Exec(`
+		UPDATE enrollment 
+		SET left_at = CURRENT_TIMESTAMP 
+		WHERE student_id = $1 AND company_id = $2 AND left_at IS NULL
+	`, student.ID, companyID)
 	if err != nil {
-		return fmt.Errorf("error deleting old groups: %w", err)
+		return fmt.Errorf("error updating old enrollments: %w", err)
 	}
 
 	// Insert new subjects
@@ -231,11 +240,24 @@ func (r *StudentRepository) Update(student *models.Student, companyID string) er
 		}
 	}
 
-	// Insert new groups
+	// Insert new enrollments
 	for _, groupID := range student.GroupIds {
-		_, err = tx.Exec(`INSERT INTO student_groups (student_id, group_id) VALUES ($1, $2)`, student.ID, groupID)
+		_, err = tx.Exec(`
+			INSERT INTO enrollment (student_id, group_id, joined_at, company_id)
+			VALUES ($1, $2, CURRENT_TIMESTAMP, $3)
+			ON CONFLICT (student_id, group_id) WHERE left_at IS NULL DO NOTHING
+		`, student.ID, groupID, companyID)
 		if err != nil {
-			return fmt.Errorf("error inserting group: %w", err)
+			return fmt.Errorf("error inserting enrollment: %w", err)
+		}
+		// If enrollment exists but was left, reactivate it
+		_, err = tx.Exec(`
+			UPDATE enrollment 
+			SET left_at = NULL, joined_at = CURRENT_TIMESTAMP 
+			WHERE student_id = $1 AND group_id = $2 AND company_id = $3 AND left_at IS NOT NULL
+		`, student.ID, groupID, companyID)
+		if err != nil {
+			return fmt.Errorf("error reactivating enrollment: %w", err)
 		}
 	}
 
