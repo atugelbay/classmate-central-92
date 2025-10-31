@@ -61,7 +61,20 @@ func (r *LessonRepository) Create(lesson *models.Lesson, companyID string) error
 }
 
 func (r *LessonRepository) GetAll(companyID string) ([]*models.Lesson, error) {
-	query := `SELECT id, title, teacher_id, group_id, subject, start_time, end_time, room, room_id, status FROM lessons WHERE company_id = $1 ORDER BY start_time`
+	query := `
+		SELECT 
+			l.id, l.title, l.teacher_id, l.group_id, l.subject, 
+			l.start_time, l.end_time, l.room, l.room_id, l.status, l.company_id,
+			t.name as teacher_name,
+			g.name as group_name,
+			rm.name as room_name
+		FROM lessons l
+		LEFT JOIN teachers t ON l.teacher_id = t.id
+		LEFT JOIN groups g ON l.group_id = g.id
+		LEFT JOIN rooms rm ON l.room_id = rm.id
+		WHERE l.company_id = $1 
+		ORDER BY l.start_time
+	`
 
 	rows, err := r.db.Query(query, companyID)
 	if err != nil {
@@ -72,10 +85,11 @@ func (r *LessonRepository) GetAll(companyID string) ([]*models.Lesson, error) {
 	lessons := []*models.Lesson{}
 	for rows.Next() {
 		lesson := &models.Lesson{}
-		var teacherID, groupID, room, roomID, status sql.NullString
+		var teacherID, teacherName, groupID, groupName, room, roomID, roomName, status sql.NullString
 
 		err := rows.Scan(&lesson.ID, &lesson.Title, &teacherID, &groupID,
-			&lesson.Subject, &lesson.Start, &lesson.End, &room, &roomID, &status)
+			&lesson.Subject, &lesson.Start, &lesson.End, &room, &roomID, &status, &lesson.CompanyID,
+			&teacherName, &groupName, &roomName)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning lesson: %w", err)
 		}
@@ -83,14 +97,23 @@ func (r *LessonRepository) GetAll(companyID string) ([]*models.Lesson, error) {
 		if teacherID.Valid {
 			lesson.TeacherID = teacherID.String
 		}
+		if teacherName.Valid {
+			lesson.TeacherName = teacherName.String
+		}
 		if groupID.Valid {
 			lesson.GroupID = groupID.String
+		}
+		if groupName.Valid {
+			lesson.GroupName = groupName.String
 		}
 		if room.Valid {
 			lesson.Room = room.String
 		}
 		if roomID.Valid {
 			lesson.RoomID = roomID.String
+		}
+		if roomName.Valid {
+			lesson.RoomName = roomName.String
 		}
 		if status.Valid {
 			lesson.Status = status.String
@@ -121,12 +144,25 @@ func (r *LessonRepository) GetAll(companyID string) ([]*models.Lesson, error) {
 
 func (r *LessonRepository) GetByID(id string, companyID string) (*models.Lesson, error) {
 	lesson := &models.Lesson{}
-	var teacherID, groupID, room, roomID, status sql.NullString
+	var teacherID, teacherName, groupID, groupName, room, roomID, roomName, status sql.NullString
 
-	query := `SELECT id, title, teacher_id, group_id, subject, start_time, end_time, room, room_id, status FROM lessons WHERE id = $1 AND company_id = $2`
+	query := `
+		SELECT 
+			l.id, l.title, l.teacher_id, l.group_id, l.subject, 
+			l.start_time, l.end_time, l.room, l.room_id, l.status, l.company_id,
+			t.name as teacher_name,
+			g.name as group_name,
+			rm.name as room_name
+		FROM lessons l
+		LEFT JOIN teachers t ON l.teacher_id = t.id
+		LEFT JOIN groups g ON l.group_id = g.id
+		LEFT JOIN rooms rm ON l.room_id = rm.id
+		WHERE l.id = $1 AND l.company_id = $2
+	`
 
 	err := r.db.QueryRow(query, id, companyID).Scan(&lesson.ID, &lesson.Title, &teacherID, &groupID,
-		&lesson.Subject, &lesson.Start, &lesson.End, &room, &roomID, &status)
+		&lesson.Subject, &lesson.Start, &lesson.End, &room, &roomID, &status, &lesson.CompanyID,
+		&teacherName, &groupName, &roomName)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -137,14 +173,23 @@ func (r *LessonRepository) GetByID(id string, companyID string) (*models.Lesson,
 	if teacherID.Valid {
 		lesson.TeacherID = teacherID.String
 	}
+	if teacherName.Valid {
+		lesson.TeacherName = teacherName.String
+	}
 	if groupID.Valid {
 		lesson.GroupID = groupID.String
+	}
+	if groupName.Valid {
+		lesson.GroupName = groupName.String
 	}
 	if room.Valid {
 		lesson.Room = room.String
 	}
 	if roomID.Valid {
 		lesson.RoomID = roomID.String
+	}
+	if roomName.Valid {
+		lesson.RoomName = roomName.String
 	}
 	if status.Valid {
 		lesson.Status = status.String

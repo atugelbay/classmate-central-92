@@ -65,10 +65,10 @@ export default function IndividualLessons() {
       if (!studentId) return;
 
       const student = students.find((s) => s.id === studentId);
-      const teacher = teachers.find((t) => t.id === lesson.teacherId);
+      // lesson.teacherName is already populated via JOIN from backend
       const room = rooms.find((r) => r.id === lesson.roomId);
       
-      if (!student || !teacher) return;
+      if (!student || !lesson.teacherName) return;
 
       const lessonDate = moment(lesson.start);
       const dayOfWeek = lessonDate.day();
@@ -84,7 +84,7 @@ export default function IndividualLessons() {
           studentId,
           studentName: student.name,
           teacherId: lesson.teacherId,
-          teacherName: teacher.name,
+          teacherName: lesson.teacherName,
           dayOfWeek,
           timeFrom,
           timeTo,

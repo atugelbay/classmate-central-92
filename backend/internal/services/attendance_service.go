@@ -11,20 +11,23 @@ import (
 )
 
 type AttendanceService struct {
-	subscriptionRepo *repository.SubscriptionRepository
-	activityRepo     *repository.ActivityRepository
-	notificationRepo *repository.NotificationRepository
-	db               *sql.DB
+	subscriptionRepo         *repository.SubscriptionRepository
+	consumptionRepo          *repository.SubscriptionConsumptionRepository
+	activityRepo             *repository.ActivityRepository
+	notificationRepo         *repository.NotificationRepository
+	db                       *sql.DB
 }
 
 func NewAttendanceService(
 	subscriptionRepo *repository.SubscriptionRepository,
+	consumptionRepo *repository.SubscriptionConsumptionRepository,
 	activityRepo *repository.ActivityRepository,
 	notificationRepo *repository.NotificationRepository,
 	db *sql.DB,
 ) *AttendanceService {
 	return &AttendanceService{
 		subscriptionRepo: subscriptionRepo,
+		consumptionRepo:  consumptionRepo,
 		activityRepo:     activityRepo,
 		notificationRepo: notificationRepo,
 		db:               db,
@@ -216,6 +219,33 @@ func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendan
 		Scan(&attendance.ID, &attendance.MarkedAt)
 	if err != nil {
 		return nil, fmt.Errorf("error marking attendance: %w", err)
+	}
+
+	// Create subscription_consumption record if subscription was used
+	if subscriptionID != nil && req.Status == "attended" {
+		// Check if consumption already exists (to prevent double creation)
+		var existingConsumptionID sql.NullInt64
+		err = tx.QueryRow(`
+			SELECT id FROM subscription_consumption 
+			WHERE subscription_id = $1 AND attendance_id = $2
+		`, *subscriptionID, attendance.ID).Scan(&existingConsumptionID)
+
+		if err != nil || !existingConsumptionID.Valid {
+			// Create consumption record
+			consumption := &models.SubscriptionConsumption{
+				SubscriptionID: *subscriptionID,
+				AttendanceID:   attendance.ID,
+				Units:          1,
+			}
+			_, err = tx.Exec(`
+				INSERT INTO subscription_consumption (subscription_id, attendance_id, units, company_id)
+				VALUES ($1, $2, $3, $4)
+				ON CONFLICT (subscription_id, attendance_id) DO NOTHING
+			`, consumption.SubscriptionID, consumption.AttendanceID, consumption.Units, companyID)
+			if err != nil {
+				return nil, fmt.Errorf("error creating subscription consumption: %w", err)
+			}
+		}
 	}
 
 	// Log attendance activity

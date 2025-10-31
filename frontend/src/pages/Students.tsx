@@ -261,7 +261,7 @@ export default function Students() {
           const nextLesson = upcomingLessons[0];
           
           // Get teacher info for next lesson
-          const nextLessonTeacher = nextLesson ? teachers.find((t) => t.id === nextLesson.teacherId) : null;
+          // nextLesson.teacherName is already populated via JOIN from backend
           const nextLessonGroup = nextLesson?.groupId ? groups.find((g) => g.id === nextLesson.groupId) : null;
 
           // Determine activity status based on upcoming lessons
@@ -334,9 +334,9 @@ export default function Students() {
                       <p className="text-sm text-green-800">
                         {moment(nextLesson.start).format("DD MMMM, dddd")} в {moment(nextLesson.start).format("HH:mm")}
                       </p>
-                      {nextLessonTeacher && (
+                      {nextLesson?.teacherName && (
                         <p className="text-xs text-green-700 mt-1">
-                          Преподаватель: {nextLessonTeacher.name}
+                          Преподаватель: {nextLesson.teacherName}
                         </p>
                       )}
                       {nextLessonGroup && (
