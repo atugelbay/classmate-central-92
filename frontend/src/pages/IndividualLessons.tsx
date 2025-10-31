@@ -42,12 +42,14 @@ interface IndividualSchedule {
 }
 
 export default function IndividualLessons() {
-  const { data: lessons = [], isLoading } = useIndividualLessons();
-  const { data: teachers = [] } = useTeachers();
-  const { data: students = [] } = useStudents();
-  const { data: rooms = [] } = useRooms();
+  const { data: lessons = [], isLoading: lessonsLoading } = useIndividualLessons();
+  const { data: teachers = [], isLoading: teachersLoading } = useTeachers();
+  const { data: students = [], isLoading: studentsLoading } = useStudents();
+  const { data: rooms = [], isLoading: roomsLoading } = useRooms();
   const updateLesson = useUpdateLesson();
   const deleteLesson = useDeleteLesson();
+  
+  const isLoading = lessonsLoading || teachersLoading || studentsLoading || roomsLoading;
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isLessonFormOpen, setIsLessonFormOpen] = useState(false);
@@ -60,15 +62,39 @@ export default function IndividualLessons() {
   const groupLessonsIntoSchedules = (): IndividualSchedule[] => {
     const scheduleMap = new Map<string, IndividualSchedule>();
 
+    console.log('Processing lessons:', lessons.length, 'students:', students.length);
+    
     lessons.forEach((lesson) => {
+      console.log('Processing lesson:', {
+        id: lesson.id,
+        title: lesson.title,
+        studentIds: lesson.studentIds,
+        teacherId: lesson.teacherId,
+        teacherName: lesson.teacherName,
+        groupId: lesson.groupId
+      });
+      
       const studentId = lesson.studentIds?.[0]; // Individual lessons have only one student
-      if (!studentId) return;
+      if (!studentId) {
+        console.warn('Lesson without student:', lesson.id, lesson.title, 'studentIds:', lesson.studentIds);
+        return;
+      }
 
       const student = students.find((s) => s.id === studentId);
       // lesson.teacherName is already populated via JOIN from backend
       const room = rooms.find((r) => r.id === lesson.roomId);
       
-      if (!student || !lesson.teacherName) return;
+      if (!student) {
+        console.warn('Student not found for lesson:', lesson.id, 'studentId:', studentId, 'available students:', students.map(s => s.id));
+        return;
+      }
+      
+      if (!lesson.teacherName) {
+        console.warn('Lesson without teacherName:', lesson.id, lesson.title, 'teacherId:', lesson.teacherId);
+        return;
+      }
+      
+      console.log('Lesson passed all checks, adding to schedule:', lesson.id);
 
       const lessonDate = moment(lesson.start);
       const dayOfWeek = lessonDate.day();
@@ -115,7 +141,29 @@ export default function IndividualLessons() {
     return Array.from(scheduleMap.values());
   };
 
-  const schedules = groupLessonsIntoSchedules();
+  // Only process lessons when all data is loaded
+  const schedules = !isLoading ? groupLessonsIntoSchedules() : [];
+  
+  // Debug logging
+  console.log('IndividualLessons Debug:', {
+    isLoading,
+    lessonsLoading,
+    studentsLoading,
+    teachersLoading,
+    roomsLoading,
+    totalLessons: lessons.length,
+    totalStudents: students.length,
+    schedulesCount: schedules.length,
+    lessonsWithStudents: lessons.filter(l => l.studentIds?.length > 0).length,
+    lessonsWithTeacherName: lessons.filter(l => l.teacherName).length,
+    lessons: lessons.slice(0, 3).map(l => ({
+      id: l.id,
+      title: l.title,
+      studentIds: l.studentIds,
+      teacherName: l.teacherName,
+      groupId: l.groupId
+    }))
+  });
 
   const filteredSchedules = schedules.filter((schedule) => {
     const searchLower = searchQuery.toLowerCase();
