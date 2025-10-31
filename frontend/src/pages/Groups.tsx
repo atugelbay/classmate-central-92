@@ -185,14 +185,27 @@ export default function Groups() {
   };
   
   // Get group activity info
-  const getGroupActivity = (groupId: string) => {
-    const groupLessons = lessons.filter((l) => l.groupId === groupId);
+  const getGroupActivity = (group: Group) => {
+    const groupLessons = lessons.filter((l) => l.groupId === group.id);
     const now = moment();
     const upcomingLessons = groupLessons.filter((l) => moment(l.start).isAfter(now));
     const completedLessons = groupLessons.filter((l) => l.status === "completed");
     
-    const isActive = upcomingLessons.length > 0;
-    const nextLesson = upcomingLessons.sort((a, b) => moment(a.start).diff(moment(b.start)))[0];
+    // Group is active if:
+    // 1. Has upcoming lessons, OR
+    // 2. Has active students (in enrollment) AND group status is "active", OR
+    // 3. Has a schedule defined AND group status is "active"
+    const hasActiveStudents = group.studentIds && group.studentIds.length > 0;
+    const hasSchedule = group.schedule && group.schedule.trim().length > 0;
+    const groupStatusActive = group.status === "active" || !group.status; // Default to active if not set
+    
+    const isActive = upcomingLessons.length > 0 || 
+                     (hasActiveStudents && groupStatusActive) || 
+                     (hasSchedule && groupStatusActive);
+    
+    const nextLesson = upcomingLessons.length > 0 
+      ? upcomingLessons.sort((a, b) => moment(a.start).diff(moment(b.start)))[0]
+      : undefined;
     
     return {
       isActive,
@@ -221,7 +234,7 @@ export default function Groups() {
     
     // Activity filter
     if (activityFilter !== "all") {
-      const activity = getGroupActivity(group.id);
+      const activity = getGroupActivity(group);
       if (activityFilter === "active" && !activity.isActive) return false;
       if (activityFilter === "inactive" && activity.isActive) return false;
     }
@@ -569,14 +582,14 @@ export default function Groups() {
             size="sm"
             onClick={() => setActivityFilter("active")}
           >
-            Активные ({groups.filter(g => getGroupActivity(g.id).isActive).length})
+            Активные ({groups.filter(g => getGroupActivity(g).isActive).length})
           </Button>
           <Button
             variant={activityFilter === "inactive" ? "default" : "outline"}
             size="sm"
             onClick={() => setActivityFilter("inactive")}
           >
-            Неактивные ({groups.filter(g => !getGroupActivity(g.id).isActive).length})
+            Неактивные ({groups.filter(g => !getGroupActivity(g).isActive).length})
           </Button>
           <Button
             variant={activityFilter === "all" ? "default" : "outline"}
@@ -594,7 +607,7 @@ export default function Groups() {
           const groupStudents = students.filter((s) =>
             group.studentIds && group.studentIds.includes(s.id)
           );
-          const activity = getGroupActivity(group.id);
+          const activity = getGroupActivity(group);
           const room = rooms.find((r) => r.id === group.roomId);
 
           return (
@@ -744,7 +757,7 @@ export default function Groups() {
             </DialogHeader>
             
             {(() => {
-              const activity = getGroupActivity(selectedGroupForDetails.id);
+              const activity = getGroupActivity(selectedGroupForDetails);
               // teacherName is already populated via JOIN from backend
               const groupStudents = students.filter((s) =>
                 selectedGroupForDetails.studentIds && selectedGroupForDetails.studentIds.includes(s.id)

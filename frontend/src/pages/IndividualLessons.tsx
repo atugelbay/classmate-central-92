@@ -23,15 +23,19 @@ import {
 import { Lesson } from "@/types";
 import { toast } from "sonner";
 
+interface ScheduleTimeSlot {
+  daysOfWeek: number[];
+  timeFrom: string;
+  timeTo: string;
+}
+
 interface IndividualSchedule {
   id: string;
   studentId: string;
   studentName: string;
   teacherId: string;
   teacherName: string;
-  dayOfWeek: number;
-  timeFrom: string;
-  timeTo: string;
+  scheduleSlots: ScheduleTimeSlot[]; // Несколько расписаний для разных времен
   roomId?: string;
   roomName?: string;
   subject: string;
@@ -101,8 +105,8 @@ export default function IndividualLessons() {
       const timeFrom = lessonDate.format("HH:mm");
       const timeTo = moment(lesson.end).format("HH:mm");
 
-      // Create unique key for this schedule pattern
-      const scheduleKey = `${studentId}-${lesson.teacherId}-${dayOfWeek}-${timeFrom}-${timeTo}`;
+      // Create unique key for this schedule (only student-teacher, regardless of time)
+      const scheduleKey = `${studentId}-${lesson.teacherId}`;
 
       if (!scheduleMap.has(scheduleKey)) {
         scheduleMap.set(scheduleKey, {
@@ -111,9 +115,7 @@ export default function IndividualLessons() {
           studentName: student.name,
           teacherId: lesson.teacherId,
           teacherName: lesson.teacherName,
-          dayOfWeek,
-          timeFrom,
-          timeTo,
+          scheduleSlots: [], // Will collect all time slots
           roomId: lesson.roomId,
           roomName: room?.name,
           subject: lesson.subject || "Занятие",
@@ -122,8 +124,33 @@ export default function IndividualLessons() {
           completedCount: 0,
         });
       }
-
+      
       const schedule = scheduleMap.get(scheduleKey)!;
+      
+      // Find or create schedule slot for this time
+      let timeSlot = schedule.scheduleSlots.find(
+        slot => slot.timeFrom === timeFrom && slot.timeTo === timeTo
+      );
+      
+      if (!timeSlot) {
+        timeSlot = {
+          daysOfWeek: [],
+          timeFrom,
+          timeTo,
+        };
+        schedule.scheduleSlots.push(timeSlot);
+      }
+      
+      // Add day of week to the time slot if not already present
+      if (!timeSlot.daysOfWeek.includes(dayOfWeek)) {
+        timeSlot.daysOfWeek.push(dayOfWeek);
+        timeSlot.daysOfWeek.sort((a, b) => {
+          const aAdj = a === 0 ? 7 : a;
+          const bAdj = b === 0 ? 7 : b;
+          return aAdj - bAdj;
+        });
+      }
+      
       schedule.lessons.push(lesson);
 
       if (moment(lesson.start).isAfter(moment())) {
@@ -228,6 +255,18 @@ export default function IndividualLessons() {
     return days[dayOfWeek];
   };
 
+  const formatDaysOfWeek = (daysOfWeek: number[]) => {
+    const dayNames = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
+    // Сортируем дни недели (0 = воскресенье, 1-6 = понедельник-суббота)
+    const sortedDays = [...daysOfWeek].sort((a, b) => {
+      // Преобразуем воскресенье (0) в 7 для правильной сортировки
+      const aAdj = a === 0 ? 7 : a;
+      const bAdj = b === 0 ? 7 : b;
+      return aAdj - bAdj;
+    });
+    return sortedDays.map(d => dayNames[d]).join(", ");
+  };
+
   const renderScheduleCard = (schedule: IndividualSchedule) => {
     const isExpanded = expandedSchedules.has(schedule.id);
     const upcomingLessons = schedule.lessons.filter((l) => moment(l.start).isAfter(moment()));
@@ -255,9 +294,13 @@ export default function IndividualLessons() {
               <CalendarDays className="h-4 w-4" />
               <span>Расписание</span>
             </div>
-            <p className="text-sm text-blue-800">
-              {getDayName(schedule.dayOfWeek)} в {schedule.timeFrom} - {schedule.timeTo}
-            </p>
+            <div className="text-sm text-blue-800 space-y-1">
+              {schedule.scheduleSlots.map((slot, idx) => (
+                <p key={idx}>
+                  {formatDaysOfWeek(slot.daysOfWeek)} в {slot.timeFrom} - {slot.timeTo}
+                </p>
+              ))}
+            </div>
           </div>
 
           {/* Teacher */}
