@@ -1,4 +1,5 @@
 import { useState } from "react";
+import * as React from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   useStudents, 
@@ -26,11 +27,21 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Label } from "@/components/ui/label";
+import { 
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { Student } from "@/types";
 import moment from "moment";
 import "moment/locale/ru";
 
 moment.locale("ru");
+
+const ITEMS_PER_PAGE = 39;
 
 export default function Students() {
   const navigate = useNavigate();
@@ -46,6 +57,7 @@ export default function Students() {
   const [activityFilter, setActivityFilter] = useState<"all" | "active" | "inactive">("active");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Check if student has upcoming lessons
   const isStudentActive = (studentId: string) => {
@@ -57,13 +69,101 @@ export default function Students() {
     return hasUpcomingLessons;
   };
 
+  // Get student schedule from lessons
+  const getStudentSchedule = (studentId: string): string => {
+    // Get all lessons for this student (both individual and group)
+    const studentLessons = lessons.filter((l) => 
+      (l.studentIds?.includes(studentId) || 
+      (l.groupId && students.find(s => s.id === studentId)?.groupIds?.includes(l.groupId))) &&
+      l.status !== "cancelled"
+    );
+    
+    if (studentLessons.length === 0) return "";
+    
+    // Group lessons by weekday and find most common time for each weekday
+    const weekdayMap = new Map<number, Map<string, number>>(); // weekday -> timeString -> count
+    
+    studentLessons.forEach((lesson) => {
+      const lessonDate = moment(lesson.start);
+      const weekday = lessonDate.day(); // 0 = Sunday, 1 = Monday, etc.
+      const startTime = lessonDate.format("HH:mm");
+      const endTime = moment(lesson.end).format("HH:mm");
+      const timeString = `${startTime} - ${endTime}`;
+      
+      if (!weekdayMap.has(weekday)) {
+        weekdayMap.set(weekday, new Map());
+      }
+      
+      const timeCountMap = weekdayMap.get(weekday)!;
+      timeCountMap.set(timeString, (timeCountMap.get(timeString) || 0) + 1);
+    });
+    
+    if (weekdayMap.size === 0) return "";
+    
+    // Get most common time for each weekday
+    const scheduleMap = new Map<number, { start: string; end: string }>();
+    
+    weekdayMap.forEach((timeCountMap, weekday) => {
+      let maxCount = 0;
+      let mostCommonTime = "";
+      
+      timeCountMap.forEach((count, timeString) => {
+        if (count > maxCount) {
+          maxCount = count;
+          mostCommonTime = timeString;
+        }
+      });
+      
+      if (mostCommonTime) {
+        const [start, end] = mostCommonTime.split(" - ");
+        scheduleMap.set(weekday, { start: start.trim(), end: end.trim() });
+      }
+    });
+    
+    if (scheduleMap.size === 0) return "";
+    
+    // Check if all weekdays have the same time
+    const firstEntry = Array.from(scheduleMap.values())[0];
+    const allSameTime = Array.from(scheduleMap.values()).every(
+      (entry) => entry.start === firstEntry.start && entry.end === firstEntry.end
+    );
+    
+    // Sort weekdays (0 = Sunday, 1 = Monday, etc.)
+    const sortedWeekdays = Array.from(scheduleMap.keys()).sort((a, b) => {
+      // Convert Sunday (0) to 7 for proper sorting
+      const aAdj = a === 0 ? 7 : a;
+      const bAdj = b === 0 ? 7 : b;
+      return aAdj - bAdj;
+    });
+    
+    const weekdayNames = ["ВС", "ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ"];
+    const weekdayLabels = sortedWeekdays.map(day => weekdayNames[day === 0 ? 0 : day]).join(" ");
+    
+    if (allSameTime) {
+      // All days have same time, format: "ПН СР ПТ 15:00 - 16:00"
+      return `${weekdayLabels} ${firstEntry.start} - ${firstEntry.end}`;
+    } else {
+      // Different times for different days - use first time as primary
+      return `${weekdayLabels} ${firstEntry.start} - ${firstEntry.end}`;
+    }
+  };
+
   const filteredStudents = students.filter((student) => {
     // Search filter
-    const matchesSearch =
-      student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student.email.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    if (!matchesSearch) return false;
+    const query = searchQuery.toLowerCase().trim();
+    if (query) {
+      // Normalize phone numbers by removing spaces, dashes, and parentheses for better matching
+      const normalizePhone = (phone: string) => phone.replace(/[\s\-\(\)]/g, '').toLowerCase();
+      const normalizedQuery = normalizePhone(query);
+      const normalizedStudentPhone = normalizePhone(student.phone || '');
+      
+      const matchesSearch =
+        student.name.toLowerCase().includes(query) ||
+        student.email.toLowerCase().includes(query) ||
+        normalizedStudentPhone.includes(normalizedQuery);
+      
+      if (!matchesSearch) return false;
+    }
     
     // Activity filter
     if (activityFilter !== "all") {
@@ -74,6 +174,17 @@ export default function Students() {
     
     return true;
   });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredStudents.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedStudents = filteredStudents.slice(startIndex, endIndex);
+
+  // Reset to first page when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, activityFilter]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -211,7 +322,7 @@ export default function Students() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Поиск по имени или email..."
+          placeholder="Поиск учеников"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-9"
@@ -245,7 +356,7 @@ export default function Students() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {filteredStudents.map((student) => {
+        {paginatedStudents.map((student) => {
           const studentGroups = groups.filter((g) =>
             student.groupIds && student.groupIds.includes(g.id)
           );
@@ -301,16 +412,12 @@ export default function Students() {
                     <Phone className="h-4 w-4" />
                     {student.phone}
                   </div>
-                  <div>
-                    <p className="mb-2 text-sm font-medium">Предметы:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {student.subjects.map((subject) => (
-                        <Badge key={subject} variant="secondary">
-                          {subject}
-                        </Badge>
-                      ))}
+                  {getStudentSchedule(student.id) && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Clock className="h-4 w-4" />
+                      {getStudentSchedule(student.id)}
                     </div>
-                  </div>
+                  )}
                   {studentGroups.length > 0 && (
                     <div>
                       <p className="mb-2 text-sm font-medium">Группы:</p>
@@ -382,6 +489,49 @@ export default function Students() {
           );
         })}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious 
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (currentPage > 1) setCurrentPage(currentPage - 1);
+                }}
+                className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+              />
+            </PaginationItem>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              <PaginationItem key={page}>
+                <PaginationLink
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setCurrentPage(page);
+                  }}
+                  isActive={currentPage === page}
+                  className="cursor-pointer"
+                >
+                  {page}
+                </PaginationLink>
+              </PaginationItem>
+            ))}
+            <PaginationItem>
+              <PaginationNext
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+                }}
+                className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      )}
     </div>
   );
 }

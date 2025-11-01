@@ -11,6 +11,14 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Loader2, Plus, Calendar, Snowflake, CheckCircle2, XCircle } from "lucide-react";
 import { 
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import { 
   useSubscriptionTypes, 
   useCreateSubscriptionType, 
   useUpdateSubscriptionType, 
@@ -26,6 +34,8 @@ import moment from "moment";
 import "moment/locale/ru";
 
 moment.locale("ru");
+
+const ITEMS_PER_PAGE = 39;
 
 export default function Subscriptions() {
   const { data: subscriptionTypes = [], isLoading: typesLoading } = useSubscriptionTypes();
@@ -44,6 +54,8 @@ export default function Subscriptions() {
   const [selectedType, setSelectedType] = useState<SubscriptionType | null>(null);
   const [selectedSubscription, setSelectedSubscription] = useState<StudentSubscription | null>(null);
   const [billingTypeFilter, setBillingTypeFilter] = useState<string>("all");
+  const [currentPageSubscriptions, setCurrentPageSubscriptions] = useState(1);
+  const [currentPageTypes, setCurrentPageTypes] = useState(1);
   
   // For subscription form
   const [formTypeId, setFormTypeId] = useState<string>("");
@@ -63,6 +75,23 @@ export default function Subscriptions() {
   const filteredTypes = subscriptionTypes.filter(type => 
     billingTypeFilter === "all" || type.billingType === billingTypeFilter
   );
+
+  // Pagination for subscriptions
+  const totalPagesSubscriptions = Math.ceil(subscriptions.length / ITEMS_PER_PAGE);
+  const startIndexSubscriptions = (currentPageSubscriptions - 1) * ITEMS_PER_PAGE;
+  const endIndexSubscriptions = startIndexSubscriptions + ITEMS_PER_PAGE;
+  const paginatedSubscriptions = subscriptions.slice(startIndexSubscriptions, endIndexSubscriptions);
+
+  // Pagination for types
+  const totalPagesTypes = Math.ceil(filteredTypes.length / ITEMS_PER_PAGE);
+  const startIndexTypes = (currentPageTypes - 1) * ITEMS_PER_PAGE;
+  const endIndexTypes = startIndexTypes + ITEMS_PER_PAGE;
+  const paginatedTypes = filteredTypes.slice(startIndexTypes, endIndexTypes);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPageTypes(1);
+  }, [billingTypeFilter]);
   
   const billingTypeLabels = {
     per_lesson: "Поурочный",
@@ -389,14 +418,14 @@ export default function Subscriptions() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {subscriptions.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground">
-                        Нет абонементов
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    subscriptions.map(subscription => (
+                  {paginatedSubscriptions.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center text-muted-foreground">
+                          Нет абонементов
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                    paginatedSubscriptions.map(subscription => (
                       <TableRow key={subscription.id} className="cursor-pointer hover:bg-muted/50" onClick={() => { setSelectedSubscription(subscription); setIsSubscriptionDialogOpen(true); }}>
                         <TableCell>{getStudentName(subscription.studentId)}</TableCell>
                         <TableCell>{getTypeName(subscription.subscriptionTypeId)}</TableCell>
@@ -435,6 +464,49 @@ export default function Subscriptions() {
               </Table>
             </CardContent>
           </Card>
+
+          {/* Pagination for Subscriptions */}
+          {totalPagesSubscriptions > 1 && (
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious 
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPageSubscriptions > 1) setCurrentPageSubscriptions(currentPageSubscriptions - 1);
+                    }}
+                    className={currentPageSubscriptions === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+                {Array.from({ length: totalPagesSubscriptions }, (_, i) => i + 1).map((page) => (
+                  <PaginationItem key={page}>
+                    <PaginationLink
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setCurrentPageSubscriptions(page);
+                      }}
+                      isActive={currentPageSubscriptions === page}
+                      className="cursor-pointer"
+                    >
+                      {page}
+                    </PaginationLink>
+                  </PaginationItem>
+                ))}
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPageSubscriptions < totalPagesSubscriptions) setCurrentPageSubscriptions(currentPageSubscriptions + 1);
+                    }}
+                    className={currentPageSubscriptions === totalPagesSubscriptions ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
         </TabsContent>
 
         {/* Types Tab */}
@@ -497,12 +569,12 @@ export default function Subscriptions() {
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredTypes.length === 0 ? (
+            {paginatedTypes.length === 0 ? (
               <p className="text-muted-foreground col-span-full text-center py-8">
                 {billingTypeFilter === "all" ? "Нет типов абонементов" : "Нет типов с выбранной тарификацией"}
               </p>
             ) : (
-              filteredTypes.map(type => (
+              paginatedTypes.map(type => (
                 <Card key={type.id} className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => { setSelectedType(type); setIsTypeDialogOpen(true); }}>
                   <CardHeader>
                     <div className="flex items-center justify-between mb-2">
@@ -529,6 +601,49 @@ export default function Subscriptions() {
               ))
             )}
           </div>
+
+          {/* Pagination for Types */}
+          {totalPagesTypes > 1 && (
+            <Pagination className="mt-6">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious 
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPageTypes > 1) setCurrentPageTypes(currentPageTypes - 1);
+                    }}
+                    className={currentPageTypes === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+                {Array.from({ length: totalPagesTypes }, (_, i) => i + 1).map((page) => (
+                  <PaginationItem key={page}>
+                    <PaginationLink
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setCurrentPageTypes(page);
+                      }}
+                      isActive={currentPageTypes === page}
+                      className="cursor-pointer"
+                    >
+                      {page}
+                    </PaginationLink>
+                  </PaginationItem>
+                ))}
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPageTypes < totalPagesTypes) setCurrentPageTypes(currentPageTypes + 1);
+                    }}
+                    className={currentPageTypes === totalPagesTypes ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
         </TabsContent>
       </Tabs>
     </div>
