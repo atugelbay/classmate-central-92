@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import moment from "moment";
 import "moment/locale/ru";
 import { useIndividualLessons, useTeachers, useStudents, useRooms, useUpdateLesson, useDeleteLesson } from "@/hooks/useData";
@@ -8,8 +8,18 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search, User, Clock, MapPin, Edit, Trash2, CalendarDays, ChevronDown, ChevronUp } from "lucide-react";
+import { 
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 moment.locale("ru");
+
+const ITEMS_PER_PAGE = 39;
 import {
   AlertDialog,
   AlertDialogAction,
@@ -61,6 +71,7 @@ export default function IndividualLessons() {
   const [lessonFormMode, setLessonFormMode] = useState<"create" | "edit">("create");
   const [deletingLesson, setDeletingLesson] = useState<Lesson | null>(null);
   const [expandedSchedules, setExpandedSchedules] = useState<Set<string>>(new Set());
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Group lessons into schedules
   const groupLessonsIntoSchedules = (): IndividualSchedule[] => {
@@ -200,6 +211,17 @@ export default function IndividualLessons() {
       schedule.subject.toLowerCase().includes(searchLower)
     );
   });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredSchedules.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedSchedules = filteredSchedules.slice(startIndex, endIndex);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   const handleCreateLesson = () => {
     setLessonFormData({
@@ -468,8 +490,51 @@ export default function IndividualLessons() {
         <div>
           <h2 className="text-xl font-semibold mb-4">Индивидуальные расписания</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredSchedules.map(renderScheduleCard)}
+            {paginatedSchedules.map(renderScheduleCard)}
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <Pagination className="mt-6">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious 
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPage > 1) setCurrentPage(currentPage - 1);
+                    }}
+                    className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <PaginationItem key={page}>
+                    <PaginationLink
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setCurrentPage(page);
+                      }}
+                      isActive={currentPage === page}
+                      className="cursor-pointer"
+                    >
+                      {page}
+                    </PaginationLink>
+                  </PaginationItem>
+                ))}
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+                    }}
+                    className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
         </div>
       ) : (
         <div className="text-center py-12">

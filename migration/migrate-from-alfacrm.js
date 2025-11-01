@@ -1277,9 +1277,11 @@ async function generateLessons() {
     SELECT 
       gs.*,
       g.name as group_name,
-      g.teacher_id
+      COALESCE(gs.teacher_id, g.teacher_id) as teacher_id,
+      r.name as room_name
     FROM group_schedule gs
     JOIN groups g ON gs.group_id = g.id
+    LEFT JOIN rooms r ON gs.room_id = r.id
     WHERE gs.is_active = true AND gs.company_id = $1
   `, [COMPANY_ID]);
   
@@ -1358,9 +1360,9 @@ async function generateLessons() {
       await pool.query(`
         INSERT INTO lessons (
           id, title, teacher_id, group_id, subject,
-          start_time, end_time, room_id, status, company_id
+          start_time, end_time, room, room_id, status, company_id
         )
-        VALUES ($1, $2, $3, $4, $5, $6::timestamp, $7::timestamp, $8, $9, $10)
+        VALUES ($1, $2, $3, $4, $5, $6::timestamp, $7::timestamp, $8, $9, $10, $11)
       `, [
         lessonId,
         'Занятие',
@@ -1369,6 +1371,7 @@ async function generateLessons() {
         'Английский язык',
         startTimeStr,
         endTimeStr,
+        schedule.room_name || '', // Fill room field with room name if available
         schedule.room_id,
         'scheduled',
         COMPANY_ID

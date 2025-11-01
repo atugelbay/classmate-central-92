@@ -9,12 +9,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, DollarSign, TrendingUp, TrendingDown, Users } from "lucide-react";
+import { 
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { useTransactions, useCreateTransaction, useAllBalances, useTariffs, useCreateTariff, useUpdateTariff, useDeleteTariff, useDebts, useCreateDebt, useUpdateDebt, useStudents } from "@/hooks/useData";
 import { Tariff, DebtRecord } from "@/types";
 import moment from "moment";
 import "moment/locale/ru";
 
 moment.locale("ru");
+
+const ITEMS_PER_PAGE = 39;
 
 export default function Finance() {
   const { data: transactions = [], isLoading: transactionsLoading } = useTransactions();
@@ -35,6 +45,9 @@ export default function Finance() {
   const [isDebtDialogOpen, setIsDebtDialogOpen] = useState(false);
   const [selectedTariff, setSelectedTariff] = useState<Tariff | null>(null);
   const [selectedDebt, setSelectedDebt] = useState<DebtRecord | null>(null);
+  const [currentPageTransactions, setCurrentPageTransactions] = useState(1);
+  const [currentPageBalances, setCurrentPageBalances] = useState(1);
+  const [currentPageDebts, setCurrentPageDebts] = useState(1);
 
   // Statistics
   const totalIncome = transactions
@@ -111,6 +124,24 @@ export default function Finance() {
     const student = students.find(s => s.id === studentId);
     return student?.name || studentId;
   };
+
+  // Pagination for transactions
+  const totalPagesTransactions = Math.ceil(transactions.length / ITEMS_PER_PAGE);
+  const startIndexTransactions = (currentPageTransactions - 1) * ITEMS_PER_PAGE;
+  const endIndexTransactions = startIndexTransactions + ITEMS_PER_PAGE;
+  const paginatedTransactions = transactions.slice(startIndexTransactions, endIndexTransactions);
+
+  // Pagination for balances
+  const totalPagesBalances = Math.ceil(balances.length / ITEMS_PER_PAGE);
+  const startIndexBalances = (currentPageBalances - 1) * ITEMS_PER_PAGE;
+  const endIndexBalances = startIndexBalances + ITEMS_PER_PAGE;
+  const paginatedBalances = balances.slice(startIndexBalances, endIndexBalances);
+
+  // Pagination for debts
+  const totalPagesDebts = Math.ceil(debts.length / ITEMS_PER_PAGE);
+  const startIndexDebts = (currentPageDebts - 1) * ITEMS_PER_PAGE;
+  const endIndexDebts = startIndexDebts + ITEMS_PER_PAGE;
+  const paginatedDebts = debts.slice(startIndexDebts, endIndexDebts);
 
   if (transactionsLoading || balancesLoading || tariffsLoading || debtsLoading) {
     return (
@@ -271,14 +302,14 @@ export default function Finance() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {transactions.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground">
-                        Нет транзакций
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    transactions.map(transaction => (
+                  {paginatedTransactions.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-muted-foreground">
+                          Нет транзакций
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                    paginatedTransactions.map(transaction => (
                       <TableRow key={transaction.id}>
                         <TableCell>{moment(transaction.createdAt).format("DD.MM.YYYY HH:mm")}</TableCell>
                         <TableCell>{getStudentName(transaction.studentId)}</TableCell>
@@ -299,6 +330,49 @@ export default function Finance() {
               </Table>
             </CardContent>
           </Card>
+
+          {/* Pagination for Transactions */}
+          {totalPagesTransactions > 1 && (
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious 
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPageTransactions > 1) setCurrentPageTransactions(currentPageTransactions - 1);
+                    }}
+                    className={currentPageTransactions === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+                {Array.from({ length: totalPagesTransactions }, (_, i) => i + 1).map((page) => (
+                  <PaginationItem key={page}>
+                    <PaginationLink
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setCurrentPageTransactions(page);
+                      }}
+                      isActive={currentPageTransactions === page}
+                      className="cursor-pointer"
+                    >
+                      {page}
+                    </PaginationLink>
+                  </PaginationItem>
+                ))}
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPageTransactions < totalPagesTransactions) setCurrentPageTransactions(currentPageTransactions + 1);
+                    }}
+                    className={currentPageTransactions === totalPagesTransactions ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
         </TabsContent>
 
         {/* Balances Tab */}
@@ -315,14 +389,14 @@ export default function Finance() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {balances.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={3} className="text-center text-muted-foreground">
-                        Нет данных о балансах
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    balances.map(balance => (
+                  {paginatedBalances.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-center text-muted-foreground">
+                          Нет данных о балансах
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                    paginatedBalances.map(balance => (
                       <TableRow key={balance.studentId}>
                         <TableCell>{getStudentName(balance.studentId)}</TableCell>
                         <TableCell>
@@ -340,6 +414,49 @@ export default function Finance() {
               </Table>
             </CardContent>
           </Card>
+
+          {/* Pagination for Balances */}
+          {totalPagesBalances > 1 && (
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious 
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPageBalances > 1) setCurrentPageBalances(currentPageBalances - 1);
+                    }}
+                    className={currentPageBalances === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+                {Array.from({ length: totalPagesBalances }, (_, i) => i + 1).map((page) => (
+                  <PaginationItem key={page}>
+                    <PaginationLink
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setCurrentPageBalances(page);
+                      }}
+                      isActive={currentPageBalances === page}
+                      className="cursor-pointer"
+                    >
+                      {page}
+                    </PaginationLink>
+                  </PaginationItem>
+                ))}
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPageBalances < totalPagesBalances) setCurrentPageBalances(currentPageBalances + 1);
+                    }}
+                    className={currentPageBalances === totalPagesBalances ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
         </TabsContent>
 
         {/* Tariffs Tab */}
@@ -477,14 +594,14 @@ export default function Finance() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {debts.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground">
-                        Нет долгов
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    debts.map(debt => (
+                  {paginatedDebts.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-muted-foreground">
+                          Нет долгов
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                    paginatedDebts.map(debt => (
                       <TableRow key={debt.id} className="cursor-pointer hover:bg-muted/50" onClick={() => { setSelectedDebt(debt); setIsDebtDialogOpen(true); }}>
                         <TableCell>{getStudentName(debt.studentId)}</TableCell>
                         <TableCell className="font-medium text-orange-600">{debt.amount.toLocaleString()} ₸</TableCell>
@@ -502,6 +619,49 @@ export default function Finance() {
               </Table>
             </CardContent>
           </Card>
+
+          {/* Pagination for Debts */}
+          {totalPagesDebts > 1 && (
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious 
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPageDebts > 1) setCurrentPageDebts(currentPageDebts - 1);
+                    }}
+                    className={currentPageDebts === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+                {Array.from({ length: totalPagesDebts }, (_, i) => i + 1).map((page) => (
+                  <PaginationItem key={page}>
+                    <PaginationLink
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setCurrentPageDebts(page);
+                      }}
+                      isActive={currentPageDebts === page}
+                      className="cursor-pointer"
+                    >
+                      {page}
+                    </PaginationLink>
+                  </PaginationItem>
+                ))}
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPageDebts < totalPagesDebts) setCurrentPageDebts(currentPageDebts + 1);
+                    }}
+                    className={currentPageDebts === totalPagesDebts ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
         </TabsContent>
       </Tabs>
     </div>
