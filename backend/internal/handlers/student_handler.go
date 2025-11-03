@@ -35,14 +35,65 @@ func NewStudentHandler(
 
 func (h *StudentHandler) GetAll(c *gin.Context) {
 	companyID := c.GetString("company_id")
+    // Optional server-side search and pagination
+    query := c.Query("query")
+    page := 1
+    pageSize := 50
+    if v := c.Query("page"); v != "" {
+        if n, err := strconv.Atoi(v); err == nil && n > 0 {
+            page = n
+        }
+    }
+    if v := c.Query("pageSize"); v != "" {
+        if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 200 {
+            pageSize = n
+        }
+    }
 
-	students, err := h.repo.GetAll(companyID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
+    // Always compute global counts (not filtered by search)
+    activeCnt, inactiveCnt, totalCnt, cntErr := h.repo.GetCounts(companyID)
+    if cntErr != nil {
+        // Not fatal for listing; log-like response inline
+        activeCnt, inactiveCnt, totalCnt = 0, 0, 0
+    }
 
-	c.JSON(http.StatusOK, students)
+    if query != "" || c.Query("page") != "" || c.Query("pageSize") != "" {
+        items, total, err := h.repo.GetPaged(companyID, query, page, pageSize)
+        if err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+            return
+        }
+        c.JSON(http.StatusOK, gin.H{
+            "items":    items,
+            "total":    total,
+            "page":     page,
+            "pageSize": pageSize,
+            "counts": gin.H{
+                "active":    activeCnt,
+                "inactive":  inactiveCnt,
+                "all":       totalCnt,
+            },
+        })
+        return
+    }
+
+    students, err := h.repo.GetAll(companyID)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{
+        "items": students,
+        "total": len(students),
+        "page":  1,
+        "pageSize": len(students),
+        "counts": gin.H{
+            "active":   activeCnt,
+            "inactive": inactiveCnt,
+            "all":      totalCnt,
+        },
+    })
 }
 
 func (h *StudentHandler) GetByID(c *gin.Context) {

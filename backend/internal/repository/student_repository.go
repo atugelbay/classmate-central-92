@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"classmate-central/internal/models"
 )
@@ -131,6 +132,86 @@ func (r *StudentRepository) GetAll(companyID string) ([]*models.Student, error) 
 	}
 
 	return students, nil
+}
+
+// GetPaged returns students with optional search and pagination
+func (r *StudentRepository) GetPaged(companyID, search string, page, pageSize int) ([]*models.Student, int, error) {
+    offset := (page - 1) * pageSize
+    // Base where
+    where := "WHERE company_id = $1"
+    args := []interface{}{companyID}
+    if search != "" {
+        // Prepare LIKE for name/email and normalized digits-only for phone
+        like := "%" + strings.ToLower(search) + "%"
+        normalized := strings.NewReplacer(" ", "", "-", "", "(", "", ")", "").Replace(search)
+        where += " AND (LOWER(name) LIKE $2 OR LOWER(email) LIKE $2 OR REPLACE(REPLACE(REPLACE(REPLACE(phone,' ',''),'-',''),'(', ''),')','') LIKE $3)"
+        args = append(args, like, "%"+normalized+"%")
+    }
+
+    // Total count
+    totalQuery := "SELECT COUNT(*) FROM students " + where
+    var total int
+    if err := r.db.QueryRow(totalQuery, args...).Scan(&total); err != nil {
+        return nil, 0, fmt.Errorf("error counting students: %w", err)
+    }
+
+    // Paged select
+    selectQuery := "SELECT id, name, age, email, phone, status, avatar, created_at FROM students " + where + " ORDER BY name LIMIT $" + fmt.Sprint(len(args)+1) + " OFFSET $" + fmt.Sprint(len(args)+2)
+    args = append(args, pageSize, offset)
+
+    rows, err := r.db.Query(selectQuery, args...)
+    if err != nil {
+        return nil, 0, fmt.Errorf("error getting students: %w", err)
+    }
+    defer rows.Close()
+
+    students := []*models.Student{}
+    for rows.Next() {
+        student := &models.Student{}
+        var avatar sql.NullString
+        var age sql.NullInt32
+        var status sql.NullString
+        var createdAt sql.NullString
+
+        if err := rows.Scan(&student.ID, &student.Name, &age, &student.Email, &student.Phone, &status, &avatar, &createdAt); err != nil {
+            return nil, 0, fmt.Errorf("error scanning student: %w", err)
+        }
+        if age.Valid {
+            student.Age = int(age.Int32)
+        }
+        if status.Valid {
+            student.Status = status.String
+        } else {
+            student.Status = "active"
+        }
+        if createdAt.Valid {
+            student.CreatedAt = createdAt.String
+        }
+        if avatar.Valid {
+            student.Avatar = avatar.String
+        }
+        student.Subjects = []string{}
+        student.GroupIds = []string{}
+        students = append(students, student)
+    }
+
+    return students, total, nil
+}
+
+// GetCounts returns global counts of students by status (not affected by search)
+func (r *StudentRepository) GetCounts(companyID string) (active int, inactive int, total int, err error) {
+    // Total
+    if err = r.db.QueryRow(`SELECT COUNT(*) FROM students WHERE company_id = $1`, companyID).Scan(&total); err != nil {
+        return
+    }
+    // Active (has upcoming lessons OR status active?) — per request, use status column
+    if err = r.db.QueryRow(`SELECT COUNT(*) FROM students WHERE company_id = $1 AND status = 'active'`, companyID).Scan(&active); err != nil {
+        return
+    }
+    if err = r.db.QueryRow(`SELECT COUNT(*) FROM students WHERE company_id = $1 AND status != 'active'`, companyID).Scan(&inactive); err != nil {
+        return
+    }
+    return
 }
 
 func (r *StudentRepository) GetByID(id string, companyID string) (*models.Student, error) {

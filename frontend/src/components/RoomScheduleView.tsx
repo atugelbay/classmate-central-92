@@ -19,6 +19,9 @@ interface RoomScheduleViewProps {
   onLessonClick?: (lesson: Lesson) => void;
   onSlotClick?: (start: Date, end: Date, roomId: string) => void;
   onLessonUpdate?: (lessonId: string, updates: { start: Date; end: Date; roomId?: string }) => void;
+  onCancelLesson?: (lesson: Lesson) => void;
+  onResumeLesson?: (lesson: Lesson) => void;
+  onOpenAttendance?: (lesson: Lesson) => void;
 }
 
 export default function RoomScheduleView({
@@ -90,6 +93,16 @@ export default function RoomScheduleView({
     if (!groupId) return null;
     const group = groups.find((g) => g.id === groupId);
     return group?.name;
+  };
+
+  const getDisplayStatus = (lesson: Lesson) => {
+    if (lesson.status === "cancelled") return "Отменен";
+    const now = moment();
+    const start = moment.utc(lesson.start).local();
+    const end = moment.utc(lesson.end).local();
+    if (now.isBetween(start, end)) return "Проводится";
+    if (now.isAfter(end)) return "Проведен";
+    return "Запланирован";
   };
 
   const activeRooms = rooms?.filter((room) => room.status === "active") || [];
@@ -545,7 +558,7 @@ export default function RoomScheduleView({
                         />
                         
                         <Card
-                          className="h-full overflow-hidden border-l-4"
+                          className={`h-full overflow-hidden border-l-4 ${lesson.status === 'cancelled' ? 'opacity-60 grayscale' : ''}`}
                           style={{ 
                             borderLeftColor: room.color,
                             padding: showMinimalInfo ? "4px 6px" : "8px"
@@ -553,7 +566,7 @@ export default function RoomScheduleView({
                         >
                           {/* Group name - always shown as title */}
                           <div 
-                            className="font-semibold truncate"
+                            className={`font-semibold truncate ${lesson.status === 'cancelled' ? 'line-through' : ''}`}
                             style={{ fontSize: showMinimalInfo ? "10px" : "12px" }}
                           >
                             {groupName || lesson.title}
@@ -634,22 +647,35 @@ export default function RoomScheduleView({
                               <span className="font-medium">Аудитория:</span> {lessonRoom?.name || "Не указана"}
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              <span className="font-medium">Статус:</span> {
-                                lesson.status === "scheduled" ? "Запланирован" :
-                                lesson.status === "completed" ? "Завершен" :
-                                lesson.status === "cancelled" ? "Отменен" : lesson.status
-                              }
+                              <span className="font-medium">Статус:</span> {getDisplayStatus(lesson)}
                             </div>
                           </div>
                         </div>
 
-                        <div className="flex gap-2 pt-2">
-                          <Button 
-                            onClick={handleEditClick}
-                            className="flex-1"
+                        <div className="flex flex-col gap-2 pt-2">
+                          <Button onClick={handleEditClick}>
+                            <Eye className="h-4 w-4 mr-2" /> Посмотреть
+                          </Button>
+                          {lesson.status === "cancelled" ? (
+                            <Button
+                              variant="default"
+                              onClick={(e) => { e.stopPropagation(); onResumeLesson && onResumeLesson(lesson); setPopoverOpen(false); }}
+                            >
+                              Возобновить урок
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="destructive"
+                              onClick={(e) => { e.stopPropagation(); onCancelLesson && onCancelLesson(lesson); setPopoverOpen(false); }}
+                            >
+                              Отменить урок
+                            </Button>
+                          )}
+                          <Button
+                            variant="secondary"
+                            onClick={(e) => { e.stopPropagation(); onOpenAttendance && onOpenAttendance(lesson); setPopoverOpen(false); }}
                           >
-                            <Eye className="h-4 w-4 mr-2" />
-                            Посмотреть
+                            Отметить посещаемость
                           </Button>
                         </div>
                       </div>

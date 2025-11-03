@@ -9,8 +9,13 @@ import {
 } from '@/types';
 
 export const studentsAPI = {
-  getAll: async (): Promise<Student[]> => {
-    const response = await apiClient.get('/students');
+  getAll: async (params?: { query?: string; page?: number; pageSize?: number }): Promise<Student[] | { items: Student[]; total: number; page: number; pageSize: number }> => {
+    const response = await apiClient.get('/students', { params });
+    return response.data;
+  },
+
+  getPaged: async (query: string, page: number, pageSize: number): Promise<{ items: Student[]; total: number; page: number; pageSize: number; counts?: { active: number; inactive: number; all: number } }> => {
+    const response = await apiClient.get('/students', { params: { query, page, pageSize } });
     return response.data;
   },
 
