@@ -8,7 +8,9 @@
     "migrate:dry-run": "node migrate.js --dry-run",
     "test-connection": "node test-connection.js",
     "cleanup": "node cleanup.js",
-    "test-teachers": "node test-teacher-api.js"
+    "test-teachers": "node test-teacher-api.js",
+    "generate-mock": "node generate-mock-data.js",
+    "check-company": "node check-company-id.js"
   },
   "dependencies": {
     "axios": "^1.6.0",

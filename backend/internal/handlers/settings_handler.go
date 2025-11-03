@@ -23,8 +23,9 @@ func (h *SettingsHandler) Get(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	// Get() now always returns settings (creates default if doesn't exist)
 	if settings == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Settings not found"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve settings"})
 		return
 	}
 
@@ -38,12 +39,23 @@ func (h *SettingsHandler) Update(c *gin.Context) {
 		return
 	}
 
-	settings.ID = 1 // Always update the first (and only) settings record
+	// ID will be set by the repository during update
 
 	if err := h.repo.Update(&settings); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, settings)
+	// Get the updated settings from database to return actual saved values
+	updatedSettings, err := h.repo.Get()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if updatedSettings == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve updated settings"})
+		return
+	}
+
+	c.JSON(http.StatusOK, updatedSettings)
 }

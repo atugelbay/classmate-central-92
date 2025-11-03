@@ -81,7 +81,7 @@ export function MiniCalendar() {
   const selectedDayLessons = selectedDayKey ? (lessonsByDate[selectedDayKey] || []) : [];
 
   return (
-    <Card className="col-span-1 lg:col-span-2">
+    <Card className="h-full flex flex-col overflow-hidden">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -104,13 +104,13 @@ export function MiniCalendar() {
           {moment(selectedDate).format("MMMM YYYY")}
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1 flex flex-col overflow-hidden min-h-0">
         {isLoading ? (
-          <div className="flex h-[300px] items-center justify-center">
+          <div className="flex h-full items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1 overflow-hidden min-h-0">
             {/* Calendar Grid */}
             <div>
               {/* Week days header */}
@@ -190,7 +190,7 @@ export function MiniCalendar() {
                   </div>
                   
                   {selectedDayLessons.length > 0 ? (
-                    <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                    <div className="space-y-2 flex-1 overflow-y-auto min-h-0">
                       {selectedDayLessons
                         .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
                         .map((lesson: any) => {

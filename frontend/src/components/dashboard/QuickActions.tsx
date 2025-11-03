@@ -71,15 +71,15 @@ export function QuickActions() {
 
   return (
     <>
-      <Card>
+      <Card className="h-full flex flex-col overflow-hidden">
         <CardHeader>
           <div className="flex items-center gap-2">
             <Zap className="h-5 w-5 text-yellow-600" />
             <CardTitle>Быстрые действия</CardTitle>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 gap-2">
+        <CardContent className="flex-1 overflow-hidden min-h-0 flex flex-col">
+          <div className="grid grid-cols-1 gap-2 flex-1 overflow-y-auto min-h-0">
             {actions.map((action) => (
               <Button
                 key={action.label}

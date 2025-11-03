@@ -50,7 +50,7 @@ export function TodaySchedule() {
   };
 
   return (
-    <Card className="flex flex-col">
+    <Card className="h-full flex flex-col overflow-hidden">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <div className="flex items-center gap-2">
           <Calendar className="h-5 w-5 text-primary" />
@@ -66,18 +66,19 @@ export function TodaySchedule() {
           <ArrowRight className="h-4 w-4" />
         </Button>
       </CardHeader>
-      <CardContent className="flex-1">
+      <CardContent className="flex-1 flex flex-col min-h-0 overflow-hidden">
         {isLoading ? (
-          <div className="flex h-[300px] items-center justify-center">
+          <div className="flex h-full items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : sortedLessons.length === 0 ? (
-          <div className="flex h-[300px] flex-col items-center justify-center text-muted-foreground">
+          <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
             <Calendar className="h-12 w-12 mb-4 opacity-20" />
             <p className="text-sm">Нет уроков на сегодня</p>
           </div>
         ) : (
-          <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+          <div className="space-y-2 overflow-hidden flex-1 flex flex-col">
+            <div className="flex-1 overflow-y-auto pr-2 space-y-2">
             {sortedLessons.map((lesson: any) => {
               const teacher = teachers.find((t) => t.id === lesson.teacherId);
               const group = groups.find((g) => g.id === lesson.groupId);
@@ -100,72 +101,59 @@ export function TodaySchedule() {
               return (
                 <div
                   key={lesson.id}
-                  className={`rounded-lg border p-4 transition-all hover:shadow-md cursor-pointer ${
+                  className={`rounded-lg border p-3 transition-all hover:shadow-md cursor-pointer ${
                     isNow ? "border-primary bg-primary/5 shadow-sm" : ""
                   } ${isPast ? "opacity-60" : ""}`}
                   onClick={() => navigate("/schedule")}
                 >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-semibold">{lessonName}</h4>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <h4 className="font-semibold text-sm truncate">{lessonName}</h4>
                         {isNow && (
-                          <Badge className="bg-green-500 text-white animate-pulse">
+                          <Badge className="bg-green-500 text-white text-xs px-1.5 py-0 shrink-0">
                             Сейчас
                           </Badge>
                         )}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs">
-                          {lesson.subject}
-                        </Badge>
-                        {isIndividual && (
-                          <Badge variant="secondary" className="text-xs">
-                            Индивидуальный
-                          </Badge>
+                      
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2">
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          <span>{startTime.format("HH:mm")} - {endTime.format("HH:mm")}</span>
+                        </div>
+                        {teacher && (
+                          <div className="flex items-center gap-1 truncate">
+                            <User className="h-3 w-3 shrink-0" />
+                            <span className="truncate">{teacher.name}</span>
+                          </div>
+                        )}
+                        {lesson.room && (
+                          <div className="flex items-center gap-1 truncate">
+                            <MapPin className="h-3 w-3 shrink-0" />
+                            <span className="truncate">{lesson.room}</span>
+                          </div>
                         )}
                       </div>
+                      
+                      {isIndividual && studentNames && (
+                        <div className="text-xs text-muted-foreground truncate">
+                          {studentNames}
+                        </div>
+                      )}
                     </div>
+                    
                     <Badge
                       variant="outline"
-                      className={`text-xs ${getStatusColor(lesson.status)}`}
+                      className={`text-xs shrink-0 ${getStatusColor(lesson.status)}`}
                     >
                       {getStatusLabel(lesson.status)}
                     </Badge>
                   </div>
-
-                  <div className="space-y-1 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-3.5 w-3.5" />
-                      <span>
-                        {startTime.format("HH:mm")} - {endTime.format("HH:mm")}
-                      </span>
-                    </div>
-                    
-                    {teacher && (
-                      <div className="flex items-center gap-2">
-                        <User className="h-3.5 w-3.5" />
-                        <span>{teacher.name}</span>
-                      </div>
-                    )}
-                    
-                    {isIndividual && studentNames && (
-                      <div className="flex items-center gap-2">
-                        <Users className="h-3.5 w-3.5" />
-                        <span className="text-xs">{studentNames}</span>
-                      </div>
-                    )}
-
-                    {lesson.room && (
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-3.5 w-3.5" />
-                        <span>{lesson.room}</span>
-                      </div>
-                    )}
-                  </div>
                 </div>
               );
             })}
+            </div>
           </div>
         )}
       </CardContent>

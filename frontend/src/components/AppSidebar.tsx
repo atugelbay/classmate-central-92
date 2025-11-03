@@ -113,17 +113,20 @@ export function AppSidebar() {
 
   return (
     <Sidebar className={isCollapsed ? "w-16" : "w-64"} collapsible="icon">
-      <SidebarHeader className="border-b border-sidebar-border px-4 py-6">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-            <GraduationCap className="h-6 w-6 text-primary-foreground" />
+      <SidebarHeader className={`border-b border-sidebar-border py-4 ${isCollapsed ? "px-2" : "px-4"}`}>
+        <div className={`flex items-center ${isCollapsed ? "justify-center" : "gap-2.5"}`}>
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden">
+            <img 
+              src="/SmartCRM/4.svg" 
+              alt="SmartCRM Logo" 
+              className="h-full w-full object-contain"
+            />
           </div>
           {!isCollapsed && (
-            <div>
-              <h2 className="text-lg font-semibold text-sidebar-foreground">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-sm font-semibold text-sidebar-foreground truncate">
                 {settings?.centerName || "Образовательный Центр"}
               </h2>
-              <p className="text-xs text-sidebar-foreground/60">CRM Система</p>
             </div>
           )}
         </div>
@@ -159,7 +162,7 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border p-4">
+      <SidebarFooter className={`border-t border-sidebar-border ${isCollapsed ? "p-2" : "p-4"}`}>
         {!isCollapsed && user && (
           <div className="mb-2 px-2">
             <p className="text-sm font-medium text-sidebar-foreground">{user.name}</p>
@@ -168,7 +171,7 @@ export function AppSidebar() {
         )}
         <Button
           variant="ghost"
-          className="w-full justify-start gap-3"
+          className={`${isCollapsed ? "w-full justify-center" : "w-full justify-start gap-3"}`}
           onClick={handleLogout}
         >
           <LogOut className="h-5 w-5" />
