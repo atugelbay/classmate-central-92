@@ -230,6 +230,7 @@ function StudentsGridContainer({
   teachers,
   balances,
   subscriptions,
+  allStudents,
   activityFilter,
   getIsActive,
   onEdit,
@@ -245,6 +246,7 @@ function StudentsGridContainer({
   teachers: ReturnType<typeof useTeachers>["data"];
   balances: any[];
   subscriptions: any[];
+  allStudents: Student[];
   activityFilter: "all" | "active" | "inactive";
   getIsActive: (s: Student) => boolean;
   onEdit: (s: Student) => void;
@@ -256,21 +258,36 @@ function StudentsGridContainer({
   const students: Student[] = (paged as any)?.items ?? [];
   const total = (paged as any)?.total ?? 0;
 
-  const filteredStudents = React.useMemo(() => {
-    if (activityFilter === "active") return students.filter(getIsActive);
-    if (activityFilter === "inactive") return students.filter((s) => !getIsActive(s));
+  // Если включен фильтр активности и нет поискового запроса,
+  // используем полный список с клиентской пагинацией, чтобы не терять элементы между страницами
+  const baseList: Student[] = React.useMemo(() => {
+    if ((activityFilter === "active" || activityFilter === "inactive") && !query) {
+      return allStudents || [];
+    }
     return students;
-  }, [students, activityFilter, getIsActive]);
+  }, [activityFilter, query, allStudents, students]);
 
-  const paginatedStudents = filteredStudents;
+  const filteredStudents = React.useMemo(() => {
+    if (activityFilter === "active") return baseList.filter(getIsActive);
+    if (activityFilter === "inactive") return baseList.filter((s) => !getIsActive(s));
+    return baseList;
+  }, [baseList, activityFilter, getIsActive]);
+
+  const totalPages = Math.ceil(((activityFilter === "all" || query) ? (total || 0) : filteredStudents.length) / pageSize) || 1;
+
+  const paginatedStudents = React.useMemo(() => {
+    if (activityFilter === "all" || query) {
+      return filteredStudents;
+    }
+    const start = (page - 1) * pageSize;
+    return filteredStudents.slice(start, start + pageSize);
+  }, [filteredStudents, activityFilter, query, page, pageSize]);
 
   const activeMap = React.useMemo(() => {
     const map: Record<string, boolean> = {};
     paginatedStudents.forEach((s) => { map[s.id] = getIsActive(s); });
     return map;
   }, [paginatedStudents, getIsActive]);
-
-  const totalPages = Math.ceil((total || 0) / pageSize) || 1;
 
   return (
     <>
@@ -665,6 +682,7 @@ export default function Students() {
         teachers={teachers}
         balances={balances}
         subscriptions={subscriptions}
+        allStudents={allStudents as Student[]}
         activityFilter={activityFilter}
         getIsActive={getIsActive}
         onEdit={handleEdit}
