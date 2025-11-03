@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Teacher } from "@/types";
+import { formatKzPhone, normalizeKzPhone } from "@/lib/phone";
 
 export default function Teachers() {
   const navigate = useNavigate();
@@ -64,7 +65,7 @@ export default function Teachers() {
       name: formData.get("name") as string,
       subject: formData.get("subject") as string,
       email: formData.get("email") as string,
-      phone: formData.get("phone") as string,
+      phone: normalizeKzPhone(formData.get("phone") as string),
       status: formData.get("status") as "active" | "inactive",
       workload: parseInt(formData.get("workload") as string),
     };
@@ -183,6 +184,9 @@ export default function Teachers() {
                   id="phone"
                   name="phone"
                   defaultValue={editingTeacher?.phone}
+                  onChange={(e) => {
+                    e.currentTarget.value = formatKzPhone(e.currentTarget.value);
+                  }}
                   required
                 />
               </div>

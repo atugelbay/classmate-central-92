@@ -1,4 +1,5 @@
 import apiClient from './client';
+import { User } from '@/types';
 
 export interface LoginRequest {
   email: string;
@@ -9,16 +10,13 @@ export interface RegisterRequest {
   name: string;
   email: string;
   password: string;
+  companyName: string;
 }
 
 export interface AuthResponse {
   token: string;
   refreshToken: string;
-  user: {
-    id: number;
-    email: string;
-    name: string;
-  };
+  user: User;
 }
 
 export const authAPI = {

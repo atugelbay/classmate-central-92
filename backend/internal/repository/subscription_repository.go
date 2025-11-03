@@ -73,8 +73,8 @@ func (r *SubscriptionRepository) CreateStudentSubscription(sub *models.StudentSu
 	query := `INSERT INTO student_subscriptions (
 		id, student_id, subscription_type_id, group_id, teacher_id,
 		total_lessons, used_lessons, total_price, price_per_lesson,
-		start_date, end_date, paid_till, status, freeze_days_remaining, company_id
-	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) 
+		start_date, end_date, paid_till, status, freeze_days_remaining, company_id, version
+	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 0) 
 	RETURNING created_at, updated_at`
 	return r.db.QueryRow(query,
 		sub.ID, sub.StudentID, sub.SubscriptionTypeID, sub.GroupID, sub.TeacherID,
@@ -89,7 +89,7 @@ func (r *SubscriptionRepository) GetStudentSubscriptions(studentID string, compa
 		ss.group_id, ss.teacher_id,
 		ss.total_lessons, ss.used_lessons, ss.remaining_lessons, ss.total_price, ss.price_per_lesson,
 		ss.start_date, ss.end_date, ss.paid_till, ss.status, ss.freeze_days_remaining, 
-		ss.created_at, ss.updated_at, ss.company_id
+		ss.created_at, ss.updated_at, ss.company_id, ss.version
 	FROM student_subscriptions ss
 	LEFT JOIN subscription_types st ON ss.subscription_type_id = st.id
 	WHERE ss.student_id = $1 AND ss.company_id = $2
@@ -109,7 +109,7 @@ func (r *SubscriptionRepository) GetStudentSubscriptions(studentID string, compa
 			&sub.GroupID, &sub.TeacherID,
 			&sub.TotalLessons, &sub.UsedLessons, &sub.LessonsRemaining, &sub.TotalPrice, &sub.PricePerLesson,
 			&sub.StartDate, &sub.EndDate, &sub.PaidTill, &sub.Status, &sub.FreezeDaysRemaining,
-			&sub.CreatedAt, &sub.UpdatedAt, &sub.CompanyID,
+			&sub.CreatedAt, &sub.UpdatedAt, &sub.CompanyID, &sub.Version,
 		); err != nil {
 			return nil, err
 		}
@@ -130,7 +130,7 @@ func (r *SubscriptionRepository) GetSubscriptionByID(id string, companyID string
 		ss.group_id, ss.teacher_id,
 		ss.total_lessons, ss.used_lessons, ss.remaining_lessons, ss.total_price, ss.price_per_lesson,
 		ss.start_date, ss.end_date, ss.paid_till, ss.status, ss.freeze_days_remaining,
-		ss.created_at, ss.updated_at, ss.company_id
+		ss.created_at, ss.updated_at, ss.company_id, ss.version
 	FROM student_subscriptions ss
 	LEFT JOIN subscription_types st ON ss.subscription_type_id = st.id
 	WHERE ss.id = $1 AND ss.company_id = $2`
@@ -141,7 +141,7 @@ func (r *SubscriptionRepository) GetSubscriptionByID(id string, companyID string
 		&sub.GroupID, &sub.TeacherID,
 		&sub.TotalLessons, &sub.UsedLessons, &sub.LessonsRemaining, &sub.TotalPrice, &sub.PricePerLesson,
 		&sub.StartDate, &sub.EndDate, &sub.PaidTill, &sub.Status, &sub.FreezeDaysRemaining,
-		&sub.CreatedAt, &sub.UpdatedAt, &sub.CompanyID,
+		&sub.CreatedAt, &sub.UpdatedAt, &sub.CompanyID, &sub.Version,
 	)
 	if err != nil {
 		return nil, err
@@ -179,7 +179,7 @@ func (r *SubscriptionRepository) GetAllSubscriptions(companyID string) ([]models
 		ss.group_id, ss.teacher_id,
 		ss.total_lessons, ss.used_lessons, ss.remaining_lessons, ss.total_price, ss.price_per_lesson,
 		ss.start_date, ss.end_date, ss.paid_till, ss.status, ss.freeze_days_remaining,
-		ss.created_at, ss.updated_at, ss.company_id
+		ss.created_at, ss.updated_at, ss.company_id, ss.version
 	FROM student_subscriptions ss
 	LEFT JOIN subscription_types st ON ss.subscription_type_id = st.id
 	WHERE ss.company_id = $1
@@ -199,7 +199,7 @@ func (r *SubscriptionRepository) GetAllSubscriptions(companyID string) ([]models
 			&sub.GroupID, &sub.TeacherID,
 			&sub.TotalLessons, &sub.UsedLessons, &sub.LessonsRemaining, &sub.TotalPrice, &sub.PricePerLesson,
 			&sub.StartDate, &sub.EndDate, &sub.PaidTill, &sub.Status, &sub.FreezeDaysRemaining,
-			&sub.CreatedAt, &sub.UpdatedAt, &sub.CompanyID,
+			&sub.CreatedAt, &sub.UpdatedAt, &sub.CompanyID, &sub.Version,
 		); err != nil {
 			return nil, err
 		}
@@ -223,7 +223,7 @@ func (r *SubscriptionRepository) GetSubscriptionByIDInternal(id string) (*models
 		ss.group_id, ss.teacher_id,
 		ss.total_lessons, ss.used_lessons, ss.remaining_lessons, ss.total_price, ss.price_per_lesson,
 		ss.start_date, ss.end_date, ss.paid_till, ss.status, ss.freeze_days_remaining,
-		ss.created_at, ss.updated_at, ss.company_id
+		ss.created_at, ss.updated_at, ss.company_id, ss.version
 	FROM student_subscriptions ss
 	LEFT JOIN subscription_types st ON ss.subscription_type_id = st.id
 	WHERE ss.id = $1`
@@ -234,7 +234,7 @@ func (r *SubscriptionRepository) GetSubscriptionByIDInternal(id string) (*models
 		&sub.GroupID, &sub.TeacherID,
 		&sub.TotalLessons, &sub.UsedLessons, &sub.LessonsRemaining, &sub.TotalPrice, &sub.PricePerLesson,
 		&sub.StartDate, &sub.EndDate, &sub.PaidTill, &sub.Status, &sub.FreezeDaysRemaining,
-		&sub.CreatedAt, &sub.UpdatedAt, &sub.CompanyID,
+		&sub.CreatedAt, &sub.UpdatedAt, &sub.CompanyID, &sub.Version,
 	)
 	if err != nil {
 		return nil, err

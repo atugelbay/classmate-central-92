@@ -9,6 +9,9 @@ type User struct {
 	Password  string    `json:"-" db:"password"`
 	Name      string    `json:"name" db:"name"`
 	CompanyID string    `json:"companyId" db:"company_id"`
+	RoleID    *string   `json:"roleId,omitempty" db:"role_id"`
+	Roles     []*Role   `json:"roles,omitempty"` // Populated via JOIN
+	Permissions []string `json:"permissions,omitempty"` // Populated from roles
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 }
@@ -92,6 +95,7 @@ type Settings struct {
 	CenterName string `json:"centerName" db:"center_name"`
 	Logo       string `json:"logo,omitempty" db:"logo"`
 	ThemeColor string `json:"themeColor" db:"theme_color"`
+	CompanyID  string `json:"companyId" db:"company_id"`
 }
 
 // LoginRequest represents login credentials
@@ -102,9 +106,10 @@ type LoginRequest struct {
 
 // RegisterRequest represents registration data
 type RegisterRequest struct {
-	Name     string `json:"name" binding:"required"`
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=6"`
+	Name        string `json:"name" binding:"required"`
+	Email       string `json:"email" binding:"required,email"`
+	Password    string `json:"password" binding:"required,min=6"`
+	CompanyName string `json:"companyName" binding:"required"`
 }
 
 // AuthResponse represents authentication response
@@ -191,6 +196,7 @@ type StudentBalance struct {
 	StudentID       string     `json:"studentId" db:"student_id"`
 	Balance         float64    `json:"balance" db:"balance"`
 	LastPaymentDate *time.Time `json:"lastPaymentDate,omitempty" db:"last_payment_date"`
+	Version         int        `json:"version" db:"version"` // For optimistic locking
 }
 
 // Tariff represents a pricing plan
@@ -254,6 +260,7 @@ type StudentSubscription struct {
 	CreatedAt            time.Time  `json:"createdAt" db:"created_at"`
 	UpdatedAt            time.Time  `json:"updatedAt" db:"updated_at"`
 	CompanyID            string     `json:"companyId" db:"company_id"`
+	Version              int        `json:"version" db:"version"` // For optimistic locking
 }
 
 // SubscriptionFreeze represents a freeze period for a subscription
@@ -461,4 +468,56 @@ type Transaction struct {
 	Kind          string     `json:"kind" db:"kind"` // pay_invoice, buy_subscription, refund, deduction, payment
 	CreatedAt     time.Time  `json:"createdAt" db:"created_at"`
 	CompanyID     string     `json:"companyId" db:"company_id"`
+}
+
+// ============= RBAC MODULE =============
+
+// Role represents a user role
+type Role struct {
+	ID          string       `json:"id" db:"id"`
+	Name        string       `json:"name" db:"name"`
+	Description string       `json:"description" db:"description"`
+	CompanyID   string       `json:"companyId" db:"company_id"`
+	Permissions []*Permission `json:"permissions,omitempty"` // Populated via JOIN
+	CreatedAt   time.Time    `json:"createdAt" db:"created_at"`
+	UpdatedAt   time.Time    `json:"updatedAt" db:"updated_at"`
+}
+
+// Permission represents a permission/resource action
+type Permission struct {
+	ID          string    `json:"id" db:"id"`
+	Name        string    `json:"name" db:"name"`
+	Resource    string    `json:"resource" db:"resource"`
+	Action      string    `json:"action" db:"action"`
+	Description string    `json:"description" db:"description"`
+	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
+}
+
+// UserRole represents the relationship between a user and a role
+type UserRole struct {
+	UserID     int       `json:"userId" db:"user_id"`
+	RoleID     string    `json:"roleId" db:"role_id"`
+	CompanyID  string    `json:"companyId" db:"company_id"`
+	AssignedAt time.Time `json:"assignedAt" db:"assigned_at"`
+	AssignedBy *int      `json:"assignedBy,omitempty" db:"assigned_by"`
+}
+
+// CreateRoleRequest represents a request to create a role
+type CreateRoleRequest struct {
+	Name        string   `json:"name" binding:"required"`
+	Description string   `json:"description"`
+	PermissionIDs []string `json:"permissionIds"`
+}
+
+// UpdateRoleRequest represents a request to update a role
+type UpdateRoleRequest struct {
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	PermissionIDs []string `json:"permissionIds"`
+}
+
+// AssignRoleRequest represents a request to assign a role to a user
+type AssignRoleRequest struct {
+	UserID int    `json:"userId" binding:"required"`
+	RoleID string `json:"roleId" binding:"required"`
 }

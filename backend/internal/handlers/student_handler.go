@@ -7,6 +7,7 @@ import (
 	"classmate-central/internal/models"
 	"classmate-central/internal/repository"
 	"classmate-central/internal/services"
+	"classmate-central/internal/validation"
 
 	"github.com/gin-gonic/gin"
 )
@@ -64,8 +65,30 @@ func (h *StudentHandler) GetByID(c *gin.Context) {
 func (h *StudentHandler) Create(c *gin.Context) {
 	var student models.Student
 	if err := c.ShouldBindJSON(&student); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": validation.FormatValidationErrors(err)})
+		return
+	}
+
+	// Validation
+	if err := validation.ValidateName(student.Name); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
+	}
+	if err := validation.ValidateAge(student.Age); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if student.Email != "" {
+		if err := validation.ValidateEmail(student.Email); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	}
+	if student.Phone != "" {
+		if err := validation.ValidatePhone(student.Phone); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 	}
 
 	companyID := c.GetString("company_id")
@@ -83,8 +106,34 @@ func (h *StudentHandler) Update(c *gin.Context) {
 
 	var student models.Student
 	if err := c.ShouldBindJSON(&student); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validation.FormatValidationErrors(err)})
 		return
+	}
+
+	// Validation
+	if student.Name != "" {
+		if err := validation.ValidateName(student.Name); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	}
+	if student.Age > 0 {
+		if err := validation.ValidateAge(student.Age); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	}
+	if student.Email != "" {
+		if err := validation.ValidateEmail(student.Email); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	}
+	if student.Phone != "" {
+		if err := validation.ValidatePhone(student.Phone); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 	}
 
 	student.ID = id

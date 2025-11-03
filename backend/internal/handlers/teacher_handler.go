@@ -5,6 +5,7 @@ import (
 
 	"classmate-central/internal/models"
 	"classmate-central/internal/repository"
+	"classmate-central/internal/validation"
 
 	"github.com/gin-gonic/gin"
 )
@@ -48,6 +49,26 @@ func (h *TeacherHandler) GetByID(c *gin.Context) {
 func (h *TeacherHandler) Create(c *gin.Context) {
 	var teacher models.Teacher
 	if err := c.ShouldBindJSON(&teacher); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": validation.FormatValidationErrors(err)})
+		return
+	}
+
+	// Validation
+	if err := validation.ValidateName(teacher.Name); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := validation.ValidateEmail(teacher.Email); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if teacher.Phone != "" {
+		if err := validation.ValidatePhone(teacher.Phone); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	}
+	if err := validation.ValidateNotEmpty(teacher.Subject, "subject"); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -67,8 +88,28 @@ func (h *TeacherHandler) Update(c *gin.Context) {
 
 	var teacher models.Teacher
 	if err := c.ShouldBindJSON(&teacher); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": validation.FormatValidationErrors(err)})
 		return
+	}
+
+	// Validation
+	if teacher.Name != "" {
+		if err := validation.ValidateName(teacher.Name); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	}
+	if teacher.Email != "" {
+		if err := validation.ValidateEmail(teacher.Email); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	}
+	if teacher.Phone != "" {
+		if err := validation.ValidatePhone(teacher.Phone); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 	}
 
 	teacher.ID = id

@@ -34,7 +34,7 @@ SELECT
     la.subscription_id,
     la.id as attendance_id,
     1 as units, -- Default to 1 unit per attendance
-    COALESCE(la.marked_at, la.created_at, now()) as created_at,
+    COALESCE(la.marked_at, now()) as created_at,
     COALESCE(la.company_id, ss.company_id, 'default-company') as company_id
 FROM lesson_attendance la
 INNER JOIN student_subscriptions ss ON la.subscription_id = ss.id

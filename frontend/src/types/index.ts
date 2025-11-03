@@ -367,3 +367,61 @@ export interface UIPreferences {
   animationsEnabled: boolean;
   dataDensity: DataDensity;
 }
+
+// ============= RBAC MODULE =============
+
+export interface Permission {
+  id: string;
+  name: string;
+  resource: string;
+  action: string;
+  description: string;
+  createdAt: string;
+}
+
+export interface Role {
+  id: string;
+  name: string;
+  description: string;
+  companyId: string;
+  permissions?: Permission[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UserRole {
+  userId: number;
+  roleId: string;
+  companyId: string;
+  assignedAt: string;
+  assignedBy?: number;
+}
+
+export interface User {
+  id: number;
+  email: string;
+  name: string;
+  companyId: string;
+  roleId?: string;
+  roles?: Role[];
+  permissions?: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateRoleRequest {
+  name: string;
+  description?: string;
+  permissionIds?: string[];
+}
+
+export interface UpdateRoleRequest {
+  name?: string;
+  description?: string;
+  permissionIds?: string[];
+}
+
+export interface AssignRoleRequest {
+  userId: number;
+  roleId: string;
+}

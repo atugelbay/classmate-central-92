@@ -655,11 +655,11 @@ async function migrateStudents() {
       
       const studentId = result.rows[0].id;
       
-      // Создаем баланс
+      // Создаем баланс с version для optimistic locking
       await pool.query(`
-        INSERT INTO student_balance (student_id, balance)
-        VALUES ($1, $2)
-        ON CONFLICT (student_id) DO UPDATE SET balance = EXCLUDED.balance
+        INSERT INTO student_balance (student_id, balance, version)
+        VALUES ($1, $2, 0)
+        ON CONFLICT (student_id) DO UPDATE SET balance = EXCLUDED.balance, version = student_balance.version
       `, [studentId, balance]);
       
       migrated++;
@@ -772,7 +772,8 @@ async function migrateStudentSubscriptions() {
       
       const totalLessons = paidCount || 8;
       const usedLessons = 0;
-      const lessonsRemaining = totalLessons - usedLessons;
+      // remaining_lessons - GENERATED колонка в БД, вычисляется автоматически
+      const calculatedRemaining = totalLessons - usedLessons;
       
       // ИСПРАВЛЕНО: Используем реальную цену урока из AlfaCRM (последняя актуальная цена)
       // Если цены нет в кэше - вычисляем из баланса как fallback
@@ -783,10 +784,16 @@ async function migrateStudentSubscriptions() {
       const startDate = new Date();
       const endDate = paidTill ? new Date(paidTill) : new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
       
+      // Определяем статус подписки правильно
       let status = 'active';
-      if (endDate < new Date()) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Обнуляем время для корректного сравнения дат
+      
+      if (endDate && endDate < today) {
         status = 'expired';
-      } else if (paidCount <= 0 && balance <= 0) {
+      } else if (paidCount <= 0 && balance <= 0 && (!paidTill || new Date(paidTill) < today)) {
+        status = 'expired';
+      } else if (calculatedRemaining <= 0) {
         status = 'expired';
       }
       
@@ -805,18 +812,21 @@ async function migrateStudentSubscriptions() {
       
       const subscriptionId = `sub_${studentId}_${Date.now()}`;
       
+      // Важно: subscription_type_id может быть NULL, но остальные поля обязательны
+      // remaining_lessons - GENERATED колонка, вычисляется автоматически
+      // teacher_id и paid_till - опциональные поля
       await pool.query(`
         INSERT INTO student_subscriptions (
-          id, student_id, subscription_type_id, group_id, total_lessons,
-          used_lessons, total_price, price_per_lesson,
-          start_date, end_date, status, freeze_days_remaining, company_id
+          id, student_id, subscription_type_id, group_id, teacher_id,
+          total_lessons, used_lessons, total_price, price_per_lesson,
+          start_date, end_date, paid_till, status, freeze_days_remaining, company_id, version
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        VALUES ($1, $2, $3, $4, NULL, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 0)
         ON CONFLICT (id) DO NOTHING
       `, [
-        subscriptionId, studentId, subscriptionTypeId, groupId, totalLessons,
-        usedLessons, totalPrice, avgPricePerLesson,
-        startDate, endDate, status, 0, COMPANY_ID
+        subscriptionId, studentId, subscriptionTypeId, groupId,
+        totalLessons, usedLessons, totalPrice, avgPricePerLesson,
+        startDate, endDate, paidTill, status, 0, COMPANY_ID
       ]);
       
       // Связываем студента с группой через enrollment
@@ -885,11 +895,12 @@ async function migrateTransactions(studentDeductions = null) {
           description = `Начальный баланс из AlfaCRM (${currentBalance.toFixed(2)} ₸)`;
         }
         
+        // created_by = NULL для исторических транзакций из миграции
         await pool.query(`
           INSERT INTO payment_transactions (
-            student_id, amount, type, payment_method, description, created_at, company_id
+            student_id, amount, type, payment_method, description, created_at, created_by, company_id
           )
-          VALUES ($1, $2, $3, $4, $5, $6, $7)
+          VALUES ($1, $2, $3, $4, $5, $6, NULL, $7)
         `, [
           balance.student_id,
           amount,
@@ -1030,10 +1041,10 @@ async function migrateLessonHistory() {
             
             if (studentExists.rows.length === 0) continue;
             
-            // Получаем ЛЮБОЙ активный абонемент студента
+            // Получаем ЛЮБОЙ абонемент студента (для исторических данных берем любой)
             const subscription = await pool.query(`
               SELECT id FROM student_subscriptions
-              WHERE student_id = $1 AND company_id = $2 AND status = 'active'
+              WHERE student_id = $1 AND company_id = $2
               ORDER BY created_at DESC
               LIMIT 1
             `, [customerId.toString(), COMPANY_ID]);
@@ -1115,10 +1126,10 @@ async function migrateLessonHistory() {
             // Пропускаем не посещенные уроки (мы мигрируем только посещения)
             if (status !== 'attended') continue;
             
-            // Получаем ЛЮБОЙ активный абонемент студента (для исторических данных не проверяем даты)
+            // Получаем ЛЮБОЙ абонемент студента (для исторических данных берем любой)
             const subscription = await pool.query(`
               SELECT id FROM student_subscriptions
-              WHERE student_id = $1 AND company_id = $2 AND status = 'active'
+              WHERE student_id = $1 AND company_id = $2
               ORDER BY created_at DESC
               LIMIT 1
             `, [customerId, COMPANY_ID]);
@@ -1176,10 +1187,11 @@ async function migrateLessonHistory() {
               studentDeductions.set(customerId, currentTotal + commission);
               
               // Создаем транзакцию списания (НО НЕ МЕНЯЕМ БАЛАНС - он уже правильный после migrateTransactions)
+              // created_by = NULL для исторических транзакций из миграции
               await pool.query(`
                 INSERT INTO payment_transactions (
-                  student_id, amount, type, payment_method, description, created_at, company_id
-                ) VALUES ($1, $2, 'deduction', 'subscription', $3, $4, $5)
+                  student_id, amount, type, payment_method, description, created_at, created_by, company_id
+                ) VALUES ($1, $2, 'deduction', 'subscription', $3, $4, NULL, $5)
                 ON CONFLICT DO NOTHING
               `, [
                 customerId,
