@@ -11,12 +11,15 @@ import {
   useStudentSubscriptions,
   useLessons,
   useTeachers,
+  useStudentsPaged,
+  useAllBalances,
+  useAllSubscriptions,
 } from "@/hooks/useData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Mail, Phone, Trash2, Edit, Loader2, AlertCircle, Clock } from "lucide-react";
+import { Plus, Search, Mail, Phone, Trash2, Edit, Loader2, AlertCircle, Clock, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -44,31 +47,343 @@ moment.locale("ru");
 
 const ITEMS_PER_PAGE = 39;
 
+// Memoized grid to avoid unnecessary re-rendering of the whole page during search
+const StudentsGrid = React.memo(function StudentsGrid({
+  students,
+  groups,
+  lessons,
+  teachers,
+  isFetching,
+  activeMap,
+  onEdit,
+  onDelete,
+  onNavigate,
+}: {
+  students: Student[];
+  groups: ReturnType<typeof useGroups>["data"];
+  lessons: ReturnType<typeof useLessons>["data"];
+  teachers: ReturnType<typeof useTeachers>["data"];
+  isFetching: boolean;
+  activeMap: Record<string, boolean>;
+  onEdit: (s: Student) => void;
+  onDelete: (id: string) => void;
+  onNavigate: (id: string) => void;
+}) {
+  const getIsActiveBySchedule = (student: Student) => {
+    const studentLessons = (lessons || []).filter((l) =>
+      l.studentIds?.includes(student.id) ||
+      (l.groupId && student.groupIds?.includes(l.groupId))
+    );
+    return studentLessons.some((l) => moment(l.start).isAfter(moment()));
+  };
+
+  return (
+    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {isFetching && (
+        <div className="col-span-full flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" /> Обновление результатов...
+        </div>
+      )}
+      {students.map((student) => {
+        const studentGroups = (groups || []).filter((g) =>
+          student.groupIds && student.groupIds.includes(g.id)
+        );
+
+        const studentLessons = (lessons || []).filter((l) =>
+          l.studentIds?.includes(student.id) ||
+          (l.groupId && student.groupIds?.includes(l.groupId))
+        );
+        const upcomingLessons = studentLessons
+          .filter((l) => moment(l.start).isAfter(moment()))
+          .sort((a, b) => moment(a.start).diff(moment(b.start)));
+        const nextLesson = upcomingLessons[0];
+        const nextLessonGroup = nextLesson?.groupId ? (groups || []).find((g) => g.id === nextLesson.groupId) : null;
+        const hasUpcomingLessons = getIsActiveBySchedule(student);
+        const isActive = activeMap[student.id] ?? hasUpcomingLessons;
+
+        return (
+          <Card 
+            key={student.id} 
+            className="hover:shadow-md transition-shadow cursor-pointer"
+            onClick={() => onNavigate(student.id)}
+          >
+            <CardHeader>
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent/10 text-lg font-semibold text-accent">
+                    {student.name.charAt(0)}
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">{student.name}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {student.age} лет
+                    </p>
+                  </div>
+                </div>
+                <Badge variant={isActive ? "default" : "secondary"}>
+                  {isActive ? "Активный" : "Неактивный"}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Mail className="h-4 w-4" />
+                  {student.email}
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Phone className="h-4 w-4" />
+                  {student.phone}
+                </div>
+                {(() => {
+                  // build schedule string quickly from lessons
+                  const sl = (lessons || []).filter((l) =>
+                    (l.studentIds?.includes(student.id) || (l.groupId && student.groupIds?.includes(l.groupId))) &&
+                    l.status !== "cancelled"
+                  );
+                  if (sl.length === 0) return null;
+                  const weekdayNames = ["ВС","ПН","ВТ","СР","ЧТ","ПТ","СБ"];
+                  const map = new Map<number, string>();
+                  sl.forEach((l) => {
+                    const d = moment(l.start);
+                    map.set(d.day(), `${d.format("HH:mm")} - ${moment(l.end).format("HH:mm")}`);
+                  });
+                  const keys = Array.from(map.keys()).sort((a,b)=> (a===0?7:a)-(b===0?7:b));
+                  const label = keys.map(k=>weekdayNames[k===0?0:k]).join(" ");
+                  const time = map.get(keys[0]);
+                  return (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Clock className="h-4 w-4" />
+                      {label} {time}
+                    </div>
+                  );
+                })()}
+
+                {/* Next Lesson Info */}
+                {nextLesson && (
+                  <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Clock className="h-4 w-4 text-green-700" />
+                      <p className="text-sm font-medium text-green-900">Ближайшее занятие:</p>
+                    </div>
+                    <p className="text-sm text-green-800">
+                      {moment(nextLesson.start).format("DD MMMM, dddd")} в {moment(nextLesson.start).format("HH:mm")}
+                    </p>
+                    {nextLesson?.teacherName && (
+                      <p className="text-xs text-green-700 mt-1">
+                        Преподаватель: {nextLesson.teacherName}
+                      </p>
+                    )}
+                    {nextLessonGroup && (
+                      <p className="text-xs text-green-700">
+                        Группа: {nextLessonGroup.name}
+                      </p>
+                    )}
+                    {!nextLessonGroup && (
+                      <p className="text-xs text-green-700">
+                        Индивидуальное занятие
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit(student);
+                    }}
+                  >
+                    <Edit className="h-4 w-4 mr-1" />
+                    Изменить
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(student.id);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
+    </div>
+  );
+});
+
+// Data-fetching container: ограничивает перерисовку остальной страницы
+function StudentsGridContainer({
+  query,
+  page,
+  pageSize,
+  groups,
+  lessons,
+  teachers,
+  balances,
+  subscriptions,
+  activityFilter,
+  getIsActive,
+  onEdit,
+  onDelete,
+  onNavigate,
+  onPageChange,
+}: {
+  query: string;
+  page: number;
+  pageSize: number;
+  groups: ReturnType<typeof useGroups>["data"];
+  lessons: ReturnType<typeof useLessons>["data"];
+  teachers: ReturnType<typeof useTeachers>["data"];
+  balances: any[];
+  subscriptions: any[];
+  activityFilter: "all" | "active" | "inactive";
+  getIsActive: (s: Student) => boolean;
+  onEdit: (s: Student) => void;
+  onDelete: (id: string) => void;
+  onNavigate: (id: string) => void;
+  onPageChange: (p: number) => void;
+}) {
+  const { data: paged, isFetching } = useStudentsPaged(query, page, pageSize);
+  const students: Student[] = (paged as any)?.items ?? [];
+  const total = (paged as any)?.total ?? 0;
+
+  const filteredStudents = React.useMemo(() => {
+    if (activityFilter === "active") return students.filter(getIsActive);
+    if (activityFilter === "inactive") return students.filter((s) => !getIsActive(s));
+    return students;
+  }, [students, activityFilter, getIsActive]);
+
+  const paginatedStudents = filteredStudents;
+
+  const activeMap = React.useMemo(() => {
+    const map: Record<string, boolean> = {};
+    paginatedStudents.forEach((s) => { map[s.id] = getIsActive(s); });
+    return map;
+  }, [paginatedStudents, getIsActive]);
+
+  const totalPages = Math.ceil((total || 0) / pageSize) || 1;
+
+  return (
+    <>
+      <StudentsGrid
+        students={paginatedStudents}
+        groups={groups}
+        lessons={lessons}
+        teachers={teachers}
+        isFetching={isFetching}
+        activeMap={activeMap}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onNavigate={onNavigate}
+      />
+      {totalPages > 1 && (
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                href="#"
+                onClick={(e) => { e.preventDefault(); if (page > 1) onPageChange(page - 1); }}
+                className={page === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+              />
+            </PaginationItem>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+              <PaginationItem key={p}>
+                <PaginationLink
+                  href="#"
+                  onClick={(e) => { e.preventDefault(); onPageChange(p); }}
+                  isActive={page === p}
+                  className="cursor-pointer"
+                >
+                  {p}
+                </PaginationLink>
+              </PaginationItem>
+            ))}
+            <PaginationItem>
+              <PaginationNext
+                href="#"
+                onClick={(e) => { e.preventDefault(); if (page < totalPages) onPageChange(page + 1); }}
+                className={page === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      )}
+    </>
+  );
+}
+
 export default function Students() {
   const navigate = useNavigate();
-  const { data: students = [], isLoading } = useStudents();
+  // Server-side search + pagination
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  React.useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(searchQuery.trim()), 300);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  // Перенесли загрузку пагинированных учеников внутрь контейнера грида,
+  // чтобы родитель не перерисовывался на каждом запросе поиска
+  const isLoading = false as unknown as boolean;
+  const isFetching = false as unknown as boolean;
+  const students: Student[] = [] as unknown as Student[];
+  const total = 0 as unknown as number;
+  const { data: allStudents = [] } = useStudents();
   const { data: groups = [] } = useGroups();
   const { data: lessons = [] } = useLessons();
   const { data: teachers = [] } = useTeachers();
+  const { data: balances = [] } = useAllBalances();
+  const { data: subscriptions = [] } = useAllSubscriptions();
   const createStudent = useCreateStudent();
   const updateStudent = useUpdateStudent();
   const deleteStudent = useDeleteStudent();
   
-  const [searchQuery, setSearchQuery] = useState("");
   const [activityFilter, setActivityFilter] = useState<"all" | "active" | "inactive">("active");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
 
-  // Check if student has upcoming lessons
-  const isStudentActive = (studentId: string) => {
+  // Build quick lookup maps for balances and active subscriptions
+  const balanceMap = React.useMemo(() => {
+    const map: Record<string, number> = {};
+    (balances as any[]).forEach((b: any) => { map[b.studentId] = b.balance; });
+    return map;
+  }, [balances]);
+
+  const activeSubMap = React.useMemo(() => {
+    const map: Record<string, boolean> = {};
+    const now = new Date();
+    (subscriptions as any[]).forEach((s: any) => {
+      const notExpired = s.paidTill ? (new Date(s.paidTill) >= now) : false;
+      const hasLessons = (s.lessonsRemaining ?? 0) > 0;
+      if (s.status === "active" && (hasLessons || notExpired)) {
+        map[s.studentId] = true;
+      }
+    });
+    return map;
+  }, [subscriptions]);
+
+  // Activity: upcoming lessons OR positive balance OR active subscription
+  const getIsActive = React.useCallback((student: Student) => {
     const studentLessons = lessons.filter((l) => 
-      l.studentIds?.includes(studentId) || 
-      (l.groupId && students.find(s => s.id === studentId)?.groupIds?.includes(l.groupId))
+      l.studentIds?.includes(student.id) || 
+      (l.groupId && student.groupIds?.includes(l.groupId))
     );
-    const hasUpcomingLessons = studentLessons.some((l) => moment(l.start).isAfter(moment()));
-    return hasUpcomingLessons;
-  };
+    const bySchedule = studentLessons.some((l) => moment(l.start).isAfter(moment()));
+    const byBalance = (balanceMap[student.id] ?? 0) > 0;
+    const bySubscription = !!activeSubMap[student.id];
+    // Активный только если ВСЕ три условия выполняются
+    return bySchedule && byBalance && bySubscription;
+  }, [lessons, balanceMap, activeSubMap]);
 
   // Get student schedule from lessons
   const getStudentSchedule = (studentId: string): string => {
@@ -149,38 +464,7 @@ export default function Students() {
     }
   };
 
-  const filteredStudents = students.filter((student) => {
-    // Search filter
-    const query = searchQuery.toLowerCase().trim();
-    if (query) {
-      // Normalize phone numbers by removing spaces, dashes, and parentheses for better matching
-      const normalizePhone = (phone: string) => phone.replace(/[\s\-\(\)]/g, '').toLowerCase();
-      const normalizedQuery = normalizePhone(query);
-      const normalizedStudentPhone = normalizePhone(student.phone || '');
-      
-      const matchesSearch =
-        student.name.toLowerCase().includes(query) ||
-        student.email.toLowerCase().includes(query) ||
-        normalizedStudentPhone.includes(normalizedQuery);
-      
-      if (!matchesSearch) return false;
-    }
-    
-    // Activity filter
-    if (activityFilter !== "all") {
-      const isActive = isStudentActive(student.id);
-      if (activityFilter === "active" && !isActive) return false;
-      if (activityFilter === "inactive" && isActive) return false;
-    }
-    
-    return true;
-  });
-
-  // Pagination
-  const totalPages = Math.ceil(filteredStudents.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
-  const paginatedStudents = filteredStudents.slice(startIndex, endIndex);
+  // Фильтрация и пагинация перенесены в контейнер грида
 
   // Reset to first page when filters change
   React.useEffect(() => {
@@ -228,7 +512,8 @@ export default function Students() {
     }
   };
 
-  if (isLoading) {
+  // Показать общий лоадер только при самом первом запросе (когда данных ещё нет)
+  if (isLoading && !paged) {
     return (
       <div className="flex h-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -237,7 +522,7 @@ export default function Students() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in-up">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Ученики</h1>
@@ -331,6 +616,19 @@ export default function Students() {
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-9"
         />
+        {searchQuery && (
+          <button
+            type="button"
+            aria-label="Очистить поиск"
+            onClick={() => {
+              setSearchQuery("");
+              setCurrentPage(1);
+            }}
+            className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 inline-flex items-center justify-center rounded hover:bg-muted text-muted-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       {/* Activity Filter */}
@@ -341,201 +639,39 @@ export default function Students() {
           size="sm"
           onClick={() => setActivityFilter("active")}
         >
-          Активные ({students.filter(s => isStudentActive(s.id)).length})
+          Активные ({(allStudents as Student[]).filter(s => getIsActive(s)).length})
         </Button>
         <Button
           variant={activityFilter === "inactive" ? "default" : "outline"}
           size="sm"
           onClick={() => setActivityFilter("inactive")}
         >
-          Неактивные ({students.filter(s => !isStudentActive(s.id)).length})
+          Неактивные ({(allStudents as Student[]).filter(s => !getIsActive(s)).length})
         </Button>
         <Button
           variant={activityFilter === "all" ? "default" : "outline"}
           size="sm"
           onClick={() => setActivityFilter("all")}
         >
-          Все ({students.length})
+          Все ({(allStudents as Student[]).length})
         </Button>
       </div>
-
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {paginatedStudents.map((student) => {
-          const studentGroups = groups.filter((g) =>
-            student.groupIds && student.groupIds.includes(g.id)
-          );
-
-          // Get student's upcoming lessons
-          const studentLessons = lessons.filter((l) => 
-            l.studentIds?.includes(student.id) || 
-            (l.groupId && student.groupIds?.includes(l.groupId))
-          );
-          const upcomingLessons = studentLessons
-            .filter((l) => moment(l.start).isAfter(moment()))
-            .sort((a, b) => moment(a.start).diff(moment(b.start)));
-          const nextLesson = upcomingLessons[0];
-          
-          // Get teacher info for next lesson
-          // nextLesson.teacherName is already populated via JOIN from backend
-          const nextLessonGroup = nextLesson?.groupId ? groups.find((g) => g.id === nextLesson.groupId) : null;
-
-          // Determine activity status based on upcoming lessons
-          const hasUpcomingLessons = upcomingLessons.length > 0;
-
-          return (
-            <Card 
-              key={student.id} 
-              className="hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => navigate(`/students/${student.id}`)}
-            >
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent/10 text-lg font-semibold text-accent">
-                      {student.name.charAt(0)}
-                    </div>
-                    <div>
-                      <h3 className="font-semibold">{student.name}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {student.age} лет
-                      </p>
-                    </div>
-                  </div>
-                  <Badge variant={hasUpcomingLessons ? "default" : "secondary"}>
-                    {hasUpcomingLessons ? "Активный" : "Неактивный"}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Mail className="h-4 w-4" />
-                    {student.email}
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Phone className="h-4 w-4" />
-                    {student.phone}
-                  </div>
-                  {getStudentSchedule(student.id) && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Clock className="h-4 w-4" />
-                      {getStudentSchedule(student.id)}
-                    </div>
-                  )}
-                  {studentGroups.length > 0 && (
-                    <div>
-                      <p className="mb-2 text-sm font-medium">Группы:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {studentGroups.map((group) => (
-                          <Badge key={group.id} variant="outline">
-                            {group.name}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Next Lesson Info */}
-                  {nextLesson && (
-                    <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Clock className="h-4 w-4 text-green-700" />
-                        <p className="text-sm font-medium text-green-900">Ближайшее занятие:</p>
-                      </div>
-                      <p className="text-sm text-green-800">
-                        {moment(nextLesson.start).format("DD MMMM, dddd")} в {moment(nextLesson.start).format("HH:mm")}
-                      </p>
-                      {nextLesson?.teacherName && (
-                        <p className="text-xs text-green-700 mt-1">
-                          Преподаватель: {nextLesson.teacherName}
-                        </p>
-                      )}
-                      {nextLessonGroup && (
-                        <p className="text-xs text-green-700">
-                          Группа: {nextLessonGroup.name}
-                        </p>
-                      )}
-                      {!nextLessonGroup && (
-                        <p className="text-xs text-green-700">
-                          Индивидуальное занятие
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="flex gap-2 pt-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEdit(student);
-                      }}
-                    >
-                      <Edit className="h-4 w-4 mr-1" />
-                      Изменить
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(student.id);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <Pagination>
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious 
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (currentPage > 1) setCurrentPage(currentPage - 1);
-                }}
-                className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-              />
-            </PaginationItem>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-              <PaginationItem key={page}>
-                <PaginationLink
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setCurrentPage(page);
-                  }}
-                  isActive={currentPage === page}
-                  className="cursor-pointer"
-                >
-                  {page}
-                </PaginationLink>
-              </PaginationItem>
-            ))}
-            <PaginationItem>
-              <PaginationNext
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (currentPage < totalPages) setCurrentPage(currentPage + 1);
-                }}
-                className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
-      )}
+      <StudentsGridContainer
+        query={debouncedQuery}
+        page={currentPage}
+        pageSize={ITEMS_PER_PAGE}
+        groups={groups}
+        lessons={lessons}
+        teachers={teachers}
+        balances={balances}
+        subscriptions={subscriptions}
+        activityFilter={activityFilter}
+        getIsActive={getIsActive}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onNavigate={(id) => navigate(`/students/${id}`)}
+        onPageChange={setCurrentPage}
+      />
     </div>
   );
 }

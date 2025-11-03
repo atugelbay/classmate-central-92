@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import moment from "moment";
 import "moment/locale/ru";
 
@@ -45,6 +46,7 @@ import { toast } from "sonner";
 moment.locale("ru");
 
 export default function Schedule() {
+  const navigate = useNavigate();
   const { data: lessons = [], isLoading } = useLessons();
   const { data: teachers = [] } = useTeachers();
   const { data: groups = [] } = useGroups();
@@ -133,8 +135,52 @@ export default function Schedule() {
     }
   };
 
+  const handleCancelLesson = async (lesson: Lesson) => {
+    try {
+      await updateLesson.mutateAsync({ id: lesson.id, data: { ...lesson, status: "cancelled" as any } });
+      toast.success("Урок отменен");
+    } catch {
+      toast.error("Не удалось отменить урок");
+    }
+  };
+
+  const handleResumeLesson = async (lesson: Lesson) => {
+    try {
+      await updateLesson.mutateAsync({ id: lesson.id, data: { ...lesson, status: "scheduled" as any } });
+      toast.success("Урок возобновлен");
+    } catch {
+      toast.error("Не удалось возобновить урок");
+    }
+  };
+
+  const openAttendanceForLesson = (lesson: Lesson) => {
+    setSelectedLesson(lesson);
+    const initialData: Record<string, { status: string; reason: string; notes: string }> = {};
+    let lessonStudentIds: string[] = [];
+    if (lesson.groupId) {
+      const group = groups.find(g => g.id === lesson.groupId);
+      if (group) {
+        lessonStudentIds = group.studentIds || [];
+      }
+    }
+    lessonStudentIds = [...new Set([...lessonStudentIds, ...(lesson.studentIds || [])])];
+    lessonStudentIds.forEach(studentId => {
+      initialData[studentId] = { status: "attended", reason: "", notes: "" };
+    });
+    setAttendanceData(initialData);
+    setIsAttendanceDialogOpen(true);
+    setIsLessonDetailsDialogOpen(false);
+  };
+
   const handleOpenAttendance = () => {
     if (!selectedLesson) return;
+    // Guard: allow opening only from lesson start time
+    const now = moment();
+    const lessonStart = moment.utc(selectedLesson.start).local();
+    if (now.isBefore(lessonStart)) {
+      toast.warning("Отметка доступна только после начала урока");
+      return;
+    }
     
     // Initialize attendance data for all students in the lesson
     const initialData: Record<string, { status: string; reason: string; notes: string }> = {};
@@ -249,13 +295,19 @@ export default function Schedule() {
   };
 
   const updateAttendanceStatus = (studentId: string, status: string) => {
-    setAttendanceData(prev => ({
-      ...prev,
-      [studentId]: {
-        ...prev[studentId],
-        status,
-      },
-    }));
+    setAttendanceData(prev => {
+      const prevEntry = prev[studentId] || { status: "attended", reason: "", notes: "" };
+      // If switching to missed and reason is empty, default to 'unexcused'
+      const nextReason = status === "missed" ? (prevEntry.reason || "unexcused") : prevEntry.reason;
+      return {
+        ...prev,
+        [studentId]: {
+          ...prevEntry,
+          status,
+          reason: nextReason,
+        },
+      };
+    });
   };
 
   const updateAttendanceReason = (studentId: string, reason: string) => {
@@ -428,6 +480,9 @@ export default function Schedule() {
               onLessonClick={handleLessonClick}
               onSlotClick={handleSlotClick}
               onLessonUpdate={handleLessonUpdate}
+              onCancelLesson={handleCancelLesson}
+              onResumeLesson={handleResumeLesson}
+              onOpenAttendance={openAttendanceForLesson}
             />
           )}
           {viewMode === "week" && (
@@ -471,12 +526,12 @@ export default function Schedule() {
 
       {/* Lesson Details Dialog */}
       <Dialog open={isLessonDetailsDialogOpen} onOpenChange={setIsLessonDetailsDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="sm:max-w-2xl w-[95vw] overflow-x-hidden">
           <DialogHeader>
             <DialogTitle>{selectedLesson?.title}</DialogTitle>
           </DialogHeader>
           {selectedLesson && (
-            <div className="space-y-6">
+            <div className="space-y-6 max-h-[80vh] overflow-y-auto pr-1">
               {/* Lesson Information */}
               <div className="bg-muted p-4 rounded-lg space-y-3">
                 <div className="grid grid-cols-2 gap-4">
@@ -535,7 +590,11 @@ export default function Schedule() {
                         return student ? (
                           <div
                             key={studentId}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-accent/10 rounded-md text-sm"
+                            className="flex items-center gap-2 px-3 py-1.5 bg-accent/10 rounded-md text-sm cursor-pointer hover:bg-accent/20 transition-colors"
+                            onClick={() => {
+                              navigate(`/students/${student.id}`);
+                              setIsLessonDetailsDialogOpen(false);
+                            }}
                           >
                             <div className="flex h-6 w-6 items-center justify-center rounded-full bg-accent/20 text-xs font-semibold">
                               {student.name.charAt(0)}
@@ -550,34 +609,25 @@ export default function Schedule() {
               })()}
 
               {/* Action Buttons */}
-              <div className="flex justify-between pt-4 border-t">
+              <div className="pt-4 border-t flex justify-end gap-2">
                 <Button
                   variant="outline"
                   onClick={() => {
-                    setIsLessonDetailsDialogOpen(false);
-                    setSelectedLesson(null);
+                    if (selectedLesson) {
+                      setIsLessonDetailsDialogOpen(false);
+                      handleEditLesson(selectedLesson);
+                    }
                   }}
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Редактировать урок
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => { setIsLessonDetailsDialogOpen(false); setSelectedLesson(null); }}
                 >
                   Закрыть
                 </Button>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      if (selectedLesson) {
-                        setIsLessonDetailsDialogOpen(false);
-                        handleEditLesson(selectedLesson);
-                      }
-                    }}
-                  >
-                    <Edit className="h-4 w-4 mr-2" />
-                    Редактировать урок
-                  </Button>
-                  <Button onClick={handleOpenAttendance}>
-                    <ClipboardCheck className="h-4 w-4 mr-2" />
-                    Отметить посещаемость
-                  </Button>
-                </div>
               </div>
             </div>
           )}
@@ -586,14 +636,14 @@ export default function Schedule() {
 
       {/* Attendance Dialog */}
       <Dialog open={isAttendanceDialogOpen} onOpenChange={setIsAttendanceDialogOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="sm:max-w-3xl w-[95vw] overflow-x-hidden">
           <DialogHeader>
             <DialogTitle>
               Отметка посещаемости: {selectedLesson?.title}
             </DialogTitle>
           </DialogHeader>
           {selectedLesson && (
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-[80vh] overflow-y-auto pr-1">
               <div className="bg-muted p-4 rounded-lg">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
@@ -680,12 +730,18 @@ export default function Schedule() {
                           {data.status === "missed" && (
                             <div className="space-y-2">
                               <Label htmlFor={`reason-${studentId}`}>Причина пропуска</Label>
-                              <Input
-                                id={`reason-${studentId}`}
-                                placeholder="Укажите причину..."
-                                value={data.reason}
-                                onChange={(e) => updateAttendanceReason(studentId, e.target.value)}
-                              />
+                              <Select
+                                defaultValue={data.reason || "unexcused"}
+                                onValueChange={(v) => updateAttendanceReason(studentId, v)}
+                              >
+                                <SelectTrigger id={`reason-${studentId}`}>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="excused">Уважительная причина (без списания)</SelectItem>
+                                  <SelectItem value="unexcused">Неуважительная причина (спишется 1 занятие)</SelectItem>
+                                </SelectContent>
+                              </Select>
                             </div>
                           )}
 

@@ -102,6 +102,7 @@ export interface Settings {
   centerName: string;
   logo?: string;
   themeColor: string;
+  timezone?: string;
 }
 
 export interface Room {

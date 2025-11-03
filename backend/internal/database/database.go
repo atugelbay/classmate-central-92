@@ -88,6 +88,8 @@ func (d *Database) RunMigrations() error {
 		"migrations/021_add_rbac_system.up.sql",
 		"migrations/022_add_company_to_settings.up.sql",
 		"migrations/023_add_version_for_optimistic_locking.up.sql",
+		"migrations/024_add_timezone_to_settings.up.sql",
+		"migrations/025_add_unique_idx_deduction.up.sql",
 	}
 
 	log.Printf("📋 Total migrations to process: %d", len(migrations))

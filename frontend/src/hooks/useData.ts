@@ -102,7 +102,18 @@ export const useDeleteTeacher = () => {
 export const useStudents = () => {
   return useQuery({
     queryKey: ["students"],
-    queryFn: studentsAPI.getAll,
+    queryFn: async () => {
+      const res = await studentsAPI.getAll();
+      return Array.isArray(res) ? res : ((res as any)?.items ?? []);
+    },
+  });
+};
+
+export const useStudentsPaged = (query: string, page: number, pageSize: number) => {
+  return useQuery({
+    queryKey: ["students", "paged", query, page, pageSize],
+    queryFn: () => studentsAPI.getPaged(query, page, pageSize),
+    keepPreviousData: true,
   });
 };
 

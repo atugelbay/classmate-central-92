@@ -95,6 +95,7 @@ type Settings struct {
 	CenterName string `json:"centerName" db:"center_name"`
 	Logo       string `json:"logo,omitempty" db:"logo"`
 	ThemeColor string `json:"themeColor" db:"theme_color"`
+    Timezone   string `json:"timezone" db:"timezone"`
 	CompanyID  string `json:"companyId" db:"company_id"`
 }
 
