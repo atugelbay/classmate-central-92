@@ -1,4 +1,5 @@
 import { useState } from "react";
+import * as React from "react";
 import { useSettings, useUpdateSettings } from "@/hooks/useData";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -32,15 +33,24 @@ export default function Settings() {
   const { data: settings, isLoading } = useSettings();
   const updateSettings = useUpdateSettings();
   const { theme, setTheme, uiPreferences, updateUIPreference, applyColorTheme } = useThemeContext();
+  
+  const [centerName, setCenterName] = useState("");
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Update local state when settings are loaded (only on initial load)
+  React.useEffect(() => {
+    if (settings && !isInitialized) {
+      setCenterName(settings.centerName || "");
+      setIsInitialized(true);
+    }
+  }, [settings, isInitialized]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.currentTarget);
     
     try {
       await updateSettings.mutateAsync({
-        centerName: formData.get("centerName") as string,
-        themeColor: formData.get("themeColor") as string,
+        centerName,
       });
     } catch (error) {
       // Error is handled by the mutation
@@ -86,33 +96,21 @@ export default function Settings() {
                   <Input
                     id="centerName"
                     name="centerName"
-                    defaultValue={settings.centerName}
+                    value={centerName}
+                    onChange={(e) => setCenterName(e.target.value)}
                     required
+                    disabled={updateSettings.isPending}
                   />
                 </div>
-                <div>
-                  <Label htmlFor="themeColor">Акцентный цвет (для совместимости)</Label>
-                  <div className="flex gap-4 items-center">
-                    <Input
-                      id="themeColor"
-                      name="themeColor"
-                      type="color"
-                      defaultValue={settings.themeColor}
-                      className="h-12 w-24"
-                    />
-                    <Input
-                      type="text"
-                      defaultValue={settings.themeColor}
-                      disabled
-                      className="flex-1"
-                    />
-                  </div>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Используйте вкладку "Интерфейс" для выбора палитры
-                  </p>
-                </div>
-                <Button type="submit" className="w-full">
-                  Сохранить настройки
+                <Button type="submit" className="w-full" disabled={updateSettings.isPending}>
+                  {updateSettings.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Сохранение...
+                    </>
+                  ) : (
+                    "Сохранить настройки"
+                  )}
                 </Button>
               </form>
             </CardContent>

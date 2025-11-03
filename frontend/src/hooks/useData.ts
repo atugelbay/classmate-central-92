@@ -351,11 +351,32 @@ export const useUpdateSettings = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: settingsAPI.update,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["settings"] });
+    onMutate: async (newSettings) => {
+      // Cancel any outgoing refetches to avoid overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: ["settings"] });
+      
+      // Snapshot the previous value
+      const previousSettings = queryClient.getQueryData(["settings"]);
+      
+      // Optimistically update to the new value
+      queryClient.setQueryData(["settings"], (old: any) => ({
+        ...old,
+        ...newSettings,
+      }));
+      
+      // Return context with the snapshotted value
+      return { previousSettings };
+    },
+    onSuccess: (data) => {
+      // Update cache with the actual data from server
+      queryClient.setQueryData(["settings"], data);
       toast.success("Настройки успешно обновлены");
     },
-    onError: (error: any) => {
+    onError: (error: any, newSettings, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousSettings) {
+        queryClient.setQueryData(["settings"], context.previousSettings);
+      }
       toast.error(error.response?.data?.error || "Ошибка при обновлении настроек");
     },
   });

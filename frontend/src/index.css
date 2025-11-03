@@ -155,3 +155,91 @@ All colors MUST be HSL.
   padding: 1.5rem;
 }
 
+/* Custom Scrollbar Styles */
+@layer base {
+  /* Webkit browsers (Chrome, Safari, Edge) */
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 10px;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: hsl(215 16% 47% / 0.3);
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    transition: background-color 0.2s ease;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: hsl(215 16% 47% / 0.5);
+    background-clip: padding-box;
+  }
+
+  *::-webkit-scrollbar-thumb:active {
+    background: hsl(215 16% 47% / 0.7);
+    background-clip: padding-box;
+  }
+
+  *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  /* Dark theme specific */
+  .dark *::-webkit-scrollbar-thumb {
+    background: hsl(215 20% 65% / 0.3);
+  }
+
+  .dark *::-webkit-scrollbar-thumb:hover {
+    background: hsl(215 20% 65% / 0.5);
+  }
+
+  .dark *::-webkit-scrollbar-thumb:active {
+    background: hsl(215 20% 65% / 0.7);
+  }
+
+  /* Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(215 16% 47% / 0.3) transparent;
+  }
+
+  .dark * {
+    scrollbar-color: hsl(215 20% 65% / 0.3) transparent;
+  }
+
+  /* Thin scrollbar variant for smaller elements */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+

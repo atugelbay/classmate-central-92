@@ -16,13 +16,12 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { RevenueChart } from "./RevenueChart";
 import { AttendanceChart } from "./AttendanceChart";
 import { TodaySchedule } from "./TodaySchedule";
 import { QuickActions } from "./QuickActions";
 import { FinancialSummary } from "./FinancialSummary";
 import { StudentStatistics } from "./StudentStatistics";
-import { MiniCalendar } from "./MiniCalendar";
+import { RecentPayments } from "./RecentPayments";
 import { Button } from "@/components/ui/button";
 import { Settings, GripVertical } from "lucide-react";
 import { toast } from "sonner";
@@ -49,53 +48,46 @@ const STORAGE_KEY = "dashboard-widgets-config";
 
 const defaultWidgets: Widget[] = [
   {
-    id: "revenue-chart",
-    name: "График доходов",
-    component: RevenueChart,
-    visible: true,
-    gridClass: "col-span-1 md:col-span-2 lg:col-span-2",
-  },
-  {
     id: "today-schedule",
     name: "Уроки на сегодня",
     component: TodaySchedule,
     visible: true,
-    gridClass: "col-span-1",
+    gridClass: "col-span-1 md:col-span-1 lg:col-span-1",
   },
   {
     id: "financial-summary",
     name: "Финансовая сводка",
     component: FinancialSummary,
     visible: true,
-    gridClass: "col-span-1",
+    gridClass: "col-span-1 md:col-span-1 lg:col-span-1",
   },
   {
     id: "attendance-chart",
     name: "Посещаемость",
     component: AttendanceChart,
     visible: true,
-    gridClass: "col-span-1",
+    gridClass: "col-span-1 md:col-span-1 lg:col-span-1",
   },
   {
     id: "student-statistics",
     name: "Статистика учеников",
     component: StudentStatistics,
     visible: true,
-    gridClass: "col-span-1",
+    gridClass: "col-span-1 md:col-span-1 lg:col-span-1",
   },
   {
-    id: "mini-calendar",
-    name: "Календарь занятий",
-    component: MiniCalendar,
+    id: "recent-payments",
+    name: "Последние платежи",
+    component: RecentPayments,
     visible: true,
-    gridClass: "col-span-1 lg:col-span-2",
+    gridClass: "col-span-1 md:col-span-1 lg:col-span-1",
   },
   {
     id: "quick-actions",
     name: "Быстрые действия",
     component: QuickActions,
     visible: true,
-    gridClass: "col-span-1",
+    gridClass: "col-span-1 md:col-span-1 lg:col-span-1",
   },
 ];
 
@@ -125,7 +117,7 @@ function SortableWidget({ widget, isDragging }: SortableWidgetProps) {
     <div
       ref={setNodeRef}
       style={style}
-      className={`${widget.gridClass} relative group`}
+      className={`${widget.gridClass} relative group h-full`}
       {...attributes}
     >
       <div
@@ -134,7 +126,9 @@ function SortableWidget({ widget, isDragging }: SortableWidgetProps) {
       >
         <GripVertical className="h-4 w-4 text-muted-foreground" />
       </div>
-      <Component />
+      <div className="h-full">
+        <Component />
+      </div>
     </div>
   );
 }
@@ -294,7 +288,7 @@ export function DashboardGrid() {
           items={visibleWidgets.map((w) => w.id)}
           strategy={rectSortingStrategy}
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-[500px]">
             {visibleWidgets.map((widget) => (
               <SortableWidget key={widget.id} widget={widget} />
             ))}
