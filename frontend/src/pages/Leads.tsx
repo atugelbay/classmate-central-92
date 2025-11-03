@@ -12,6 +12,7 @@ import {
   useUpdateLeadTask,
 } from "@/hooks/useData";
 import { Lead, LeadStatus, LeadSource } from "@/types";
+import { formatKzPhone, normalizeKzPhone } from "@/lib/phone";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -106,7 +107,7 @@ export default function Leads() {
 
     const leadData = {
       name: formData.get("name") as string,
-      phone: formData.get("phone") as string,
+      phone: normalizeKzPhone(formData.get("phone") as string),
       email: formData.get("email") as string,
       source: formData.get("source") as LeadSource,
       status: "new" as LeadStatus,
@@ -266,7 +267,7 @@ export default function Leads() {
               </div>
               <div>
                 <Label htmlFor="phone">Телефон *</Label>
-                <Input id="phone" name="phone" type="tel" required />
+                <Input id="phone" name="phone" type="tel" required onChange={(e)=>{ e.currentTarget.value = formatKzPhone(e.currentTarget.value); }} />
               </div>
               <div>
                 <Label htmlFor="email">Email</Label>

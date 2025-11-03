@@ -4,6 +4,7 @@ import (
 	"classmate-central/internal/models"
 	"classmate-central/internal/repository"
 	"classmate-central/internal/services"
+	"classmate-central/internal/validation"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -33,6 +34,20 @@ func NewSubscriptionHandler(
 func (h *SubscriptionHandler) CreateType(c *gin.Context) {
 	var subType models.SubscriptionType
 	if err := c.ShouldBindJSON(&subType); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": validation.FormatValidationErrors(err)})
+		return
+	}
+
+	// Validation
+	if err := validation.ValidateNotEmpty(subType.Name, "name"); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := validation.ValidatePositiveInt(subType.LessonsCount, "lessonsCount"); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := validation.ValidatePositiveAmount(subType.Price); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -107,6 +122,20 @@ func (h *SubscriptionHandler) DeleteType(c *gin.Context) {
 func (h *SubscriptionHandler) CreateStudentSubscription(c *gin.Context) {
 	var sub models.StudentSubscription
 	if err := c.ShouldBindJSON(&sub); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": validation.FormatValidationErrors(err)})
+		return
+	}
+
+	// Validation
+	if err := validation.ValidateNotEmpty(sub.StudentID, "studentId"); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := validation.ValidatePositiveInt(sub.TotalLessons, "totalLessons"); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := validation.ValidatePositiveAmount(sub.TotalPrice); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

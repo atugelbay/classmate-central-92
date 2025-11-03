@@ -18,6 +18,7 @@ import IndividualLessons from "./pages/IndividualLessons";
 import Finance from "./pages/Finance";
 import Subscriptions from "./pages/Subscriptions";
 import Settings from "./pages/Settings";
+import Roles from "./pages/Roles";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
@@ -112,6 +113,7 @@ const App = () => (
                         <Route path="/finance" element={<Finance />} />
                         <Route path="/subscriptions" element={<Subscriptions />} />
                         <Route path="/settings" element={<Settings />} />
+                        <Route path="/roles" element={<Roles />} />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </Layout>

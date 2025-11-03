@@ -36,6 +36,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { Student } from "@/types";
+import { formatKzPhone, normalizeKzPhone } from "@/lib/phone";
 import moment from "moment";
 import "moment/locale/ru";
 
@@ -193,7 +194,7 @@ export default function Students() {
       name: formData.get("name") as string,
       age: parseInt(formData.get("age") as string),
       email: formData.get("email") as string,
-      phone: formData.get("phone") as string,
+      phone: normalizeKzPhone(formData.get("phone") as string),
       status: "active" as const,
       subjects: (formData.get("subjects") as string).split(",").map((s) => s.trim()),
       groupIds: editingStudent?.groupIds || [],
@@ -299,6 +300,9 @@ export default function Students() {
                   id="phone"
                   name="phone"
                   defaultValue={editingStudent?.phone}
+                  onChange={(e) => {
+                    e.currentTarget.value = formatKzPhone(e.currentTarget.value);
+                  }}
                   required
                 />
               </div>

@@ -12,6 +12,7 @@ import {
   DollarSign,
   Ticket,
   UserCheck,
+  Shield,
 } from "lucide-react";
 import {
   Sidebar,
@@ -35,51 +36,67 @@ const navItems = [
     title: "Dashboard",
     url: "/",
     icon: LayoutDashboard,
+    permission: "dashboard.view",
   },
   {
     title: "Лиды",
     url: "/leads",
     icon: UserPlus,
+    permission: "leads.view",
   },
   {
     title: "Учителя",
     url: "/teachers",
     icon: GraduationCap,
+    permission: "teachers.view",
   },
   {
     title: "Ученики",
     url: "/students",
     icon: Users,
+    permission: "students.view",
   },
   {
     title: "Расписание",
     url: "/schedule",
     icon: Calendar,
+    permission: "schedule.view",
   },
   {
     title: "Группы",
     url: "/groups",
     icon: UsersRound,
+    permission: "groups.view",
   },
   {
     title: "Индивидуальные",
     url: "/individual-lessons",
     icon: UserCheck,
+    permission: "lessons.view",
   },
   {
     title: "Финансы",
     url: "/finance",
     icon: DollarSign,
+    permission: "finance.view",
   },
   {
     title: "Абонементы",
     url: "/subscriptions",
     icon: Ticket,
+    permission: "subscriptions.view",
   },
   {
     title: "Настройки",
     url: "/settings",
     icon: Settings,
+    permission: "settings.view",
+  },
+  {
+    title: "Роли и права",
+    url: "/roles",
+    icon: Shield,
+    permission: "roles.view",
   },
 ];
 
@@ -88,7 +105,7 @@ export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { data: settings } = useSettings();
-  const { logout, user } = useAuth();
+  const { logout, user, hasPermission } = useAuth();
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -139,24 +156,33 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive(item.url)}
-                    tooltip={isCollapsed ? item.title : undefined}
-                  >
-                    <NavLink
-                      to={item.url}
-                      end={item.url === "/"}
-                      className="flex items-center gap-3"
+              {navItems
+                .filter((item) => {
+                  // If no permission is specified, always show the item
+                  if (!item.permission) return true;
+                  // If user has no permissions at all (new user), show all items
+                  if (!user || !user.permissions || user.permissions.length === 0) return true;
+                  // Otherwise, check if user has the required permission
+                  return hasPermission(item.permission);
+                })
+                .map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive(item.url)}
+                      tooltip={isCollapsed ? item.title : undefined}
                     >
-                      <item.icon className="h-5 w-5" />
-                      {!isCollapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+                      <NavLink
+                        to={item.url}
+                        end={item.url === "/"}
+                        className="flex items-center gap-3"
+                      >
+                        <item.icon className="h-5 w-5" />
+                        {!isCollapsed && <span>{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

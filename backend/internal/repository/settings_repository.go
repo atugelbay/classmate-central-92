@@ -15,28 +15,29 @@ func NewSettingsRepository(db *sql.DB) *SettingsRepository {
 	return &SettingsRepository{db: db}
 }
 
-func (r *SettingsRepository) Get() (*models.Settings, error) {
-	settings := &models.Settings{}
+func (r *SettingsRepository) Get(companyID string) (*models.Settings, error) {
+	settings := &models.Settings{CompanyID: companyID}
 	var logo sql.NullString
 
-	// Get the first (and should be only) settings record
-	query := `SELECT id, center_name, logo, theme_color FROM settings ORDER BY id LIMIT 1`
+	// Get settings for specific company
+	query := `SELECT id, center_name, logo, theme_color, company_id FROM settings WHERE company_id = $1 LIMIT 1`
 
-	err := r.db.QueryRow(query).Scan(&settings.ID, &settings.CenterName, &logo, &settings.ThemeColor)
+	err := r.db.QueryRow(query, companyID).Scan(&settings.ID, &settings.CenterName, &logo, &settings.ThemeColor, &settings.CompanyID)
 	if err == sql.ErrNoRows {
-		// If settings don't exist, create default record
+		// If settings don't exist, create default record for this company
 		defaultSettings := &models.Settings{
 			CenterName: "Образовательный Центр",
 			ThemeColor: "#8B5CF6",
 			Logo:       "",
+			CompanyID:  companyID,
 		}
 		
 		insertQuery := `
-			INSERT INTO settings (center_name, logo, theme_color)
-			VALUES ($1, $2, $3)
+			INSERT INTO settings (center_name, logo, theme_color, company_id)
+			VALUES ($1, $2, $3, $4)
 			RETURNING id
 		`
-		err = r.db.QueryRow(insertQuery, defaultSettings.CenterName, defaultSettings.Logo, defaultSettings.ThemeColor).Scan(&defaultSettings.ID)
+		err = r.db.QueryRow(insertQuery, defaultSettings.CenterName, defaultSettings.Logo, defaultSettings.ThemeColor, defaultSettings.CompanyID).Scan(&defaultSettings.ID)
 		if err != nil {
 			return nil, fmt.Errorf("error creating default settings: %w", err)
 		}
@@ -54,37 +55,43 @@ func (r *SettingsRepository) Get() (*models.Settings, error) {
 	return settings, nil
 }
 
-func (r *SettingsRepository) Update(settings *models.Settings) error {
-	// First check if any settings exist
+func (r *SettingsRepository) Update(settings *models.Settings, companyID string) error {
+	// First check if settings exist for this company
 	var existingID int
-	checkQuery := `SELECT id FROM settings ORDER BY id LIMIT 1`
-	err := r.db.QueryRow(checkQuery).Scan(&existingID)
+	checkQuery := `SELECT id FROM settings WHERE company_id = $1 LIMIT 1`
+	err := r.db.QueryRow(checkQuery, companyID).Scan(&existingID)
 	
 	if err == sql.ErrNoRows {
-		// No settings exist, create new record
+		// No settings exist for this company, create new record
 		insertQuery := `
-			INSERT INTO settings (center_name, logo, theme_color)
-			VALUES ($1, $2, $3)
+			INSERT INTO settings (center_name, logo, theme_color, company_id)
+			VALUES ($1, $2, $3, $4)
 			RETURNING id
 		`
-		err = r.db.QueryRow(insertQuery, settings.CenterName, settings.Logo, settings.ThemeColor).Scan(&settings.ID)
+		err = r.db.QueryRow(insertQuery, settings.CenterName, settings.Logo, settings.ThemeColor, companyID).Scan(&settings.ID)
 		if err != nil {
 			return fmt.Errorf("error inserting settings: %w", err)
 		}
+		settings.CompanyID = companyID
 	} else if err != nil {
 		return fmt.Errorf("error checking for existing settings: %w", err)
 	} else {
-		// Settings exist, update the first record
+		// Settings exist for this company, update the record
 		updateQuery := `
 			UPDATE settings 
 			SET center_name = $1, logo = $2, theme_color = $3
-			WHERE id = $4
+			WHERE id = $4 AND company_id = $5
 		`
-		_, err = r.db.Exec(updateQuery, settings.CenterName, settings.Logo, settings.ThemeColor, existingID)
+		result, err := r.db.Exec(updateQuery, settings.CenterName, settings.Logo, settings.ThemeColor, existingID, companyID)
 		if err != nil {
 			return fmt.Errorf("error updating settings: %w", err)
 		}
+		rowsAffected, _ := result.RowsAffected()
+		if rowsAffected == 0 {
+			return fmt.Errorf("settings not found or unauthorized")
+		}
 		settings.ID = existingID
+		settings.CompanyID = companyID
 	}
 
 	return nil

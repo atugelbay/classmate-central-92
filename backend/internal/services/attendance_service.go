@@ -105,16 +105,29 @@ func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendan
 			// Get current lessons remaining
 			lessonsRemaining := activeSub.LessonsRemaining
 
-			// Deduct lesson ONLY for per_lesson billing type
+			// Deduct lesson ONLY for per_lesson billing type with optimistic locking
 			if billingType == "per_lesson" {
+				// Get current version first
+				var currentVersion int
+				err = tx.QueryRow("SELECT version FROM student_subscriptions WHERE id = $1", activeSub.ID).Scan(&currentVersion)
+				if err != nil {
+					return nil, fmt.Errorf("error getting subscription version: %w", err)
+				}
+
 				deductQuery := `
 					UPDATE student_subscriptions 
-					SET used_lessons = used_lessons + 1, updated_at = CURRENT_TIMESTAMP
-					WHERE id = $1 AND remaining_lessons > 0
+					SET used_lessons = used_lessons + 1, 
+					    updated_at = CURRENT_TIMESTAMP,
+					    version = version + 1
+					WHERE id = $1 AND remaining_lessons > 0 AND version = $2
 				`
-				_, err = tx.Exec(deductQuery, activeSub.ID)
+				result, err := tx.Exec(deductQuery, activeSub.ID, currentVersion)
 				if err != nil {
 					return nil, fmt.Errorf("error deducting lesson: %w", err)
+				}
+				rowsAffected, _ := result.RowsAffected()
+				if rowsAffected == 0 {
+					return nil, fmt.Errorf("subscription update failed: version mismatch or no remaining lessons")
 				}
 
 				// Get updated lessons remaining after deduction

@@ -6,12 +6,14 @@ import (
 
 	"classmate-central/internal/database"
 	"classmate-central/internal/handlers"
+	"classmate-central/internal/logger"
 	"classmate-central/internal/middleware"
 	"classmate-central/internal/repository"
 	"classmate-central/internal/services"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"go.uber.org/zap"
 )
 
 func main() {
@@ -20,17 +22,33 @@ func main() {
 		log.Println("No .env file found, using environment variables")
 	}
 
+	// Initialize logger
+	env := os.Getenv("ENV")
+	if env == "" {
+		env = "development"
+	}
+	if err := logger.Init(env); err != nil {
+		log.Fatalf("Failed to initialize logger: %v", err)
+	}
+	defer logger.Logger.Sync()
+
+	logger.Info("Starting application", zap.String("environment", env))
+
 	// Initialize database
 	db, err := database.NewDatabase()
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		logger.Fatal("Failed to connect to database", logger.ErrorField(err))
 	}
 	defer db.Close()
 
+	logger.Info("Database connected successfully")
+
 	// Run migrations
 	if err := db.RunMigrations(); err != nil {
-		log.Printf("Warning: Failed to run migrations: %v", err)
-		log.Println("Continuing with existing database schema...")
+		logger.Warn("Failed to run migrations", logger.ErrorField(err))
+		logger.Info("Continuing with existing database schema...")
+	} else {
+		logger.Info("Database migrations completed")
 	}
 
 	// Initialize repositories
@@ -50,6 +68,8 @@ func main() {
 	consumptionRepo := repository.NewSubscriptionConsumptionRepository(db.DB)
 	activityRepo := repository.NewActivityRepository(db.DB)
 	notificationRepo := repository.NewNotificationRepository(db.DB)
+	roleRepo := repository.NewRoleRepository(db.DB)
+	permRepo := repository.NewPermissionRepository(db.DB)
 
 	// Initialize services
 	activityService := services.NewActivityService(activityRepo)
@@ -57,7 +77,7 @@ func main() {
 	attendanceService := services.NewAttendanceService(subscriptionRepo, consumptionRepo, activityRepo, notificationRepo, db.DB)
 
 	// Initialize handlers
-	authHandler := handlers.NewAuthHandler(userRepo, companyRepo)
+	authHandler := handlers.NewAuthHandler(userRepo, companyRepo, roleRepo, settingsRepo)
 	teacherHandler := handlers.NewTeacherHandler(teacherRepo)
 	studentHandler := handlers.NewStudentHandler(studentRepo, activityRepo, notificationRepo, activityService)
 	groupHandler := handlers.NewGroupHandler(groupRepo, lessonRepo)
@@ -71,12 +91,15 @@ func main() {
 	subscriptionHandler := handlers.NewSubscriptionHandler(subscriptionRepo, attendanceService, activityService)
 	migrationHandler := handlers.NewMigrationHandler(teacherRepo, studentRepo, groupRepo, roomRepo, lessonRepo, subscriptionRepo)
 	dashboardHandler := handlers.NewDashboardHandler(lessonRepo, paymentRepo, subscriptionRepo, studentRepo, leadRepo, debtRepo)
+	roleHandler := handlers.NewRoleHandler(roleRepo, permRepo)
+	userRoleHandler := handlers.NewUserRoleHandler(userRepo, roleRepo)
 
 	// Initialize Gin
 	router := gin.Default()
 
 	// Middleware
 	router.Use(middleware.CORSMiddleware())
+	router.Use(middleware.ErrorHandlerMiddleware()) // Centralized error handling
 
 	// Public routes
 	auth := router.Group("/api/auth")
@@ -93,6 +116,24 @@ func main() {
 	{
 		// Auth
 		api.GET("/auth/me", authHandler.Me)
+
+		// ============= RBAC MODULE =============
+
+		// Permissions
+		api.GET("/permissions", roleHandler.GetAllPermissions)
+
+		// Roles
+		api.GET("/roles", roleHandler.GetAll)
+		api.GET("/roles/:id", roleHandler.GetByID)
+		api.POST("/roles", middleware.RequirePermission("roles", "manage"), roleHandler.Create)
+		api.PUT("/roles/:id", middleware.RequirePermission("roles", "manage"), roleHandler.Update)
+		api.DELETE("/roles/:id", middleware.RequirePermission("roles", "manage"), roleHandler.Delete)
+		api.GET("/roles/:id/permissions", roleHandler.GetRolePermissions)
+
+		// User Roles
+		api.GET("/users/:userId/roles", userRoleHandler.GetUserRoles)
+		api.POST("/users/roles/assign", middleware.RequirePermission("users", "manage"), userRoleHandler.AssignRole)
+		api.POST("/users/roles/remove", middleware.RequirePermission("users", "manage"), userRoleHandler.RemoveRole)
 
 		// Teachers
 		api.GET("/teachers", teacherHandler.GetAll)
@@ -244,8 +285,8 @@ func main() {
 		port = "8080"
 	}
 
-	log.Printf("Server starting on port %s", port)
+	logger.Info("Server starting", zap.String("port", port))
 	if err := router.Run(":" + port); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
+		logger.Fatal("Failed to start server", logger.ErrorField(err))
 	}
 }

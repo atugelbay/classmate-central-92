@@ -13,6 +13,7 @@ export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [companyName, setCompanyName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -30,10 +31,15 @@ export default function Register() {
       return;
     }
 
+    if (!companyName.trim()) {
+      toast.error("Название компании обязательно");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      await register(name, email, password);
+      await register(name, email, password, companyName);
       toast.success("Регистрация успешна!");
       // Полная перезагрузка страницы для сброса всех данных
       window.location.href = "/";
@@ -80,6 +86,18 @@ export default function Register() {
                 placeholder="example@mail.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={isLoading}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="companyName">Название учебного центра</Label>
+              <Input
+                id="companyName"
+                type="text"
+                placeholder="Название вашего учебного центра"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
                 required
                 disabled={isLoading}
               />

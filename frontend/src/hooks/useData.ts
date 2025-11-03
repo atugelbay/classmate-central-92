@@ -9,6 +9,7 @@ import { leadsApi } from "@/api/leads";
 import * as financeApi from "@/api/finance";
 import * as subscriptionsApi from "@/api/subscriptions";
 import * as dashboardApi from "@/api/dashboard";
+import { rolesAPI } from "@/api/roles";
 import { 
   Teacher, 
   Student, 
@@ -32,6 +33,11 @@ import {
   Notification,
   AttendanceJournalEntry,
   StudentStatus,
+  Role,
+  Permission,
+  CreateRoleRequest,
+  UpdateRoleRequest,
+  AssignRoleRequest,
 } from "@/types";
 import { toast } from "sonner";
 
@@ -1074,5 +1080,122 @@ export const useAttendanceChart = (period: "week" | "month" = "week") => {
   return useQuery({
     queryKey: ["dashboard", "attendance-stats", period],
     queryFn: () => dashboardApi.getAttendanceStats(period),
+  });
+};
+
+// ============= RBAC HOOKS =============
+
+// Permissions
+export const usePermissions = () => {
+  return useQuery({
+    queryKey: ["permissions"],
+    queryFn: rolesAPI.getAllPermissions,
+  });
+};
+
+// Roles
+export const useRoles = () => {
+  return useQuery({
+    queryKey: ["roles"],
+    queryFn: rolesAPI.getAll,
+  });
+};
+
+export const useRole = (id: string) => {
+  return useQuery({
+    queryKey: ["roles", id],
+    queryFn: () => rolesAPI.getById(id),
+    enabled: !!id,
+  });
+};
+
+export const useCreateRole = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateRoleRequest) => rolesAPI.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["roles"] });
+      toast.success("Роль успешно создана");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при создании роли");
+    },
+  });
+};
+
+export const useUpdateRole = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateRoleRequest }) =>
+      rolesAPI.update(id, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["roles"] });
+      queryClient.invalidateQueries({ queryKey: ["roles", variables.id] });
+      toast.success("Роль успешно обновлена");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при обновлении роли");
+    },
+  });
+};
+
+export const useDeleteRole = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => rolesAPI.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["roles"] });
+      toast.success("Роль успешно удалена");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при удалении роли");
+    },
+  });
+};
+
+export const useRolePermissions = (roleId: string) => {
+  return useQuery({
+    queryKey: ["roles", roleId, "permissions"],
+    queryFn: () => rolesAPI.getRolePermissions(roleId),
+    enabled: !!roleId,
+  });
+};
+
+// User Roles
+export const useUserRoles = (userId: number) => {
+  return useQuery({
+    queryKey: ["users", userId, "roles"],
+    queryFn: () => rolesAPI.getUserRoles(userId),
+    enabled: !!userId,
+  });
+};
+
+export const useAssignRole = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: AssignRoleRequest) => rolesAPI.assignRole(data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["users", variables.userId, "roles"] });
+      queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
+      toast.success("Роль успешно назначена");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при назначении роли");
+    },
+  });
+};
+
+export const useRemoveRole = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: AssignRoleRequest) => rolesAPI.removeRole(data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["users", variables.userId, "roles"] });
+      queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
+      toast.success("Роль успешно удалена");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при удалении роли");
+    },
   });
 };

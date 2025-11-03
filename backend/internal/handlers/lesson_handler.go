@@ -7,6 +7,7 @@ import (
 
 	"classmate-central/internal/models"
 	"classmate-central/internal/repository"
+	"classmate-central/internal/validation"
 
 	"github.com/gin-gonic/gin"
 )
@@ -65,6 +66,20 @@ func (h *LessonHandler) GetByID(c *gin.Context) {
 func (h *LessonHandler) Create(c *gin.Context) {
 	var lesson models.Lesson
 	if err := c.ShouldBindJSON(&lesson); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": validation.FormatValidationErrors(err)})
+		return
+	}
+
+	// Validation
+	if err := validation.ValidateNotEmpty(lesson.Title, "title"); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := validation.ValidateDateRange(lesson.Start, lesson.End); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := validation.ValidateNotEmpty(lesson.Subject, "subject"); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

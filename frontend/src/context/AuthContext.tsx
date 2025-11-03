@@ -1,19 +1,17 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authAPI, AuthResponse } from '@/api/auth';
-
-interface User {
-  id: number;
-  email: string;
-  name: string;
-}
+import { User } from '@/types';
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string, companyName: string) => Promise<void>;
   logout: () => void;
+  hasPermission: (permissionName: string) => boolean;
+  hasRole: (roleName: string) => boolean;
+  hasAnyRole: (roleNames: string[]) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -29,7 +27,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     if (token && savedUser) {
       try {
-        setUser(JSON.parse(savedUser));
+        const parsedUser = JSON.parse(savedUser);
+        setUser(parsedUser);
+        // Refresh user data from server to get latest roles and permissions
+        authAPI.me().then((freshUser) => {
+          setUser(freshUser);
+          localStorage.setItem('user', JSON.stringify(freshUser));
+        }).catch(() => {
+          // If refresh fails, keep cached user
+        });
       } catch (error) {
         console.error('Error parsing saved user:', error);
         localStorage.removeItem('user');
@@ -51,8 +57,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     handleAuthResponse(response);
   };
 
-  const register = async (name: string, email: string, password: string) => {
-    const response = await authAPI.register({ name, email, password });
+  const register = async (name: string, email: string, password: string, companyName: string) => {
+    const response = await authAPI.register({ name, email, password, companyName });
     handleAuthResponse(response);
   };
 
@@ -61,6 +67,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
     // Полная перезагрузка страницы для сброса всех данных
     window.location.href = "/login";
+  };
+
+  const hasPermission = (permissionName: string): boolean => {
+    if (!user || !user.permissions) return false;
+    return user.permissions.includes(permissionName);
+  };
+
+  const hasRole = (roleName: string): boolean => {
+    if (!user || !user.roles) return false;
+    return user.roles.some(role => role.name === roleName);
+  };
+
+  const hasAnyRole = (roleNames: string[]): boolean => {
+    if (!user || !user.roles) return false;
+    return user.roles.some(role => roleNames.includes(role.name));
   };
 
   return (
@@ -72,6 +93,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         register,
         logout,
+        hasPermission,
+        hasRole,
+        hasAnyRole,
       }}
     >
       {children}

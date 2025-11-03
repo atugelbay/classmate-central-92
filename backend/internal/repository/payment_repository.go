@@ -3,6 +3,7 @@ package repository
 import (
 	"classmate-central/internal/models"
 	"database/sql"
+	"fmt"
 )
 
 type PaymentRepository struct {
@@ -65,9 +66,9 @@ func (r *PaymentRepository) GetAllTransactions(companyID string) ([]models.Payme
 // Student Balance
 
 func (r *PaymentRepository) GetStudentBalance(studentID string) (*models.StudentBalance, error) {
-	query := `SELECT student_id, balance, last_payment_date FROM student_balance WHERE student_id = $1`
+	query := `SELECT student_id, balance, last_payment_date, version FROM student_balance WHERE student_id = $1`
 	var balance models.StudentBalance
-	err := r.db.QueryRow(query, studentID).Scan(&balance.StudentID, &balance.Balance, &balance.LastPaymentDate)
+	err := r.db.QueryRow(query, studentID).Scan(&balance.StudentID, &balance.Balance, &balance.LastPaymentDate, &balance.Version)
 	if err == sql.ErrNoRows {
 		// If no balance record exists, create one with zero balance
 		return r.CreateStudentBalance(studentID)
@@ -79,10 +80,10 @@ func (r *PaymentRepository) GetStudentBalance(studentID string) (*models.Student
 }
 
 func (r *PaymentRepository) CreateStudentBalance(studentID string) (*models.StudentBalance, error) {
-	query := `INSERT INTO student_balance (student_id, balance) VALUES ($1, 0.00) 
-	          ON CONFLICT (student_id) DO NOTHING RETURNING student_id, balance, last_payment_date`
+	query := `INSERT INTO student_balance (student_id, balance, version) VALUES ($1, 0.00, 0) 
+	          ON CONFLICT (student_id) DO NOTHING RETURNING student_id, balance, last_payment_date, version`
 	var balance models.StudentBalance
-	err := r.db.QueryRow(query, studentID).Scan(&balance.StudentID, &balance.Balance, &balance.LastPaymentDate)
+	err := r.db.QueryRow(query, studentID).Scan(&balance.StudentID, &balance.Balance, &balance.LastPaymentDate, &balance.Version)
 	if err != nil {
 		// If conflict occurred, get the existing balance
 		return r.GetStudentBalance(studentID)
@@ -97,6 +98,74 @@ func (r *PaymentRepository) UpdateStudentBalance(studentID string, amount float6
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+// Transaction-based methods for atomic operations
+
+// CreateTransactionWithBalance creates a transaction and updates balance atomically
+func (r *PaymentRepository) CreateTransactionWithBalance(tx *models.PaymentTransaction, companyID string) error {
+	dbTx, err := r.db.Begin()
+	if err != nil {
+		return fmt.Errorf("error starting transaction: %w", err)
+	}
+	defer dbTx.Rollback()
+
+	// Create transaction record
+	query := `INSERT INTO payment_transactions (student_id, amount, type, payment_method, description, created_by, company_id) 
+	          VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, created_at`
+	err = dbTx.QueryRow(query, tx.StudentID, tx.Amount, tx.Type, tx.PaymentMethod, tx.Description, tx.CreatedBy, companyID).
+		Scan(&tx.ID, &tx.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("error creating transaction: %w", err)
+	}
+
+	// Ensure student balance exists
+	_, err = dbTx.Exec(`
+		INSERT INTO student_balance (student_id, balance, version)
+		VALUES ($1, 0, 0)
+		ON CONFLICT (student_id) DO NOTHING
+	`, tx.StudentID)
+	if err != nil {
+		return fmt.Errorf("error ensuring student balance exists: %w", err)
+	}
+
+	// Update balance based on transaction type with optimistic locking
+	var balanceAdjustment float64
+	switch tx.Type {
+	case "payment":
+		balanceAdjustment = tx.Amount
+	case "refund":
+		balanceAdjustment = tx.Amount
+	case "debt":
+		balanceAdjustment = -tx.Amount // Debt reduces balance
+	default:
+		balanceAdjustment = tx.Amount
+	}
+
+	updateQuery := `UPDATE student_balance 
+	                SET balance = balance + $1, 
+	                    last_payment_date = CASE WHEN $2 > 0 THEN CURRENT_TIMESTAMP ELSE last_payment_date END,
+	                    version = version + 1
+	                WHERE student_id = $3`
+	result, err := dbTx.Exec(updateQuery, balanceAdjustment, balanceAdjustment, tx.StudentID)
+	if err != nil {
+		return fmt.Errorf("error updating balance: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("error checking update result: %w", err)
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("balance record not found for student %s", tx.StudentID)
+	}
+
+	// Commit transaction
+	if err = dbTx.Commit(); err != nil {
+		return fmt.Errorf("error committing transaction: %w", err)
+	}
+
 	return nil
 }
 

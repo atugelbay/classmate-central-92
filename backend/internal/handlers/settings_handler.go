@@ -18,7 +18,13 @@ func NewSettingsHandler(repo *repository.SettingsRepository) *SettingsHandler {
 }
 
 func (h *SettingsHandler) Get(c *gin.Context) {
-	settings, err := h.repo.Get()
+	companyID := c.GetString("company_id")
+	if companyID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Company context required"})
+		return
+	}
+
+	settings, err := h.repo.Get(companyID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -33,6 +39,12 @@ func (h *SettingsHandler) Get(c *gin.Context) {
 }
 
 func (h *SettingsHandler) Update(c *gin.Context) {
+	companyID := c.GetString("company_id")
+	if companyID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Company context required"})
+		return
+	}
+
 	var settings models.Settings
 	if err := c.ShouldBindJSON(&settings); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -41,13 +53,13 @@ func (h *SettingsHandler) Update(c *gin.Context) {
 
 	// ID will be set by the repository during update
 
-	if err := h.repo.Update(&settings); err != nil {
+	if err := h.repo.Update(&settings, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	// Get the updated settings from database to return actual saved values
-	updatedSettings, err := h.repo.Get()
+	updatedSettings, err := h.repo.Get(companyID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

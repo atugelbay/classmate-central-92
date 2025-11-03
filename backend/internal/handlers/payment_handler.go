@@ -4,6 +4,7 @@ import (
 	"classmate-central/internal/models"
 	"classmate-central/internal/repository"
 	"classmate-central/internal/services"
+	"classmate-central/internal/validation"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -25,30 +26,40 @@ func NewPaymentHandler(repo *repository.PaymentRepository, activityService *serv
 func (h *PaymentHandler) CreateTransaction(c *gin.Context) {
 	var tx models.PaymentTransaction
 	if err := c.ShouldBindJSON(&tx); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": validation.FormatValidationErrors(err)})
+		return
+	}
+
+	// Validation
+	if err := validation.ValidateNotEmpty(tx.StudentID, "studentId"); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := validation.ValidateAmount(tx.Amount); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := validation.ValidateOneOf(tx.Type, []string{"payment", "refund", "debt"}, "type"); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	// Get user ID from context (set by auth middleware)
-	if userID, exists := c.Get("userID"); exists {
+	if userID, exists := c.Get("user_id"); exists {
 		if uid, ok := userID.(int); ok {
 			tx.CreatedBy = &uid
 		}
 	}
 
 	companyID := c.GetString("company_id")
-	if err := h.repo.CreateTransaction(&tx, companyID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	
+	// Use atomic transaction method to ensure data consistency
+	if err := h.repo.CreateTransactionWithBalance(&tx, companyID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create transaction: " + err.Error()})
 		return
 	}
 
-	// Update student balance
-	if err := h.repo.UpdateStudentBalance(tx.StudentID, tx.Amount); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update balance"})
-		return
-	}
-
-	// Log payment activity
+	// Log payment activity (non-critical, can fail without affecting transaction)
 	_ = h.activityService.LogPayment(&tx)
 
 	c.JSON(http.StatusCreated, tx)

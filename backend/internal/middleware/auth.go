@@ -12,16 +12,20 @@ import (
 )
 
 type Claims struct {
-	UserID int    `json:"user_id"`
-	Email  string `json:"email"`
+	UserID      int      `json:"user_id"`
+	Email       string   `json:"email"`
+	RoleID      *string  `json:"role_id,omitempty"`
+	Permissions []string `json:"permissions,omitempty"`
 	jwt.RegisteredClaims
 }
 
-func GenerateToken(userID int, email string) (string, error) {
+func GenerateToken(userID int, email string, roleID *string, permissions []string) (string, error) {
 	expirationTime := time.Now().Add(24 * time.Hour)
 	claims := &Claims{
-		UserID: userID,
-		Email:  email,
+		UserID:      userID,
+		Email:       email,
+		RoleID:      roleID,
+		Permissions: permissions,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -33,11 +37,13 @@ func GenerateToken(userID int, email string) (string, error) {
 	return token.SignedString([]byte(jwtSecret))
 }
 
-func GenerateRefreshToken(userID int, email string) (string, error) {
+func GenerateRefreshToken(userID int, email string, roleID *string, permissions []string) (string, error) {
 	expirationTime := time.Now().Add(7 * 24 * time.Hour)
 	claims := &Claims{
-		UserID: userID,
-		Email:  email,
+		UserID:      userID,
+		Email:       email,
+		RoleID:      roleID,
+		Permissions: permissions,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -95,6 +101,10 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		c.Set("user_id", claims.UserID)
 		c.Set("user_email", claims.Email)
+		if claims.RoleID != nil {
+			c.Set("role_id", *claims.RoleID)
+		}
+		c.Set("permissions", claims.Permissions)
 		c.Next()
 	}
 }

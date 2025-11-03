@@ -17,6 +17,11 @@ func NewCompanyRepository(db *sql.DB) *CompanyRepository {
 	return &CompanyRepository{db: db}
 }
 
+// DB returns the underlying database connection
+func (r *CompanyRepository) DB() *sql.DB {
+	return r.db
+}
+
 // Create creates a new company
 func (r *CompanyRepository) Create(company *models.Company) error {
 	// Generate UUID if not provided
