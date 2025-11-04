@@ -33,6 +33,9 @@ export default function RoomScheduleView({
   onLessonClick,
   onSlotClick,
   onLessonUpdate,
+  onCancelLesson,
+  onResumeLesson,
+  onOpenAttendance,
 }: RoomScheduleViewProps) {
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [popoverOpen, setPopoverOpen] = useState(false);

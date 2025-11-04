@@ -390,7 +390,12 @@ export default function Students() {
   }, [subscriptions]);
 
   // Activity: upcoming lessons OR positive balance OR active subscription
+  // BUT: if student.status === "inactive", always return false
   const getIsActive = React.useCallback((student: Student) => {
+    // Если статус вручную установлен как "inactive", студент неактивен
+    if (student.status === "inactive") {
+      return false;
+    }
     const studentLessons = lessons.filter((l) => 
       l.studentIds?.includes(student.id) || 
       (l.groupId && student.groupIds?.includes(l.groupId))
