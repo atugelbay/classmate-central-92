@@ -223,6 +223,30 @@ type DebtRecord struct {
 	CompanyID string     `json:"companyId" db:"company_id"`
 }
 
+// Discount represents a discount that can be applied to students
+type Discount struct {
+	ID          string    `json:"id" db:"id"`
+	Name        string    `json:"name" db:"name"`
+	Description string    `json:"description" db:"description"`
+	Type        string    `json:"type" db:"type"` // "percentage" or "fixed"
+	Value       float64   `json:"value" db:"value"` // Percentage (0-100) or fixed amount
+	IsActive    bool      `json:"isActive" db:"is_active"`
+	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
+	CompanyID   string    `json:"companyId" db:"company_id"`
+}
+
+// StudentDiscount represents a discount applied to a student
+type StudentDiscount struct {
+	ID          int       `json:"id" db:"id"`
+	StudentID   string    `json:"studentId" db:"student_id"`
+	DiscountID  string    `json:"discountId" db:"discount_id"`
+	AppliedAt   time.Time `json:"appliedAt" db:"applied_at"`
+	ExpiresAt   *time.Time `json:"expiresAt,omitempty" db:"expires_at"`
+	IsActive    bool      `json:"isActive" db:"is_active"`
+	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
+	CompanyID   string    `json:"companyId" db:"company_id"`
+}
+
 // ============= SUBSCRIPTION MODULE =============
 
 // SubscriptionType represents a subscription type/plan

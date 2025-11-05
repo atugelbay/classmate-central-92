@@ -34,5 +34,10 @@ export const groupsAPI = {
     const response = await apiClient.post(`/groups/${id}/generate-lessons`);
     return response.data;
   },
+
+  extend: async (id: string): Promise<{ message: string; count: number }> => {
+    const response = await apiClient.post(`/groups/${id}/extend`);
+    return response.data;
+  },
 };
 

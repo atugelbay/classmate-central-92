@@ -6,26 +6,30 @@ import (
 	"classmate-central/internal/services"
 	"classmate-central/internal/validation"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
 type SubscriptionHandler struct {
-	repo              *repository.SubscriptionRepository
-	attendanceService *services.AttendanceService
-	activityService   *services.ActivityService
+	repo                *repository.SubscriptionRepository
+	attendanceService    *services.AttendanceService
+	activityService      *services.ActivityService
+	subscriptionService  *services.SubscriptionService
 }
 
 func NewSubscriptionHandler(
 	repo *repository.SubscriptionRepository,
 	attendanceService *services.AttendanceService,
 	activityService *services.ActivityService,
+	subscriptionService *services.SubscriptionService,
 ) *SubscriptionHandler {
 	return &SubscriptionHandler{
-		repo:              repo,
-		attendanceService: attendanceService,
-		activityService:   activityService,
+		repo:               repo,
+		attendanceService:  attendanceService,
+		activityService:    activityService,
+		subscriptionService: subscriptionService,
 	}
 }
 
@@ -263,6 +267,54 @@ func (h *SubscriptionHandler) UpdateFreeze(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, freeze)
+}
+
+// FreezeSubscription handles subscription freeze with lesson shifting
+func (h *SubscriptionHandler) FreezeSubscription(c *gin.Context) {
+	subscriptionID := c.Param("id")
+	companyID := c.GetString("company_id")
+
+	var req struct {
+		FreezeStart string `json:"freezeStart" binding:"required"`
+		FreezeEnd   string `json:"freezeEnd" binding:"required"`
+		Reason      string `json:"reason"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	freezeStart, err := time.Parse("2006-01-02", req.FreezeStart)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid freezeStart date format"})
+		return
+	}
+
+	freezeEnd, err := time.Parse("2006-01-02", req.FreezeEnd)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid freezeEnd date format"})
+		return
+	}
+
+	if freezeEnd.Before(freezeStart) || freezeEnd.Equal(freezeStart) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "freezeEnd must be after freezeStart"})
+		return
+	}
+
+	subscription, err := h.subscriptionService.FreezeSubscription(
+		subscriptionID,
+		freezeStart,
+		freezeEnd,
+		req.Reason,
+		companyID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, subscription)
 }
 
 // ============= Lesson Attendance =============

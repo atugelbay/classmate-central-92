@@ -63,6 +63,7 @@ func main() {
 	leadRepo := repository.NewLeadRepository(db.DB)
 	paymentRepo := repository.NewPaymentRepository(db.DB)
 	tariffRepo := repository.NewTariffRepository(db.DB)
+	discountRepo := repository.NewDiscountRepository(db.DB)
 	debtRepo := repository.NewDebtRepository(db.DB)
 	subscriptionRepo := repository.NewSubscriptionRepository(db.DB)
 	consumptionRepo := repository.NewSubscriptionConsumptionRepository(db.DB)
@@ -75,6 +76,7 @@ func main() {
 	activityService := services.NewActivityService(activityRepo)
 	_ = services.NewNotificationService(notificationRepo, debtRepo, subscriptionRepo) // Can be used for scheduled tasks
 	attendanceService := services.NewAttendanceService(subscriptionRepo, consumptionRepo, activityRepo, notificationRepo, db.DB)
+	subscriptionService := services.NewSubscriptionService(subscriptionRepo, lessonRepo, activityRepo, db.DB)
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(userRepo, companyRepo, roleRepo, settingsRepo)
@@ -87,8 +89,9 @@ func main() {
 	leadHandler := handlers.NewLeadHandler(leadRepo)
 	paymentHandler := handlers.NewPaymentHandler(paymentRepo, activityService)
 	tariffHandler := handlers.NewTariffHandler(tariffRepo)
+	discountHandler := handlers.NewDiscountHandler(discountRepo)
 	debtHandler := handlers.NewDebtHandler(debtRepo)
-	subscriptionHandler := handlers.NewSubscriptionHandler(subscriptionRepo, attendanceService, activityService)
+	subscriptionHandler := handlers.NewSubscriptionHandler(subscriptionRepo, attendanceService, activityService, subscriptionService)
 	migrationHandler := handlers.NewMigrationHandler(teacherRepo, studentRepo, groupRepo, roomRepo, lessonRepo, subscriptionRepo)
 	dashboardHandler := handlers.NewDashboardHandler(lessonRepo, paymentRepo, subscriptionRepo, studentRepo, leadRepo, debtRepo)
 	roleHandler := handlers.NewRoleHandler(roleRepo, permRepo)
@@ -144,18 +147,24 @@ func main() {
 
 		// Students
 		api.GET("/students", studentHandler.GetAll)
-		api.GET("/students/:id", studentHandler.GetByID)
 		api.POST("/students", studentHandler.Create)
-		api.PUT("/students/:id", studentHandler.Update)
-		api.DELETE("/students/:id", studentHandler.Delete)
-
-		// Student Activities, Notes, and Status
+		
+		// Student-specific routes (must be before /students/:id)
 		api.GET("/students/:id/activities", studentHandler.GetActivities)
 		api.POST("/students/:id/notes", studentHandler.AddNote)
 		api.GET("/students/:id/notes", studentHandler.GetNotes)
 		api.PUT("/students/:id/status", studentHandler.UpdateStatus)
 		api.GET("/students/:id/attendance", studentHandler.GetAttendanceJournal)
 		api.GET("/students/:id/notifications", studentHandler.GetNotifications)
+		api.GET("/students/:id/discounts", discountHandler.GetStudentDiscounts)
+		api.POST("/students/:id/discounts", discountHandler.ApplyToStudent)
+		api.DELETE("/students/:id/discounts/:discountId", discountHandler.RemoveStudentDiscount)
+		
+		// General student routes
+		api.GET("/students/:id", studentHandler.GetByID)
+		api.PUT("/students/:id", studentHandler.Update)
+		api.DELETE("/students/:id", studentHandler.Delete)
+		
 		api.PUT("/notifications/:notificationId/read", studentHandler.MarkNotificationRead)
 
 		// Groups
@@ -165,6 +174,7 @@ func main() {
 		api.PUT("/groups/:id", groupHandler.Update)
 		api.DELETE("/groups/:id", groupHandler.Delete)
 		api.POST("/groups/:id/generate-lessons", groupHandler.GenerateLessons)
+		api.POST("/groups/:id/extend", groupHandler.ExtendGroup)
 
 		// Lessons
 		api.GET("/lessons", lessonHandler.GetAll)
@@ -223,6 +233,13 @@ func main() {
 		api.PUT("/tariffs/:id", tariffHandler.Update)
 		api.DELETE("/tariffs/:id", tariffHandler.Delete)
 
+		// Discounts
+		api.GET("/discounts", discountHandler.GetAll)
+		api.GET("/discounts/:id", discountHandler.GetByID)
+		api.POST("/discounts", discountHandler.Create)
+		api.PUT("/discounts/:id", discountHandler.Update)
+		api.DELETE("/discounts/:id", discountHandler.Delete)
+
 		// Debts
 		api.GET("/debts", debtHandler.GetAll) // supports ?status= query param
 		api.GET("/debts/student/:studentId", debtHandler.GetByStudent)
@@ -250,6 +267,7 @@ func main() {
 		// Subscription Freezes
 		api.GET("/subscriptions/:id/freezes", subscriptionHandler.GetFreezes)
 		api.POST("/subscriptions/:id/freezes", subscriptionHandler.CreateFreeze)
+		api.POST("/subscriptions/:id/freeze", subscriptionHandler.FreezeSubscription)
 		api.PUT("/subscriptions/freezes", subscriptionHandler.UpdateFreeze)
 
 		// Lesson Attendance

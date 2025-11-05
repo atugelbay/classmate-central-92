@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, DollarSign, TrendingUp, TrendingDown, Users } from "lucide-react";
+import { Loader2, Plus, DollarSign, TrendingUp, TrendingDown, Users, Trash2, Edit } from "lucide-react";
 import { 
   Pagination,
   PaginationContent,
@@ -17,8 +17,8 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { useTransactions, useCreateTransaction, useAllBalances, useTariffs, useCreateTariff, useUpdateTariff, useDeleteTariff, useDebts, useCreateDebt, useUpdateDebt, useStudents } from "@/hooks/useData";
-import { Tariff, DebtRecord } from "@/types";
+import { useTransactions, useCreateTransaction, useAllBalances, useDiscounts, useCreateDiscount, useUpdateDiscount, useDeleteDiscount, useDebts, useCreateDebt, useUpdateDebt, useStudents } from "@/hooks/useData";
+import { Discount, DebtRecord } from "@/types";
 import moment from "moment";
 import "moment/locale/ru";
 
@@ -29,21 +29,21 @@ const ITEMS_PER_PAGE = 39;
 export default function Finance() {
   const { data: transactions = [], isLoading: transactionsLoading } = useTransactions();
   const { data: balances = [], isLoading: balancesLoading } = useAllBalances();
-  const { data: tariffs = [], isLoading: tariffsLoading } = useTariffs();
+  const { data: discounts = [], isLoading: discountsLoading } = useDiscounts();
   const { data: debts = [], isLoading: debtsLoading } = useDebts();
   const { data: students = [] } = useStudents();
   
   const createTransaction = useCreateTransaction();
-  const createTariff = useCreateTariff();
-  const updateTariff = useUpdateTariff();
-  const deleteTariff = useDeleteTariff();
+  const createDiscount = useCreateDiscount();
+  const updateDiscount = useUpdateDiscount();
+  const deleteDiscount = useDeleteDiscount();
   const createDebt = useCreateDebt();
   const updateDebt = useUpdateDebt();
 
   const [isTransactionDialogOpen, setIsTransactionDialogOpen] = useState(false);
-  const [isTariffDialogOpen, setIsTariffDialogOpen] = useState(false);
+  const [isDiscountDialogOpen, setIsDiscountDialogOpen] = useState(false);
   const [isDebtDialogOpen, setIsDebtDialogOpen] = useState(false);
-  const [selectedTariff, setSelectedTariff] = useState<Tariff | null>(null);
+  const [selectedDiscount, setSelectedDiscount] = useState<Discount | null>(null);
   const [selectedDebt, setSelectedDebt] = useState<DebtRecord | null>(null);
   const [currentPageTransactions, setCurrentPageTransactions] = useState(1);
   const [currentPageBalances, setCurrentPageBalances] = useState(1);
@@ -76,26 +76,26 @@ export default function Finance() {
     setIsTransactionDialogOpen(false);
   };
 
-  const handleTariffSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleDiscountSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
 
-    const tariffData = {
+    const discountData = {
       name: formData.get("name") as string,
       description: formData.get("description") as string,
-      price: parseFloat(formData.get("price") as string),
-      durationDays: formData.get("durationDays") ? parseInt(formData.get("durationDays") as string) : undefined,
-      lessonCount: formData.get("lessonCount") ? parseInt(formData.get("lessonCount") as string) : undefined,
+      type: formData.get("type") as "percentage" | "fixed",
+      value: parseFloat(formData.get("value") as string),
+      isActive: formData.get("isActive") === "true",
     };
 
-    if (selectedTariff) {
-      await updateTariff.mutateAsync({ id: selectedTariff.id, data: tariffData });
+    if (selectedDiscount) {
+      await updateDiscount.mutateAsync({ id: selectedDiscount.id, data: discountData });
     } else {
-      await createTariff.mutateAsync(tariffData);
+      await createDiscount.mutateAsync(discountData);
     }
 
-    setIsTariffDialogOpen(false);
-    setSelectedTariff(null);
+    setIsDiscountDialogOpen(false);
+    setSelectedDiscount(null);
   };
 
   const handleDebtSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -143,7 +143,7 @@ export default function Finance() {
   const endIndexDebts = startIndexDebts + ITEMS_PER_PAGE;
   const paginatedDebts = debts.slice(startIndexDebts, endIndexDebts);
 
-  if (transactionsLoading || balancesLoading || tariffsLoading || debtsLoading) {
+  if (transactionsLoading || balancesLoading || debtsLoading || discountsLoading) {
     return (
       <div className="flex h-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -212,7 +212,7 @@ export default function Finance() {
         <TabsList>
           <TabsTrigger value="transactions">Транзакции</TabsTrigger>
           <TabsTrigger value="balances">Балансы</TabsTrigger>
-          <TabsTrigger value="tariffs">Тарифы</TabsTrigger>
+          <TabsTrigger value="discounts">Скидки</TabsTrigger>
           <TabsTrigger value="debts">Долги</TabsTrigger>
         </TabsList>
 
@@ -459,65 +459,130 @@ export default function Finance() {
           )}
         </TabsContent>
 
-        {/* Tariffs Tab */}
-        <TabsContent value="tariffs" className="space-y-4">
+        {/* Discounts Tab */}
+        <TabsContent value="discounts" className="space-y-4">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Тарифы</h2>
-            <Dialog open={isTariffDialogOpen} onOpenChange={(open) => { setIsTariffDialogOpen(open); if (!open) setSelectedTariff(null); }}>
+            <h2 className="text-xl font-semibold">Скидки</h2>
+            <Dialog open={isDiscountDialogOpen} onOpenChange={(open) => { setIsDiscountDialogOpen(open); if (!open) setSelectedDiscount(null); }}>
               <DialogTrigger asChild>
                 <Button>
                   <Plus className="mr-2 h-4 w-4" />
-                  Создать тариф
+                  Создать скидку
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>{selectedTariff ? "Редактировать тариф" : "Новый тариф"}</DialogTitle>
+                  <DialogTitle>{selectedDiscount ? "Редактировать скидку" : "Новая скидка"}</DialogTitle>
                 </DialogHeader>
-                <form onSubmit={handleTariffSubmit} className="space-y-4">
+                <form onSubmit={handleDiscountSubmit} className="space-y-4">
                   <div>
                     <Label htmlFor="name">Название</Label>
-                    <Input id="name" name="name" defaultValue={selectedTariff?.name} required />
+                    <Input id="name" name="name" defaultValue={selectedDiscount?.name} required />
                   </div>
                   <div>
                     <Label htmlFor="description">Описание</Label>
-                    <Input id="description" name="description" defaultValue={selectedTariff?.description} />
+                    <Input id="description" name="description" defaultValue={selectedDiscount?.description} />
                   </div>
                   <div>
-                    <Label htmlFor="price">Цена (₸)</Label>
-                    <Input id="price" name="price" type="number" step="0.01" defaultValue={selectedTariff?.price} required />
+                    <Label htmlFor="type">Тип скидки</Label>
+                    <Select name="type" defaultValue={selectedDiscount?.type || "percentage"} required>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="percentage">Процентная</SelectItem>
+                        <SelectItem value="fixed">Фиксированная сумма</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
-                    <Label htmlFor="lessonCount">Количество уроков (необязательно)</Label>
-                    <Input id="lessonCount" name="lessonCount" type="number" defaultValue={selectedTariff?.lessonCount} placeholder="Неограничено" />
+                    <Label htmlFor="value">
+                      {selectedDiscount?.type === "fixed" || document.querySelector('[name="type"]')?.getAttribute('value') === 'fixed' ? "Сумма (₸)" : "Процент (%)"}
+                    </Label>
+                    <Input id="value" name="value" type="number" step="0.01" defaultValue={selectedDiscount?.value} required />
                   </div>
                   <div>
-                    <Label htmlFor="durationDays">Срок действия (дней, необязательно)</Label>
-                    <Input id="durationDays" name="durationDays" type="number" defaultValue={selectedTariff?.durationDays} placeholder="Неограничено" />
+                    <Label htmlFor="isActive">Активна</Label>
+                    <Select name="isActive" defaultValue={selectedDiscount?.isActive ? "true" : "false"} required>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="true">Да</SelectItem>
+                        <SelectItem value="false">Нет</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <Button type="submit" className="w-full">{selectedTariff ? "Сохранить" : "Создать"}</Button>
+                  <Button type="submit" className="w-full">{selectedDiscount ? "Сохранить" : "Создать"}</Button>
                 </form>
               </DialogContent>
             </Dialog>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {tariffs.map(tariff => (
-              <Card key={tariff.id} className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => { setSelectedTariff(tariff); setIsTariffDialogOpen(true); }}>
-                <CardHeader>
-                  <CardTitle>{tariff.name}</CardTitle>
-                  <p className="text-sm text-muted-foreground">{tariff.description}</p>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold mb-2">{tariff.price.toLocaleString()} ₸</div>
-                  <div className="space-y-1 text-sm text-muted-foreground">
-                    <div>Уроков: {tariff.lessonCount || "Неограничено"}</div>
-                    <div>Срок: {tariff.durationDays ? `${tariff.durationDays} дней` : "Неограничено"}</div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          {discountsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : discounts.length === 0 ? (
+            <Card>
+              <CardContent className="py-8">
+                <p className="text-center text-muted-foreground">Нет скидок</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {discounts.map(discount => (
+                <Card key={discount.id} className="cursor-pointer hover:shadow-lg transition-shadow">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle>{discount.name}</CardTitle>
+                      <Badge variant={discount.isActive ? "default" : "secondary"}>
+                        {discount.isActive ? "Активна" : "Неактивна"}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{discount.description}</p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-2xl font-bold">
+                          {discount.type === "percentage" 
+                            ? `${discount.value}%` 
+                            : `${discount.value.toLocaleString()} ₸`}
+                        </div>
+                        <div className="text-sm text-muted-foreground mt-1">
+                          {discount.type === "percentage" ? "Процентная скидка" : "Фиксированная сумма"}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedDiscount(discount);
+                            setIsDiscountDialogOpen(true);
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            if (confirm("Вы уверены, что хотите удалить эту скидку?")) {
+                              deleteDiscount.mutate(discount.id);
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         {/* Debts Tab */}

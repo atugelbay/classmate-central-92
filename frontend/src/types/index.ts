@@ -192,6 +192,27 @@ export interface Tariff {
   createdAt: string;
 }
 
+export interface Discount {
+  id: string;
+  name: string;
+  description: string;
+  type: "percentage" | "fixed";
+  value: number; // Percentage (0-100) or fixed amount
+  isActive: boolean;
+  createdAt: string;
+  companyId?: string;
+}
+
+export interface StudentDiscount {
+  id: number;
+  studentId: string;
+  discountId: string;
+  appliedAt: string;
+  expiresAt?: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
 export interface DebtRecord {
   id: number;
   studentId: string;

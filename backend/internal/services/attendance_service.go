@@ -283,6 +283,117 @@ func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendan
 		}
 	}
 
+	// Handle excused absence: add lesson and extend subscription
+	if req.Status == "missed" && req.Reason != "" && req.Reason != "unexcused" {
+		// Get active subscription
+		var activeSub models.StudentSubscription
+		query := `
+			SELECT id, student_id, end_date, paid_till, total_lessons, used_lessons, remaining_lessons
+			FROM student_subscriptions
+			WHERE student_id = $1 AND status = 'active'
+			ORDER BY created_at DESC
+			LIMIT 1
+		`
+		err := tx.QueryRow(query, req.StudentID).Scan(
+			&activeSub.ID, &activeSub.StudentID, &activeSub.EndDate,
+			&activeSub.PaidTill, &activeSub.TotalLessons, &activeSub.UsedLessons, &activeSub.LessonsRemaining,
+		)
+
+		if err == nil {
+			// Get lesson details to create a make-up lesson
+			var lessonTitle, lessonSubject, lessonTeacherID, lessonGroupID sql.NullString
+			var lessonStart, lessonEnd time.Time
+			err = tx.QueryRow(`
+				SELECT title, subject, teacher_id, group_id, start_time, end_time
+				FROM lessons
+				WHERE id = $1 AND company_id = $2
+			`, req.LessonID, companyID).Scan(
+				&lessonTitle, &lessonSubject, &lessonTeacherID, &lessonGroupID, &lessonStart, &lessonEnd,
+			)
+
+			if err == nil {
+				// Calculate lesson duration
+				duration := lessonEnd.Sub(lessonStart)
+
+				// Extend subscription end date by 1 day (add make-up lesson)
+				var newEndDate *time.Time
+				var newPaidTill *time.Time
+				if activeSub.EndDate != nil {
+					extended := activeSub.EndDate.AddDate(0, 0, 1)
+					newEndDate = &extended
+				}
+				if activeSub.PaidTill != nil {
+					extended := activeSub.PaidTill.AddDate(0, 0, 1)
+					newPaidTill = &extended
+				}
+
+				// Update subscription
+				_, err = tx.Exec(`
+					UPDATE student_subscriptions
+					SET end_date = $1, paid_till = $2, total_lessons = total_lessons + 1, remaining_lessons = remaining_lessons + 1, updated_at = NOW()
+					WHERE id = $3
+				`, newEndDate, newPaidTill, activeSub.ID)
+				if err != nil {
+					return nil, fmt.Errorf("error extending subscription for excused absence: %w", err)
+				}
+
+				// Create make-up lesson after subscription end date
+				var makeUpLessonStart time.Time
+				if activeSub.EndDate != nil {
+					makeUpLessonStart = activeSub.EndDate.AddDate(0, 0, 1)
+				} else {
+					makeUpLessonStart = time.Now().AddDate(0, 0, 1)
+				}
+				makeUpLessonEnd := makeUpLessonStart.Add(duration)
+
+				makeUpLessonID := fmt.Sprintf("makeup-%s-%d", req.StudentID, time.Now().Unix())
+				lessonTitleValue := lessonTitle.String
+				if lessonTitleValue == "" {
+					lessonTitleValue = "Отработка"
+				}
+
+				_, err = tx.Exec(`
+					INSERT INTO lessons (id, title, teacher_id, group_id, subject, start_time, end_time, status, company_id)
+					VALUES ($1, $2, $3, $4, $5, $6, $7, 'scheduled', $8)
+				`, makeUpLessonID, lessonTitleValue+" (отработка)",
+					lessonTeacherID, lessonGroupID, lessonSubject, makeUpLessonStart, makeUpLessonEnd, companyID)
+				if err != nil {
+					return nil, fmt.Errorf("error creating make-up lesson: %w", err)
+				}
+
+				// Add student to make-up lesson
+				_, err = tx.Exec(`
+					INSERT INTO lesson_students (lesson_id, student_id, company_id)
+					VALUES ($1, $2, $3)
+					ON CONFLICT DO NOTHING
+				`, makeUpLessonID, req.StudentID, companyID)
+				if err != nil {
+					return nil, fmt.Errorf("error adding student to make-up lesson: %w", err)
+				}
+
+				// Log activity
+				extendMetadata := map[string]interface{}{
+					"subscription_id": activeSub.ID,
+					"makeup_lesson_id": makeUpLessonID,
+					"original_lesson_id": req.LessonID,
+					"reason": req.Reason,
+				}
+				extendMetadataJSON, _ := json.Marshal(extendMetadata)
+				extendMetadataStr := string(extendMetadataJSON)
+
+				extendActivityLog := &models.StudentActivityLog{
+					StudentID:    req.StudentID,
+					ActivityType: "subscription_change",
+					Description:  fmt.Sprintf("Добавлен урок за пропуск по уважительной причине. Абонемент продлен на 1 день."),
+					Metadata:     &extendMetadataStr,
+					CreatedBy:    markedBy,
+					CreatedAt:    time.Now(),
+				}
+				_ = s.activityRepo.LogActivity(extendActivityLog)
+			}
+		}
+	}
+
 	// Log attendance activity
 	statusText := map[string]string{
 		"attended":  "Посетил занятие",

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import moment from "moment";
 import "moment/locale/ru";
-import { useGroups, useCreateGroup, useUpdateGroup, useDeleteGroup, useTeachers, useStudents, useRooms, useCheckConflicts, useLessons } from "@/hooks/useData";
+import { useGroups, useCreateGroup, useUpdateGroup, useDeleteGroup, useTeachers, useStudents, useRooms, useCheckConflicts, useLessons, useExtendGroup } from "@/hooks/useData";
 
 moment.locale("ru");
 import { GroupScheduleForm } from "@/components/GroupScheduleForm";
@@ -48,6 +48,7 @@ export default function Groups() {
   const createGroup = useCreateGroup();
   const updateGroup = useUpdateGroup();
   const deleteGroup = useDeleteGroup();
+  const extendGroup = useExtendGroup();
   
   const [searchQuery, setSearchQuery] = useState("");
   const [activityFilter, setActivityFilter] = useState<"all" | "active" | "inactive">("active");
@@ -724,6 +725,23 @@ export default function Groups() {
                     </div>
                   )}
                   <div className="flex gap-2 pt-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        extendGroup.mutate(group.id);
+                      }}
+                      disabled={extendGroup.isPending}
+                    >
+                      {extendGroup.isPending ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Clock className="h-4 w-4 mr-2" />
+                      )}
+                      Продлить
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"

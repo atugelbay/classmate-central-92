@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import moment from "moment";
 import "moment/locale/ru";
-import { Room, Lesson, Teacher, Group } from "@/types";
+import { Room, Lesson, Teacher, Group, Student } from "@/types";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
-import { Edit2, X, Clock, User, Users, Eye } from "lucide-react";
+import { Edit2, X, Clock, User, Users } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 
 moment.locale("ru");
@@ -15,10 +16,12 @@ interface WeekScheduleViewProps {
   lessons: Lesson[];
   teachers: Teacher[];
   groups: Group[];
+  students: Student[];
   selectedDate: Date;
   onLessonClick?: (lesson: Lesson) => void;
   onSlotClick?: (start: Date, end: Date, roomId: string) => void;
   onLessonUpdate?: (lessonId: string, updates: { start: Date; end: Date; roomId?: string }) => void;
+  unmarkedLessonIds?: Set<string>;
 }
 
 export default function WeekScheduleView({
@@ -26,11 +29,14 @@ export default function WeekScheduleView({
   lessons,
   teachers,
   groups,
+  students,
   selectedDate,
   onLessonClick,
   onSlotClick,
   onLessonUpdate,
+  unmarkedLessonIds = new Set(),
 }: WeekScheduleViewProps) {
+  const navigate = useNavigate();
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [draggingLesson, setDraggingLesson] = useState<Lesson | null>(null);
@@ -330,6 +336,10 @@ export default function WeekScheduleView({
                               <Card
                                 className={`p-1 hover:shadow-md transition-shadow cursor-pointer select-none overflow-hidden ${
                                   isDragged ? 'opacity-50' : ''
+                                } ${
+                                  unmarkedLessonIds.has(lesson.id)
+                                    ? 'border-red-500 border-2 animate-pulse bg-red-50'
+                                    : ''
                                 }`}
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -394,15 +404,49 @@ export default function WeekScheduleView({
                                       <Badge variant="outline">{getGroupName(lesson.groupId)}</Badge>
                                     </div>
                                   )}
+
+                                  {/* Students List */}
+                                  {(() => {
+                                    let lessonStudentIds: string[] = [];
+                                    if (lesson.groupId) {
+                                      const group = groups.find(g => g.id === lesson.groupId);
+                                      if (group) {
+                                        lessonStudentIds = group.studentIds || [];
+                                      }
+                                    }
+                                    lessonStudentIds = [...new Set([...lessonStudentIds, ...(lesson.studentIds || [])])];
+
+                                    return lessonStudentIds.length > 0 && (
+                                      <div className="pt-2 border-t">
+                                        <h3 className="text-sm font-semibold mb-2">Ученики ({lessonStudentIds.length})</h3>
+                                        <div className="flex flex-col gap-2 max-h-48 overflow-y-auto">
+                                          {lessonStudentIds.map(studentId => {
+                                            const student = students.find(s => s.id === studentId);
+                                            return student ? (
+                                              <div
+                                                key={studentId}
+                                                className="flex items-center gap-2 px-3 py-1.5 bg-accent/10 rounded-md text-sm cursor-pointer hover:bg-accent/20 transition-colors"
+                                                onClick={() => {
+                                                  navigate(`/students/${student.id}`);
+                                                  setPopoverOpen(false);
+                                                }}
+                                              >
+                                                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-accent/20 text-xs font-semibold">
+                                                  {student.name.charAt(0)}
+                                                </div>
+                                                <span>{student.name}</span>
+                                              </div>
+                                            ) : null;
+                                          })}
+                                        </div>
+                                      </div>
+                                    );
+                                  })()}
                                 </div>
 
-                                <div className="flex gap-2 pt-2">
-                                  <Button 
-                                    onClick={handleEditClick}
-                                    className="flex-1"
-                                  >
-                                    <Eye className="h-4 w-4 mr-2" />
-                                    Посмотреть
+                                <div className="flex flex-col gap-2 pt-2">
+                                  <Button onClick={handleEditClick}>
+                                    <Edit2 className="h-4 w-4 mr-2" /> Редактировать урок
                                   </Button>
                                 </div>
                               </div>

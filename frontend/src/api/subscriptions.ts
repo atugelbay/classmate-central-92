@@ -90,6 +90,26 @@ export const getSubscriptionFreezes = async (
   const response = await apiClient.get(
     `/subscriptions/${subscriptionId}/freezes`
   );
+  const items = Array.isArray(response.data) ? response.data : [];
+  // Normalize snake_case from backend to camelCase expected by frontend types
+  return items.map((f: any) => ({
+    id: f.id,
+    subscriptionId: f.subscription_id ?? f.subscriptionId,
+    freezeStart: f.freeze_start ?? f.freezeStart,
+    freezeEnd: f.freeze_end ?? f.freezeEnd,
+    reason: f.reason ?? "",
+    createdAt: f.created_at ?? f.createdAt,
+  }));
+};
+
+export const freezeSubscription = async (
+  subscriptionId: string,
+  data: { freezeStart: string; freezeEnd: string; reason?: string }
+): Promise<StudentSubscription> => {
+  const response = await apiClient.post(
+    `/subscriptions/${subscriptionId}/freeze`,
+    data
+  );
   return response.data;
 };
 
