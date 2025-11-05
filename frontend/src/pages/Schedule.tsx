@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import moment from "moment";
 import "moment/locale/ru";
 
 import { useLessons, useDeleteLesson, useUpdateLesson, useTeachers, useGroups, useRooms, useCreateRoom, useStudents, useMarkAttendance } from "@/hooks/useData";
+import { useLessonAttendances } from "@/hooks/useLessonAttendances";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Loader2, Trash2, ChevronLeft, ChevronRight, Building2, Calendar, CalendarDays, CalendarRange, CheckCircle2, XCircle, Clock, Edit, ClipboardCheck } from "lucide-react";
@@ -62,12 +63,66 @@ export default function Schedule() {
   const [lessonFormMode, setLessonFormMode] = useState<"create" | "edit">("create");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isRoomDialogOpen, setIsRoomDialogOpen] = useState(false);
-  const [isLessonDetailsDialogOpen, setIsLessonDetailsDialogOpen] = useState(false);
   const [isAttendanceDialogOpen, setIsAttendanceDialogOpen] = useState(false);
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<"day" | "week" | "month">("day");
   const [attendanceData, setAttendanceData] = useState<Record<string, { status: string; reason: string; notes: string }>>({});
+  
+  // Get all passed lessons that need attendance check
+  const passedLessonIds = useMemo(() => {
+    const now = moment();
+    return lessons
+      .filter((lesson) => {
+        const lessonStart = moment(lesson.start);
+        return lessonStart.isBefore(now) && lesson.status !== "cancelled";
+      })
+      .map((lesson) => lesson.id);
+  }, [lessons]);
+
+  // Fetch attendances for all passed lessons
+  const { data: attendancesMap = new Map() } = useLessonAttendances(passedLessonIds);
+
+  // Check which lessons are unmarked
+  // A lesson is unmarked if it has passed but attendance isn't complete for all students
+  const unmarkedLessonIds = useMemo(() => {
+    const now = moment();
+    const unmarked = new Set<string>();
+    
+    lessons.forEach((lesson) => {
+      const lessonStart = moment(lesson.start);
+      
+      // Only check lessons that have passed and are not cancelled
+      if (lessonStart.isAfter(now) || lesson.status === "cancelled") {
+        return;
+      }
+      
+      // Get all students for this lesson
+      let lessonStudentIds: string[] = [];
+      if (lesson.studentIds && lesson.studentIds.length > 0) {
+        lessonStudentIds = [...lesson.studentIds];
+      }
+      if (lesson.groupId) {
+        const group = groups.find((g) => g.id === lesson.groupId);
+        if (group && group.studentIds) {
+          lessonStudentIds = [...new Set([...lessonStudentIds, ...group.studentIds])];
+        }
+      }
+      
+      // If lesson has students, check if attendance is marked for all
+      if (lessonStudentIds.length > 0) {
+        const attendances = attendancesMap.get(lesson.id) || [];
+        const markedStudentIds = new Set(attendances.map((a) => a.studentId));
+        const allMarked = lessonStudentIds.every((studentId) => markedStudentIds.has(studentId));
+        
+        if (!allMarked) {
+          unmarked.add(lesson.id);
+        }
+      }
+    });
+    
+    return unmarked;
+  }, [lessons, groups, attendancesMap]);
 
   const handleSlotClick = (start: Date, end: Date, roomId: string) => {
     setLessonFormData({
@@ -104,10 +159,6 @@ export default function Schedule() {
     }
   };
 
-  const handleLessonClick = (lesson: Lesson) => {
-    setSelectedLesson(lesson);
-    setIsLessonDetailsDialogOpen(true);
-  };
 
   const handleLessonUpdate = async (lessonId: string, updates: { start: Date; end: Date; roomId?: string }) => {
     try {
@@ -169,7 +220,6 @@ export default function Schedule() {
     });
     setAttendanceData(initialData);
     setIsAttendanceDialogOpen(true);
-    setIsLessonDetailsDialogOpen(false);
   };
 
   const handleOpenAttendance = () => {
@@ -200,7 +250,6 @@ export default function Schedule() {
     });
     
     setAttendanceData(initialData);
-    setIsLessonDetailsDialogOpen(false);
     setIsAttendanceDialogOpen(true);
   };
 
@@ -476,13 +525,15 @@ export default function Schedule() {
               lessons={lessons}
               teachers={teachers}
               groups={groups}
+              students={students}
               selectedDate={selectedDate}
-              onLessonClick={handleLessonClick}
+              onLessonClick={handleEditLesson}
               onSlotClick={handleSlotClick}
               onLessonUpdate={handleLessonUpdate}
               onCancelLesson={handleCancelLesson}
               onResumeLesson={handleResumeLesson}
               onOpenAttendance={openAttendanceForLesson}
+              unmarkedLessonIds={unmarkedLessonIds}
             />
           )}
           {viewMode === "week" && (
@@ -491,8 +542,10 @@ export default function Schedule() {
               lessons={lessons}
               teachers={teachers}
               groups={groups}
+              students={students}
               selectedDate={selectedDate}
-              onLessonClick={handleLessonClick}
+              unmarkedLessonIds={unmarkedLessonIds}
+              onLessonClick={handleEditLesson}
               onSlotClick={handleSlotClick}
               onLessonUpdate={handleLessonUpdate}
             />
@@ -524,115 +577,6 @@ export default function Schedule() {
         }}
       />
 
-      {/* Lesson Details Dialog */}
-      <Dialog open={isLessonDetailsDialogOpen} onOpenChange={setIsLessonDetailsDialogOpen}>
-        <DialogContent className="sm:max-w-2xl w-[95vw] overflow-x-hidden">
-          <DialogHeader>
-            <DialogTitle>{selectedLesson?.title}</DialogTitle>
-          </DialogHeader>
-          {selectedLesson && (
-            <div className="space-y-6 max-h-[80vh] overflow-y-auto pr-1">
-              {/* Lesson Information */}
-              <div className="bg-muted p-4 rounded-lg space-y-3">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <span className="text-sm text-muted-foreground">Дата</span>
-                    <p className="font-medium">{moment.utc(selectedLesson.start).local().format("DD MMMM YYYY")}</p>
-                  </div>
-                  <div>
-                    <span className="text-sm text-muted-foreground">Время</span>
-                    <p className="font-medium">
-                      {moment.utc(selectedLesson.start).local().format("HH:mm")} - {moment.utc(selectedLesson.end).local().format("HH:mm")}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-sm text-muted-foreground">Предмет</span>
-                    <p className="font-medium">{selectedLesson.subject}</p>
-                  </div>
-                  <div>
-                    <span className="text-sm text-muted-foreground">Преподаватель</span>
-                    <p className="font-medium">
-                      {selectedLesson.teacherName || "—"}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-sm text-muted-foreground">Аудитория</span>
-                    <p className="font-medium">{rooms.find(r => r.id === selectedLesson.roomId)?.name || "—"}</p>
-                  </div>
-                  {selectedLesson.groupId && (
-                    <div>
-                      <span className="text-sm text-muted-foreground">Группа</span>
-                      <p className="font-medium">
-                        {groups.find(g => g.id === selectedLesson.groupId)?.name || "—"}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Students List */}
-              {(() => {
-                let lessonStudentIds: string[] = [];
-                if (selectedLesson.groupId) {
-                  const group = groups.find(g => g.id === selectedLesson.groupId);
-                  if (group) {
-                    lessonStudentIds = group.studentIds || [];
-                  }
-                }
-                lessonStudentIds = [...new Set([...lessonStudentIds, ...(selectedLesson.studentIds || [])])];
-
-                return lessonStudentIds.length > 0 && (
-                  <div>
-                    <h3 className="text-sm font-semibold mb-2">Ученики ({lessonStudentIds.length})</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {lessonStudentIds.map(studentId => {
-                        const student = students.find(s => s.id === studentId);
-                        return student ? (
-                          <div
-                            key={studentId}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-accent/10 rounded-md text-sm cursor-pointer hover:bg-accent/20 transition-colors"
-                            onClick={() => {
-                              navigate(`/students/${student.id}`);
-                              setIsLessonDetailsDialogOpen(false);
-                            }}
-                          >
-                            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-accent/20 text-xs font-semibold">
-                              {student.name.charAt(0)}
-                            </div>
-                            <span>{student.name}</span>
-                          </div>
-                        ) : null;
-                      })}
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {/* Action Buttons */}
-              <div className="pt-4 border-t flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    if (selectedLesson) {
-                      setIsLessonDetailsDialogOpen(false);
-                      handleEditLesson(selectedLesson);
-                    }
-                  }}
-                >
-                  <Edit className="h-4 w-4 mr-2" />
-                  Редактировать урок
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => { setIsLessonDetailsDialogOpen(false); setSelectedLesson(null); }}
-                >
-                  Закрыть
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
 
       {/* Attendance Dialog */}
       <Dialog open={isAttendanceDialogOpen} onOpenChange={setIsAttendanceDialogOpen}>

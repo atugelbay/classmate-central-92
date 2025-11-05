@@ -9,6 +9,7 @@ import { leadsApi } from "@/api/leads";
 import * as financeApi from "@/api/finance";
 import * as subscriptionsApi from "@/api/subscriptions";
 import * as dashboardApi from "@/api/dashboard";
+import * as discountsApi from "@/api/discounts";
 import { rolesAPI } from "@/api/roles";
 import { 
   Teacher, 
@@ -23,6 +24,7 @@ import {
   PaymentTransaction,
   StudentBalance,
   Tariff,
+  Discount,
   DebtRecord,
   SubscriptionType,
   StudentSubscription,
@@ -227,6 +229,21 @@ export const useGenerateGroupLessons = () => {
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.error || "Ошибка при создании уроков");
+    },
+  });
+};
+
+export const useExtendGroup = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: groupsAPI.extend,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["lessons"] });
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
+      toast.success(`Группа продлена. Создано ${data.count} новых уроков`);
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при продлении группы");
     },
   });
 };
@@ -691,6 +708,107 @@ export const useDeleteTariff = () => {
   });
 };
 
+// ============= DISCOUNT HOOKS =============
+
+export const useDiscounts = () => {
+  return useQuery({
+    queryKey: ["discounts"],
+    queryFn: discountsApi.getAll,
+  });
+};
+
+export const useDiscountById = (id: string) => {
+  return useQuery({
+    queryKey: ["discounts", id],
+    queryFn: () => discountsApi.getById(id),
+    enabled: !!id,
+  });
+};
+
+export const useCreateDiscount = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Omit<Discount, "id" | "createdAt">) =>
+      discountsApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["discounts"] });
+      toast.success("Скидка создана");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при создании скидки");
+    },
+  });
+};
+
+export const useUpdateDiscount = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Discount> }) =>
+      discountsApi.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["discounts"] });
+      toast.success("Скидка обновлена");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при обновлении скидки");
+    },
+  });
+};
+
+export const useDeleteDiscount = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: discountsApi.delete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["discounts"] });
+      toast.success("Скидка удалена");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при удалении скидки");
+    },
+  });
+};
+
+export const useStudentDiscounts = (studentId: string) => {
+  return useQuery({
+    queryKey: ["discounts", "student", studentId],
+    queryFn: () => discountsApi.getStudentDiscounts(studentId),
+    enabled: !!studentId,
+  });
+};
+
+export const useApplyDiscountToStudent = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ studentId, data }: { studentId: string; data: { discountId: string; expiresAt?: string } }) =>
+      discountsApi.applyToStudent(studentId, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["discounts", "student", variables.studentId] });
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      toast.success("Скидка применена к студенту");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при применении скидки");
+    },
+  });
+};
+
+export const useRemoveStudentDiscount = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ studentId, discountId }: { studentId: string; discountId: string }) =>
+      discountsApi.removeStudentDiscount(studentId, discountId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["discounts", "student", variables.studentId] });
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      toast.success("Скидка удалена");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при удалении скидки");
+    },
+  });
+};
+
 // Debts
 export const useDebts = (status?: string) => {
   return useQuery({
@@ -896,6 +1014,27 @@ export const useDeleteSubscription = () => {
   });
 };
 
+export const useFreezeSubscription = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ subscriptionId, data }: { subscriptionId: string; data: { freezeStart: string; freezeEnd: string; reason?: string } }) =>
+      subscriptionsApi.freezeSubscription(subscriptionId, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+      queryClient.invalidateQueries({ queryKey: ["lessons"] });
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      // Invalidate freezes for this subscription so calendar shows frozen days immediately
+      if (variables?.subscriptionId) {
+        queryClient.invalidateQueries({ queryKey: ["subscriptions", variables.subscriptionId, "freezes"] });
+      }
+      toast.success("Абонемент заморожен");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при заморозке абонемента");
+    },
+  });
+};
+
 // Subscription Freezes
 export const useSubscriptionFreezes = (subscriptionId: string) => {
   return useQuery({
@@ -915,6 +1054,9 @@ export const useCreateFreeze = () => {
       queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
       queryClient.invalidateQueries({ queryKey: ["balances"] });
       queryClient.invalidateQueries({ queryKey: ["students"] });
+      if (variables?.subscriptionId) {
+        queryClient.invalidateQueries({ queryKey: ["subscriptions", variables.subscriptionId, "freezes"] });
+      }
       toast.success("Заморозка создана");
     },
     onError: (error: any) => {
@@ -930,6 +1072,8 @@ export const useUpdateFreeze = () => {
     onSuccess: () => {
       // Invalidate all subscription-related queries to ensure UI updates everywhere
       queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+      // Broadly invalidate all freezes
+      queryClient.invalidateQueries({ queryKey: ["subscriptions", undefined as any, "freezes" ] });
       queryClient.invalidateQueries({ queryKey: ["balances"] });
       queryClient.invalidateQueries({ queryKey: ["students"] });
       toast.success("Заморозка обновлена");
@@ -948,6 +1092,8 @@ export const useMarkAttendance = () => {
     onSuccess: () => {
       // Invalidate all related queries to ensure complete UI update
       queryClient.invalidateQueries({ queryKey: ["attendance"] });
+      queryClient.invalidateQueries({ queryKey: ["attendances"] });
+      queryClient.invalidateQueries({ queryKey: ["lessons"] });
       queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
       queryClient.invalidateQueries({ queryKey: ["students"] });
       queryClient.invalidateQueries({ queryKey: ["transactions"] });

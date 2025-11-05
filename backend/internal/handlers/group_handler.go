@@ -140,3 +140,38 @@ func (h *GroupHandler) GenerateLessons(c *gin.Context) {
 		"count":   lessonsCreated,
 	})
 }
+
+// ExtendGroup generates additional lessons for a group
+func (h *GroupHandler) ExtendGroup(c *gin.Context) {
+	groupID := c.Param("id")
+	companyID := c.GetString("company_id")
+
+	log.Printf("🚀 Extending group %s (company: %s)", groupID, companyID)
+
+	// Get the group
+	group, err := h.repo.GetByID(groupID, companyID)
+	if err != nil {
+		log.Printf("❌ Error getting group: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if group == nil {
+		log.Printf("❌ Group not found: %s", groupID)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Group not found"})
+		return
+	}
+
+	// Generate additional lessons (12 more)
+	lessonsCreated, err := h.repo.GenerateLessonsForGroup(group, companyID)
+	if err != nil {
+		log.Printf("❌ Error generating lessons: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	log.Printf("✅ Successfully extended group with %d additional lessons", lessonsCreated)
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Group extended successfully",
+		"count":   lessonsCreated,
+	})
+}

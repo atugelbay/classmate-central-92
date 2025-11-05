@@ -230,13 +230,31 @@ func (r *GroupRepository) Update(group *models.Group, companyID string) error {
 	}
 	defer tx.Rollback()
 
+	// Convert empty room_id to NULL to avoid foreign key constraint violations
+	var roomID interface{}
+	if group.RoomID == "" {
+		roomID = nil
+	} else {
+		// Verify room exists before updating
+		var roomExists bool
+		err = tx.QueryRow(`SELECT EXISTS(SELECT 1 FROM rooms WHERE id = $1 AND company_id = $2)`, group.RoomID, companyID).Scan(&roomExists)
+		if err != nil {
+			return fmt.Errorf("error checking room existence: %w", err)
+		}
+		if !roomExists {
+			roomID = nil // Set to NULL if room doesn't exist
+		} else {
+			roomID = group.RoomID
+		}
+	}
+
 	// Update group
 	query := `
 		UPDATE groups 
 		SET name = $2, subject = $3, teacher_id = $4, room_id = $5, schedule = $6, description = $7, status = $8, color = $9
 		WHERE id = $1 AND company_id = $10
 	`
-	_, err = tx.Exec(query, group.ID, group.Name, group.Subject, group.TeacherID, group.RoomID, group.Schedule, group.Description, group.Status, group.Color, companyID)
+	_, err = tx.Exec(query, group.ID, group.Name, group.Subject, group.TeacherID, roomID, group.Schedule, group.Description, group.Status, group.Color, companyID)
 	if err != nil {
 		return fmt.Errorf("error updating group: %w", err)
 	}

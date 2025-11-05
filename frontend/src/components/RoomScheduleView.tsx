@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import moment from "moment";
 import "moment/locale/ru";
-import { Room, Lesson, Teacher, Group } from "@/types";
+import { Room, Lesson, Teacher, Group, Student } from "@/types";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
-import { Edit2, X, Clock, User, Users, Eye } from "lucide-react";
+import { Edit2, X, Clock, User, Users } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 
 moment.locale("ru");
@@ -15,6 +16,7 @@ interface RoomScheduleViewProps {
   lessons: Lesson[];
   teachers: Teacher[];
   groups: Group[];
+  students: Student[];
   selectedDate: Date;
   onLessonClick?: (lesson: Lesson) => void;
   onSlotClick?: (start: Date, end: Date, roomId: string) => void;
@@ -22,6 +24,7 @@ interface RoomScheduleViewProps {
   onCancelLesson?: (lesson: Lesson) => void;
   onResumeLesson?: (lesson: Lesson) => void;
   onOpenAttendance?: (lesson: Lesson) => void;
+  unmarkedLessonIds?: Set<string>;
 }
 
 export default function RoomScheduleView({
@@ -29,6 +32,7 @@ export default function RoomScheduleView({
   lessons,
   teachers,
   groups,
+  students,
   selectedDate,
   onLessonClick,
   onSlotClick,
@@ -36,7 +40,9 @@ export default function RoomScheduleView({
   onCancelLesson,
   onResumeLesson,
   onOpenAttendance,
+  unmarkedLessonIds = new Set(),
 }: RoomScheduleViewProps) {
+  const navigate = useNavigate();
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -561,9 +567,15 @@ export default function RoomScheduleView({
                         />
                         
                         <Card
-                          className={`h-full overflow-hidden border-l-4 ${lesson.status === 'cancelled' ? 'opacity-60 grayscale' : ''}`}
+                          className={`h-full overflow-hidden border-l-4 ${
+                            lesson.status === 'cancelled' 
+                              ? 'opacity-60 grayscale' 
+                              : unmarkedLessonIds.has(lesson.id)
+                              ? 'border-red-500 border-2 animate-pulse bg-red-50'
+                              : ''
+                          }`}
                           style={{ 
-                            borderLeftColor: room.color,
+                            borderLeftColor: unmarkedLessonIds.has(lesson.id) ? undefined : room.color,
                             padding: showMinimalInfo ? "4px 6px" : "8px"
                           }}
                         >
@@ -628,9 +640,6 @@ export default function RoomScheduleView({
                             <span>
                               {moment.utc(lesson.start).local().format("HH:mm")} - {moment.utc(lesson.end).local().format("HH:mm")}
                             </span>
-                            <span className="text-muted-foreground">
-                              ({duration} мин)
-                            </span>
                           </div>
 
                           <div className="flex items-center gap-2 text-sm">
@@ -645,6 +654,44 @@ export default function RoomScheduleView({
                             </div>
                           )}
 
+                          {/* Students List */}
+                          {(() => {
+                            let lessonStudentIds: string[] = [];
+                            if (lesson.groupId) {
+                              const group = groups.find(g => g.id === lesson.groupId);
+                              if (group) {
+                                lessonStudentIds = group.studentIds || [];
+                              }
+                            }
+                            lessonStudentIds = [...new Set([...lessonStudentIds, ...(lesson.studentIds || [])])];
+
+                            return lessonStudentIds.length > 0 && (
+                              <div className="pt-2 border-t">
+                                <h3 className="text-sm font-semibold mb-2">Ученики ({lessonStudentIds.length})</h3>
+                                <div className="flex flex-col gap-2 max-h-48 overflow-y-auto">
+                                  {lessonStudentIds.map(studentId => {
+                                    const student = students.find(s => s.id === studentId);
+                                    return student ? (
+                                      <div
+                                        key={studentId}
+                                        className="flex items-center gap-2 px-3 py-1.5 bg-accent/10 rounded-md text-sm cursor-pointer hover:bg-accent/20 transition-colors"
+                                        onClick={() => {
+                                          navigate(`/students/${student.id}`);
+                                          setPopoverOpen(false);
+                                        }}
+                                      >
+                                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-accent/20 text-xs font-semibold">
+                                          {student.name.charAt(0)}
+                                        </div>
+                                        <span>{student.name}</span>
+                                      </div>
+                                    ) : null;
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })()}
+
                           <div className="pt-2 border-t">
                             <div className="text-sm text-muted-foreground">
                               <span className="font-medium">Аудитория:</span> {lessonRoom?.name || "Не указана"}
@@ -657,7 +704,7 @@ export default function RoomScheduleView({
 
                         <div className="flex flex-col gap-2 pt-2">
                           <Button onClick={handleEditClick}>
-                            <Eye className="h-4 w-4 mr-2" /> Посмотреть
+                            <Edit2 className="h-4 w-4 mr-2" /> Редактировать урок
                           </Button>
                           {lesson.status === "cancelled" ? (
                             <Button
