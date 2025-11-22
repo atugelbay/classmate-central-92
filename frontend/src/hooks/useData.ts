@@ -632,6 +632,24 @@ export const useCreateTransaction = () => {
   });
 };
 
+export const useUpdateTransaction = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<PaymentTransaction> }) =>
+      financeApi.updateTransaction(id, data),
+    onSuccess: () => {
+      // Invalidate all finance-related queries
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["balances"] });
+      queryClient.invalidateQueries({ queryKey: ["students"] });
+      toast.success("Транзакция обновлена");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при обновлении транзакции");
+    },
+  });
+};
+
 // Student Balances
 export const useStudentBalance = (studentId: string) => {
   return useQuery({

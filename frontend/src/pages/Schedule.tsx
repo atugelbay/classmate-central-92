@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import moment from "moment";
 import "moment/locale/ru";
 
-import { useLessons, useDeleteLesson, useUpdateLesson, useTeachers, useGroups, useRooms, useCreateRoom, useStudents, useMarkAttendance } from "@/hooks/useData";
+import { useLessons, useDeleteLesson, useUpdateLesson, useTeachers, useGroups, useRooms, useCreateRoom, useStudents, useMarkAttendance, useAllSubscriptions } from "@/hooks/useData";
 import { useLessonAttendances } from "@/hooks/useLessonAttendances";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,6 +53,7 @@ export default function Schedule() {
   const { data: groups = [] } = useGroups();
   const { data: rooms = [] } = useRooms();
   const { data: students = [] } = useStudents();
+  const { data: subscriptions = [] } = useAllSubscriptions();
   const deleteLesson = useDeleteLesson();
   const updateLesson = useUpdateLesson();
   const createRoom = useCreateRoom();
@@ -526,6 +527,7 @@ export default function Schedule() {
               teachers={teachers}
               groups={groups}
               students={students}
+              subscriptions={subscriptions}
               selectedDate={selectedDate}
               onLessonClick={handleEditLesson}
               onSlotClick={handleSlotClick}
@@ -543,6 +545,7 @@ export default function Schedule() {
               teachers={teachers}
               groups={groups}
               students={students}
+              subscriptions={subscriptions}
               selectedDate={selectedDate}
               unmarkedLessonIds={unmarkedLessonIds}
               onLessonClick={handleEditLesson}

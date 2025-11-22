@@ -302,8 +302,21 @@ func (r *SubscriptionRepository) GetFreezesBySubscription(subscriptionID string)
 	freezes := []models.SubscriptionFreeze{}
 	for rows.Next() {
 		var freeze models.SubscriptionFreeze
-		if err := rows.Scan(&freeze.ID, &freeze.SubscriptionID, &freeze.FreezeStart, &freeze.FreezeEnd, &freeze.Reason, &freeze.CreatedAt); err != nil {
+		var freezeEnd sql.NullTime
+		var reason sql.NullString
+		if err := rows.Scan(&freeze.ID, &freeze.SubscriptionID, &freeze.FreezeStart, &freezeEnd, &reason, &freeze.CreatedAt); err != nil {
 			return nil, err
+		}
+		if freezeEnd.Valid {
+			t := freezeEnd.Time
+			freeze.FreezeEnd = &t
+		} else {
+			freeze.FreezeEnd = nil
+		}
+		if reason.Valid {
+			freeze.Reason = reason.String
+		} else {
+			freeze.Reason = ""
 		}
 		freezes = append(freezes, freeze)
 	}

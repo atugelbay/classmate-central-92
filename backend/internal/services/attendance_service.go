@@ -11,11 +11,11 @@ import (
 )
 
 type AttendanceService struct {
-	subscriptionRepo         *repository.SubscriptionRepository
-	consumptionRepo          *repository.SubscriptionConsumptionRepository
-	activityRepo             *repository.ActivityRepository
-	notificationRepo         *repository.NotificationRepository
-	db                       *sql.DB
+	subscriptionRepo *repository.SubscriptionRepository
+	consumptionRepo  *repository.SubscriptionConsumptionRepository
+	activityRepo     *repository.ActivityRepository
+	notificationRepo *repository.NotificationRepository
+	db               *sql.DB
 }
 
 func NewAttendanceService(
@@ -43,19 +43,19 @@ func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendan
 	}
 	defer tx.Rollback()
 
-    // Guard: prevent marking attendance before lesson start (company timezone)
-    var lessonStart time.Time
-    if err := tx.QueryRow(`SELECT start_time FROM lessons WHERE id = $1 AND company_id = $2`, req.LessonID, companyID).Scan(&lessonStart); err == nil {
-        // Load company timezone; fallback to Asia/Almaty
-        tz := "Asia/Almaty"
-        _ = tx.QueryRow(`SELECT timezone FROM settings WHERE company_id = $1 LIMIT 1`, companyID).Scan(&tz)
-        if loc, locErr := time.LoadLocation(tz); locErr == nil {
-            now := time.Now().In(loc)
-            if now.Before(lessonStart.In(loc)) {
-                return nil, fmt.Errorf("attendance cannot be marked before lesson start")
-            }
-        }
-    }
+	// Guard: prevent marking attendance before lesson start (company timezone)
+	var lessonStart time.Time
+	if err := tx.QueryRow(`SELECT start_time FROM lessons WHERE id = $1 AND company_id = $2`, req.LessonID, companyID).Scan(&lessonStart); err == nil {
+		// Load company timezone; fallback to Asia/Almaty
+		tz := "Asia/Almaty"
+		_ = tx.QueryRow(`SELECT timezone FROM settings WHERE company_id = $1 LIMIT 1`, companyID).Scan(&tz)
+		if loc, locErr := time.LoadLocation(tz); locErr == nil {
+			now := time.Now().In(loc)
+			if now.Before(lessonStart.In(loc)) {
+				return nil, fmt.Errorf("attendance cannot be marked before lesson start")
+			}
+		}
+	}
 
 	// Create attendance record
 	attendance := &models.LessonAttendance{
@@ -69,26 +69,26 @@ func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendan
 		CompanyID: companyID,
 	}
 
-    // Check if attendance already exists and was marked as a deductible state
-    // If so, don't deduct again to prevent double charging
-    var existingStatus sql.NullString
-    var existingReason sql.NullString
-    err = tx.QueryRow(`
+	// Check if attendance already exists and was marked as a deductible state
+	// If so, don't deduct again to prevent double charging
+	var existingStatus sql.NullString
+	var existingReason sql.NullString
+	err = tx.QueryRow(`
         SELECT status, reason FROM lesson_attendance 
         WHERE lesson_id = $1 AND student_id = $2
     `, req.LessonID, req.StudentID).Scan(&existingStatus, &existingReason)
 
-    alreadyDeducted := false
-    if err == nil && existingStatus.Valid {
-        if existingStatus.String == "attended" || (existingStatus.String == "missed" && existingReason.Valid && existingReason.String == "unexcused") {
-            alreadyDeducted = true
-        }
-    }
+	alreadyDeducted := false
+	if err == nil && existingStatus.Valid {
+		if existingStatus.String == "attended" || (existingStatus.String == "missed" && existingReason.Valid && existingReason.String == "unexcused") {
+			alreadyDeducted = true
+		}
+	}
 
-    // If student attended or missed with unexcused reason, try to deduct from active subscription
+	// If student attended or missed with unexcused reason, try to deduct from active subscription
 	var subscriptionID *string
-    needsDeduction := req.Status == "attended" || (req.Status == "missed" && req.Reason == "unexcused")
-    if needsDeduction && !alreadyDeducted {
+	needsDeduction := req.Status == "attended" || (req.Status == "missed" && req.Reason == "unexcused")
+	if needsDeduction && !alreadyDeducted {
 		// Get active subscription with billing type and price using transaction
 		var activeSub models.StudentSubscription
 		var billingType string
@@ -179,15 +179,15 @@ func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendan
 						return nil, fmt.Errorf("error deducting from balance: %w", err)
 					}
 
-                // Create deduction transaction for history
-                _, err = tx.Exec(`
+					// Create deduction transaction for history
+					_, err = tx.Exec(`
                     INSERT INTO payment_transactions (
                         student_id, amount, type, payment_method, description, created_at, company_id
                     ) VALUES ($1, $2, 'deduction', 'subscription', $3, CURRENT_TIMESTAMP, $4)
                     ON CONFLICT DO NOTHING
                 `, req.StudentID, pricePerLesson,
-                    fmt.Sprintf("Списание за занятие (Урок ID: %s)", req.LessonID),
-                    companyID)
+						fmt.Sprintf("Списание за занятие (Урок ID: %s)", req.LessonID),
+						companyID)
 					if err != nil {
 						return nil, fmt.Errorf("error creating deduction transaction: %w", err)
 					}
@@ -256,8 +256,8 @@ func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendan
 		return nil, fmt.Errorf("error marking attendance: %w", err)
 	}
 
-    // Create subscription_consumption record if subscription was used
-    if subscriptionID != nil && needsDeduction && !alreadyDeducted {
+	// Create subscription_consumption record if subscription was used
+	if subscriptionID != nil && needsDeduction && !alreadyDeducted {
 		// Check if consumption already exists (to prevent double creation)
 		var existingConsumptionID sql.NullInt64
 		err = tx.QueryRow(`
@@ -330,7 +330,10 @@ func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendan
 				// Update subscription
 				_, err = tx.Exec(`
 					UPDATE student_subscriptions
-					SET end_date = $1, paid_till = $2, total_lessons = total_lessons + 1, remaining_lessons = remaining_lessons + 1, updated_at = NOW()
+					SET end_date = $1,
+					    paid_till = $2,
+					    total_lessons = total_lessons + 1,
+					    updated_at = NOW()
 					WHERE id = $3
 				`, newEndDate, newPaidTill, activeSub.ID)
 				if err != nil {
@@ -373,10 +376,10 @@ func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendan
 
 				// Log activity
 				extendMetadata := map[string]interface{}{
-					"subscription_id": activeSub.ID,
-					"makeup_lesson_id": makeUpLessonID,
+					"subscription_id":    activeSub.ID,
+					"makeup_lesson_id":   makeUpLessonID,
 					"original_lesson_id": req.LessonID,
-					"reason": req.Reason,
+					"reason":             req.Reason,
 				}
 				extendMetadataJSON, _ := json.Marshal(extendMetadata)
 				extendMetadataStr := string(extendMetadataJSON)
