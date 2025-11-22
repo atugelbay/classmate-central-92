@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import moment from "moment";
 import "moment/locale/ru";
-import { Room, Lesson, Teacher, Group, Student } from "@/types";
+import { Room, Lesson, Teacher, Group, Student, StudentSubscription } from "@/types";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -17,6 +17,7 @@ interface RoomScheduleViewProps {
   teachers: Teacher[];
   groups: Group[];
   students: Student[];
+  subscriptions?: StudentSubscription[];
   selectedDate: Date;
   onLessonClick?: (lesson: Lesson) => void;
   onSlotClick?: (start: Date, end: Date, roomId: string) => void;
@@ -33,6 +34,7 @@ export default function RoomScheduleView({
   teachers,
   groups,
   students,
+  subscriptions = [],
   selectedDate,
   onLessonClick,
   onSlotClick,
@@ -102,6 +104,38 @@ export default function RoomScheduleView({
     if (!groupId) return null;
     const group = groups.find((g) => g.id === groupId);
     return group?.name;
+  };
+
+  // Get student status color based on remaining lessons
+  const getStudentStatusColor = (studentId: string) => {
+    // Find active subscriptions for this student
+    const activeSubscriptions = subscriptions.filter(
+      (sub) => sub.studentId === studentId && sub.status === "active"
+    );
+
+    if (activeSubscriptions.length === 0) {
+      // No active subscription - check if there are any expired/completed subscriptions
+      const expiredSubscriptions = subscriptions.filter(
+        (sub) => sub.studentId === studentId && (sub.status === "expired" || sub.status === "completed")
+      );
+      if (expiredSubscriptions.length > 0) {
+        return "bg-red-100 border-red-300 text-red-800"; // Red for expired/completed
+      }
+      return "bg-green-100 border-green-300 text-green-800"; // Default green if no subscription data
+    }
+
+    // Get the maximum lessonsRemaining from all active subscriptions
+    const maxLessonsRemaining = Math.max(
+      ...activeSubscriptions.map((sub) => sub.lessonsRemaining || 0)
+    );
+
+    if (maxLessonsRemaining === 0) {
+      return "bg-red-100 border-red-300 text-red-800"; // Red for no lessons remaining
+    } else if (maxLessonsRemaining === 1) {
+      return "bg-yellow-100 border-yellow-300 text-yellow-800"; // Yellow for 1 lesson remaining
+    } else {
+      return "bg-green-100 border-green-300 text-green-800"; // Green for 2+ lessons remaining
+    }
   };
 
   const getDisplayStatus = (lesson: Lesson) => {
@@ -674,13 +708,13 @@ export default function RoomScheduleView({
                                     return student ? (
                                       <div
                                         key={studentId}
-                                        className="flex items-center gap-2 px-3 py-1.5 bg-accent/10 rounded-md text-sm cursor-pointer hover:bg-accent/20 transition-colors"
+                                        className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm cursor-pointer border transition-colors hover:opacity-80 ${getStudentStatusColor(studentId)}`}
                                         onClick={() => {
                                           navigate(`/students/${student.id}`);
                                           setPopoverOpen(false);
                                         }}
                                       >
-                                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-accent/20 text-xs font-semibold">
+                                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white/50 text-xs font-semibold">
                                           {student.name.charAt(0)}
                                         </div>
                                         <span>{student.name}</span>

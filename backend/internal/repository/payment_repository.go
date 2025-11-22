@@ -169,6 +169,113 @@ func (r *PaymentRepository) CreateTransactionWithBalance(tx *models.PaymentTrans
 	return nil
 }
 
+func calculateBalanceAdjustment(txType string, amount float64) float64 {
+	switch txType {
+	case "payment":
+		return amount
+	case "refund":
+		return amount
+	case "debt":
+		return -amount
+	default:
+		return amount
+	}
+}
+
+// UpdateTransactionWithBalance updates a transaction and syncs the student's balance atomically
+func (r *PaymentRepository) UpdateTransactionWithBalance(txID int, companyID string, update *models.PaymentTransactionUpdate) (*models.PaymentTransaction, error) {
+	dbTx, err := r.db.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("error starting transaction: %w", err)
+	}
+	defer dbTx.Rollback()
+
+	var existing models.PaymentTransaction
+	query := `SELECT id, student_id, amount, type, payment_method, description, created_at, created_by
+	          FROM payment_transactions
+	          WHERE id = $1 AND company_id = $2
+	          FOR UPDATE`
+	err = dbTx.QueryRow(query, txID, companyID).Scan(
+		&existing.ID,
+		&existing.StudentID,
+		&existing.Amount,
+		&existing.Type,
+		&existing.PaymentMethod,
+		&existing.Description,
+		&existing.CreatedAt,
+		&existing.CreatedBy,
+	)
+	if err == sql.ErrNoRows {
+		return nil, sql.ErrNoRows
+	}
+	if err != nil {
+		return nil, fmt.Errorf("error fetching transaction: %w", err)
+	}
+
+	newAmount := existing.Amount
+	if update.Amount != nil {
+		newAmount = *update.Amount
+	}
+
+	newPaymentMethod := existing.PaymentMethod
+	if update.PaymentMethod != nil {
+		newPaymentMethod = *update.PaymentMethod
+	}
+
+	newDescription := existing.Description
+	if update.Description != nil {
+		newDescription = *update.Description
+	}
+
+	_, err = dbTx.Exec(
+		`UPDATE payment_transactions SET amount = $1, payment_method = $2, description = $3 WHERE id = $4 AND company_id = $5`,
+		newAmount,
+		newPaymentMethod,
+		newDescription,
+		txID,
+		companyID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("error updating transaction: %w", err)
+	}
+
+	oldAdjustment := calculateBalanceAdjustment(existing.Type, existing.Amount)
+	newAdjustment := calculateBalanceAdjustment(existing.Type, newAmount)
+	delta := newAdjustment - oldAdjustment
+
+	if delta != 0 {
+		result, err := dbTx.Exec(
+			`UPDATE student_balance 
+			 SET balance = balance + $1, 
+			     last_payment_date = CASE WHEN $1 > 0 THEN CURRENT_TIMESTAMP ELSE last_payment_date END,
+			     version = version + 1
+			 WHERE student_id = $2`,
+			delta,
+			existing.StudentID,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error updating balance: %w", err)
+		}
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			return nil, fmt.Errorf("error checking balance update: %w", err)
+		}
+		if rowsAffected == 0 {
+			return nil, fmt.Errorf("balance record not found for student %s", existing.StudentID)
+		}
+	}
+
+	if err = dbTx.Commit(); err != nil {
+		return nil, fmt.Errorf("error committing transaction: %w", err)
+	}
+
+	existing.Amount = newAmount
+	existing.PaymentMethod = newPaymentMethod
+	existing.Description = newDescription
+
+	return &existing, nil
+}
+
 func (r *PaymentRepository) GetAllBalances(companyID string) ([]models.StudentBalance, error) {
 	query := `SELECT sb.student_id, sb.balance, sb.last_payment_date 
 	          FROM student_balance sb

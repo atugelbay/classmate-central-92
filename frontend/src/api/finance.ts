@@ -29,6 +29,14 @@ export const getTransactionsByStudent = async (
   return response.data;
 };
 
+export const updateTransaction = async (
+  id: number,
+  data: Partial<PaymentTransaction>
+): Promise<PaymentTransaction> => {
+  const response = await apiClient.put(`/payments/transactions/${id}`, data);
+  return response.data;
+};
+
 // ============= Student Balances =============
 
 export const getStudentBalance = async (

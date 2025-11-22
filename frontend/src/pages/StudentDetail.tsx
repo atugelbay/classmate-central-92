@@ -19,6 +19,7 @@ import {
   useLessons,
   useTeachers,
   useCreateTransaction,
+  useUpdateTransaction,
   useFreezeSubscription,
   useUpdateGroup,
   useDiscounts,
@@ -64,7 +65,7 @@ import {
   Paperclip,
   GripVertical,
 } from "lucide-react";
-import { Discount } from "@/types";
+import { Discount, PaymentTransaction } from "@/types";
 import moment from "moment";
 import "moment/locale/ru";
 
@@ -134,6 +135,7 @@ export default function StudentDetail() {
   const updateStatus = useUpdateStudentStatus();
   const markNotificationRead = useMarkNotificationRead();
   const createTransaction = useCreateTransaction();
+  const updateTransaction = useUpdateTransaction();
   const freezeSubscription = useFreezeSubscription();
   const updateGroup = useUpdateGroup();
   const applyDiscount = useApplyDiscountToStudent();
@@ -144,6 +146,8 @@ export default function StudentDetail() {
   const [selectedStatus, setSelectedStatus] = useState<string>("");
   const [isAssignSubModalOpen, setIsAssignSubModalOpen] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [isEditPaymentDialogOpen, setIsEditPaymentDialogOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<PaymentTransaction | null>(null);
   const [selectedSubscriptionForFreeze, setSelectedSubscriptionForFreeze] = useState<any>(null);
   const [isFreezeModalOpen, setIsFreezeModalOpen] = useState(false);
 
@@ -244,29 +248,41 @@ export default function StudentDetail() {
     }
   };
 
+  const handleEditTransactionClick = (transaction: PaymentTransaction) => {
+    setEditingTransaction(transaction);
+    setIsEditPaymentDialogOpen(true);
+  };
+
   // Combine lessons and transactions for timeline
   const allOperations = [
-    ...transactions.map(tx => ({
+    ...transactions.map((tx) => ({
+      key: `transaction-${tx.id}`,
       date: tx.createdAt,
-      type: 'transaction',
+      type: "transaction" as const,
+      transaction: tx,
       operation: tx.type === "payment" ? "Оплата" : tx.type === "refund" ? "Возврат" : "Долг",
       description: tx.description || tx.paymentMethod,
       amount: tx.type === "payment" ? tx.amount : -tx.amount,
-      badge: tx.type === "payment" ? "default" : "destructive"
+      badge: tx.type === "payment" ? "default" : "destructive",
     })),
-    ...journal.filter(j => j.status === "attended").map(j => {
-      const sub = subscriptions.find(s => s.id === j.subscriptionId);
-      const lessonCost = sub?.pricePerLesson || 0;
-      return {
-        date: j.startTime,
-        type: 'lesson',
-        operation: "Списание",
-        description: `${j.lessonTitle} (${moment(j.startTime).format("HH:mm")})`,
-        amount: -lessonCost,
-        badge: "secondary"
-      };
-    })
-  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 15);
+    ...journal
+      .filter((j) => j.status === "attended")
+      .map((j) => {
+        const sub = subscriptions.find((s) => s.id === j.subscriptionId);
+        const lessonCost = sub?.pricePerLesson || 0;
+        return {
+          key: `lesson-${j.lessonId || j.startTime}`,
+          date: j.startTime,
+          type: "lesson" as const,
+          operation: "Списание",
+          description: `${j.lessonTitle} (${moment(j.startTime).format("HH:mm")})`,
+          amount: -lessonCost,
+          badge: "secondary",
+        };
+      }),
+  ]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 15);
 
   return (
     <div className="space-y-6 animate-fade-in-up">
@@ -508,7 +524,7 @@ export default function StudentDetail() {
                 </div>
                 <div className="space-y-3 max-h-[400px] overflow-y-auto">
                   {allOperations.map((op, idx) => (
-                    <div key={`${op.type}-${idx}`} className="flex items-start gap-3 p-3 border rounded-lg hover:bg-accent/50">
+                    <div key={op.key || `${op.type}-${idx}`} className="flex items-start gap-3 p-3 border rounded-lg hover:bg-accent/50">
                       <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                         {op.type === 'transaction' ? (
                           <DollarSign className="h-4 w-4 text-primary" />
@@ -530,9 +546,22 @@ export default function StudentDetail() {
                           )}
                         </div>
                       </div>
-                      {op.type === 'transaction' && (
-                        <div className={`text-sm font-semibold ${op.amount > 0 ? "text-green-600" : "text-red-600"}`}>
-                          {op.amount > 0 ? "+" : ""}{op.amount.toLocaleString()} ₸
+                      {op.type === "transaction" && (
+                        <div className="flex items-center gap-2">
+                          <div className={`text-sm font-semibold ${op.amount > 0 ? "text-green-600" : "text-red-600"}`}>
+                            {op.amount > 0 ? "+" : ""}
+                            {op.amount.toLocaleString()} ₸
+                          </div>
+                          {op.transaction?.type === "payment" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => op.transaction && handleEditTransactionClick(op.transaction)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -853,6 +882,108 @@ export default function StudentDetail() {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Payment Dialog */}
+      <Dialog
+        open={isEditPaymentDialogOpen}
+        onOpenChange={(open) => {
+          setIsEditPaymentDialogOpen(open);
+          if (!open) {
+            setEditingTransaction(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Изменить платеж</DialogTitle>
+          </DialogHeader>
+          {editingTransaction ? (
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!editingTransaction) return;
+                const formData = new FormData(e.currentTarget);
+                const amountInput = parseFloat(formData.get("amount") as string);
+                const amount = Number.isNaN(amountInput) ? editingTransaction.amount : Math.abs(amountInput);
+                const paymentMethod = formData.get("paymentMethod") as PaymentTransaction["paymentMethod"];
+                const description = (formData.get("description") as string) || "";
+
+                try {
+                  await updateTransaction.mutateAsync({
+                    id: editingTransaction.id,
+                    data: {
+                      amount,
+                      paymentMethod,
+                      description,
+                    },
+                  });
+                  setIsEditPaymentDialogOpen(false);
+                  setEditingTransaction(null);
+                } catch (error) {
+                  // Error handled by mutation
+                }
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <Label htmlFor="edit-amount">Сумма (₸)</Label>
+                <Input
+                  id="edit-amount"
+                  name="amount"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  required
+                  defaultValue={editingTransaction.amount}
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-paymentMethod">Способ оплаты</Label>
+                <Select name="paymentMethod" defaultValue={editingTransaction.paymentMethod} required>
+                  <SelectTrigger id="edit-paymentMethod">
+                    <SelectValue placeholder="Выберите способ оплаты" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">Наличные</SelectItem>
+                    <SelectItem value="card">Карта</SelectItem>
+                    <SelectItem value="transfer">Перевод</SelectItem>
+                    <SelectItem value="other">Другое</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="edit-description">Описание (опционально)</Label>
+                <Textarea
+                  id="edit-description"
+                  name="description"
+                  placeholder="Дополнительная информация..."
+                  rows={3}
+                  defaultValue={editingTransaction.description}
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditPaymentDialogOpen(false);
+                    setEditingTransaction(null);
+                  }}
+                >
+                  Отмена
+                </Button>
+                <Button type="submit" disabled={updateTransaction.isPending}>
+                  {updateTransaction.isPending ? "Сохранение..." : "Сохранить изменения"}
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <p className="text-sm text-muted-foreground py-4">
+              Выберите платеж из списка для редактирования
+            </p>
+          )}
         </DialogContent>
       </Dialog>
 

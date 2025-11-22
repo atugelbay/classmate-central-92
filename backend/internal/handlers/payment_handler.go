@@ -5,7 +5,10 @@ import (
 	"classmate-central/internal/repository"
 	"classmate-central/internal/services"
 	"classmate-central/internal/validation"
+	"database/sql"
+	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -52,7 +55,7 @@ func (h *PaymentHandler) CreateTransaction(c *gin.Context) {
 	}
 
 	companyID := c.GetString("company_id")
-	
+
 	// Use atomic transaction method to ensure data consistency
 	if err := h.repo.CreateTransactionWithBalance(&tx, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create transaction: " + err.Error()})
@@ -114,4 +117,52 @@ func (h *PaymentHandler) GetAllBalances(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, balances)
+}
+
+// UpdateTransaction updates an existing transaction and keeps balance in sync
+func (h *PaymentHandler) UpdateTransaction(c *gin.Context) {
+	idParam := c.Param("id")
+	txID, err := strconv.Atoi(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid transaction id"})
+		return
+	}
+
+	var input models.PaymentTransactionUpdate
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": validation.FormatValidationErrors(err)})
+		return
+	}
+
+	if input.Amount == nil && input.PaymentMethod == nil && input.Description == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "nothing to update"})
+		return
+	}
+
+	if input.Amount != nil {
+		if err := validation.ValidateAmount(*input.Amount); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
+	if input.PaymentMethod != nil {
+		if err := validation.ValidateOneOf(*input.PaymentMethod, []string{"cash", "card", "transfer", "other"}, "paymentMethod"); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
+	companyID := c.GetString("company_id")
+	updated, err := h.repo.UpdateTransactionWithBalance(txID, companyID, &input)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "transaction not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, updated)
 }

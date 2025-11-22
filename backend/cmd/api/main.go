@@ -148,7 +148,7 @@ func main() {
 		// Students
 		api.GET("/students", studentHandler.GetAll)
 		api.POST("/students", studentHandler.Create)
-		
+
 		// Student-specific routes (must be before /students/:id)
 		api.GET("/students/:id/activities", studentHandler.GetActivities)
 		api.POST("/students/:id/notes", studentHandler.AddNote)
@@ -159,12 +159,12 @@ func main() {
 		api.GET("/students/:id/discounts", discountHandler.GetStudentDiscounts)
 		api.POST("/students/:id/discounts", discountHandler.ApplyToStudent)
 		api.DELETE("/students/:id/discounts/:discountId", discountHandler.RemoveStudentDiscount)
-		
+
 		// General student routes
 		api.GET("/students/:id", studentHandler.GetByID)
 		api.PUT("/students/:id", studentHandler.Update)
 		api.DELETE("/students/:id", studentHandler.Delete)
-		
+
 		api.PUT("/notifications/:notificationId/read", studentHandler.MarkNotificationRead)
 
 		// Groups
@@ -221,6 +221,7 @@ func main() {
 		api.POST("/payments/transactions", paymentHandler.CreateTransaction)
 		api.GET("/payments/transactions", paymentHandler.GetAllTransactions)
 		api.GET("/payments/transactions/student/:studentId", paymentHandler.GetTransactionsByStudent)
+		api.PUT("/payments/transactions/:id", paymentHandler.UpdateTransaction)
 
 		// Student Balances
 		api.GET("/payments/balance/:studentId", paymentHandler.GetStudentBalance)

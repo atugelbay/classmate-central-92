@@ -4,16 +4,16 @@ import "time"
 
 // User represents authentication user
 type User struct {
-	ID        int       `json:"id" db:"id"`
-	Email     string    `json:"email" db:"email"`
-	Password  string    `json:"-" db:"password"`
-	Name      string    `json:"name" db:"name"`
-	CompanyID string    `json:"companyId" db:"company_id"`
-	RoleID    *string   `json:"roleId,omitempty" db:"role_id"`
-	Roles     []*Role   `json:"roles,omitempty"` // Populated via JOIN
-	Permissions []string `json:"permissions,omitempty"` // Populated from roles
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+	ID          int       `json:"id" db:"id"`
+	Email       string    `json:"email" db:"email"`
+	Password    string    `json:"-" db:"password"`
+	Name        string    `json:"name" db:"name"`
+	CompanyID   string    `json:"companyId" db:"company_id"`
+	RoleID      *string   `json:"roleId,omitempty" db:"role_id"`
+	Roles       []*Role   `json:"roles,omitempty"`       // Populated via JOIN
+	Permissions []string  `json:"permissions,omitempty"` // Populated from roles
+	CreatedAt   time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
 }
 
 // Company represents a company/tenant in the system
@@ -55,21 +55,21 @@ type Student struct {
 
 // Lesson represents a lesson/class
 type Lesson struct {
-	ID         string    `json:"id" db:"id"`
-	Title      string    `json:"title" db:"title"`
-	TeacherID  string    `json:"teacherId" db:"teacher_id"`
-	TeacherName string   `json:"teacherName,omitempty" db:"teacher_name"` // Populated via JOIN
-	GroupID    string    `json:"groupId,omitempty" db:"group_id"`
-	GroupName  string    `json:"groupName,omitempty" db:"group_name"` // Populated via JOIN
-	Subject    string    `json:"subject" db:"subject"`
-	Start      time.Time `json:"start" db:"start_time"`
-	End        time.Time `json:"end" db:"end_time"`
-	Room       string    `json:"room" db:"room"`
-	RoomID     string    `json:"roomId,omitempty" db:"room_id"`
-	RoomName   string    `json:"roomName,omitempty" db:"room_name"` // Populated via JOIN
-	Status     string    `json:"status" db:"status"` // scheduled, completed, cancelled
-	StudentIds []string  `json:"studentIds"`
-	CompanyID  string    `json:"companyId" db:"company_id"`
+	ID          string    `json:"id" db:"id"`
+	Title       string    `json:"title" db:"title"`
+	TeacherID   string    `json:"teacherId" db:"teacher_id"`
+	TeacherName string    `json:"teacherName,omitempty" db:"teacher_name"` // Populated via JOIN
+	GroupID     string    `json:"groupId,omitempty" db:"group_id"`
+	GroupName   string    `json:"groupName,omitempty" db:"group_name"` // Populated via JOIN
+	Subject     string    `json:"subject" db:"subject"`
+	Start       time.Time `json:"start" db:"start_time"`
+	End         time.Time `json:"end" db:"end_time"`
+	Room        string    `json:"room" db:"room"`
+	RoomID      string    `json:"roomId,omitempty" db:"room_id"`
+	RoomName    string    `json:"roomName,omitempty" db:"room_name"` // Populated via JOIN
+	Status      string    `json:"status" db:"status"`                // scheduled, completed, cancelled
+	StudentIds  []string  `json:"studentIds"`
+	CompanyID   string    `json:"companyId" db:"company_id"`
 }
 
 // Group represents a study group
@@ -95,7 +95,7 @@ type Settings struct {
 	CenterName string `json:"centerName" db:"center_name"`
 	Logo       string `json:"logo,omitempty" db:"logo"`
 	ThemeColor string `json:"themeColor" db:"theme_color"`
-    Timezone   string `json:"timezone" db:"timezone"`
+	Timezone   string `json:"timezone" db:"timezone"`
 	CompanyID  string `json:"companyId" db:"company_id"`
 }
 
@@ -192,6 +192,13 @@ type PaymentTransaction struct {
 	CompanyID     string    `json:"companyId" db:"company_id"`
 }
 
+// PaymentTransactionUpdate represents fields that can be updated for a transaction
+type PaymentTransactionUpdate struct {
+	Amount        *float64 `json:"amount"`
+	PaymentMethod *string  `json:"paymentMethod"`
+	Description   *string  `json:"description"`
+}
+
 // StudentBalance represents a student's financial balance
 type StudentBalance struct {
 	StudentID       string     `json:"studentId" db:"student_id"`
@@ -228,7 +235,7 @@ type Discount struct {
 	ID          string    `json:"id" db:"id"`
 	Name        string    `json:"name" db:"name"`
 	Description string    `json:"description" db:"description"`
-	Type        string    `json:"type" db:"type"` // "percentage" or "fixed"
+	Type        string    `json:"type" db:"type"`   // "percentage" or "fixed"
 	Value       float64   `json:"value" db:"value"` // Percentage (0-100) or fixed amount
 	IsActive    bool      `json:"isActive" db:"is_active"`
 	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
@@ -237,14 +244,14 @@ type Discount struct {
 
 // StudentDiscount represents a discount applied to a student
 type StudentDiscount struct {
-	ID          int       `json:"id" db:"id"`
-	StudentID   string    `json:"studentId" db:"student_id"`
-	DiscountID  string    `json:"discountId" db:"discount_id"`
-	AppliedAt   time.Time `json:"appliedAt" db:"applied_at"`
-	ExpiresAt   *time.Time `json:"expiresAt,omitempty" db:"expires_at"`
-	IsActive    bool      `json:"isActive" db:"is_active"`
-	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
-	CompanyID   string    `json:"companyId" db:"company_id"`
+	ID         int        `json:"id" db:"id"`
+	StudentID  string     `json:"studentId" db:"student_id"`
+	DiscountID string     `json:"discountId" db:"discount_id"`
+	AppliedAt  time.Time  `json:"appliedAt" db:"applied_at"`
+	ExpiresAt  *time.Time `json:"expiresAt,omitempty" db:"expires_at"`
+	IsActive   bool       `json:"isActive" db:"is_active"`
+	CreatedAt  time.Time  `json:"createdAt" db:"created_at"`
+	CompanyID  string     `json:"companyId" db:"company_id"`
 }
 
 // ============= SUBSCRIPTION MODULE =============
@@ -422,13 +429,13 @@ type ScheduleRule struct {
 	OwnerID         string     `json:"ownerId" db:"owner_id"`
 	RRule           string     `json:"rrule" db:"rrule"` // RFC 5545 RRULE format
 	DTStart         time.Time  `json:"dtstart" db:"dtstart"`
-	DTEnd            *time.Time `json:"dtend,omitempty" db:"dtend"`
+	DTEnd           *time.Time `json:"dtend,omitempty" db:"dtend"`
 	DurationMinutes int        `json:"durationMinutes" db:"duration_minutes"`
 	Timezone        string     `json:"timezone" db:"timezone"`
 	Location        *string    `json:"location,omitempty" db:"location"`
 	CompanyID       string     `json:"companyId" db:"company_id"`
 	CreatedAt       time.Time  `json:"createdAt" db:"created_at"`
-	UpdatedAt        time.Time  `json:"updatedAt" db:"updated_at"`
+	UpdatedAt       time.Time  `json:"updatedAt" db:"updated_at"`
 }
 
 // LessonOccurrence represents a materialized lesson generated from a schedule rule
@@ -471,13 +478,13 @@ type Invoice struct {
 
 // InvoiceItem represents a line item in an invoice
 type InvoiceItem struct {
-	ID          int64   `json:"id" db:"id"`
-	InvoiceID   int64   `json:"invoiceId" db:"invoice_id"`
-	Description string  `json:"description" db:"description"`
-	Quantity    int     `json:"quantity" db:"quantity"`
-	UnitPrice   float64 `json:"unitPrice" db:"unit_price"`
-	Meta        *string `json:"meta,omitempty" db:"meta"` // JSONB stored as string
-	CompanyID   string  `json:"companyId" db:"company_id"`
+	ID          int64     `json:"id" db:"id"`
+	InvoiceID   int64     `json:"invoiceId" db:"invoice_id"`
+	Description string    `json:"description" db:"description"`
+	Quantity    int       `json:"quantity" db:"quantity"`
+	UnitPrice   float64   `json:"unitPrice" db:"unit_price"`
+	Meta        *string   `json:"meta,omitempty" db:"meta"` // JSONB stored as string
+	CompanyID   string    `json:"companyId" db:"company_id"`
 	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
 }
 
@@ -485,27 +492,27 @@ type InvoiceItem struct {
 
 // Transaction represents a unified financial transaction
 type Transaction struct {
-	ID            int64      `json:"id" db:"id"`
-	PaymentID     *int       `json:"paymentId,omitempty" db:"payment_id"`
-	InvoiceID     *int64     `json:"invoiceId,omitempty" db:"invoice_id"`
+	ID             int64     `json:"id" db:"id"`
+	PaymentID      *int      `json:"paymentId,omitempty" db:"payment_id"`
+	InvoiceID      *int64    `json:"invoiceId,omitempty" db:"invoice_id"`
 	SubscriptionID *string   `json:"subscriptionId,omitempty" db:"subscription_id"`
-	Amount        float64    `json:"amount" db:"amount"`
-	Kind          string     `json:"kind" db:"kind"` // pay_invoice, buy_subscription, refund, deduction, payment
-	CreatedAt     time.Time  `json:"createdAt" db:"created_at"`
-	CompanyID     string     `json:"companyId" db:"company_id"`
+	Amount         float64   `json:"amount" db:"amount"`
+	Kind           string    `json:"kind" db:"kind"` // pay_invoice, buy_subscription, refund, deduction, payment
+	CreatedAt      time.Time `json:"createdAt" db:"created_at"`
+	CompanyID      string    `json:"companyId" db:"company_id"`
 }
 
 // ============= RBAC MODULE =============
 
 // Role represents a user role
 type Role struct {
-	ID          string       `json:"id" db:"id"`
-	Name        string       `json:"name" db:"name"`
-	Description string       `json:"description" db:"description"`
-	CompanyID   string       `json:"companyId" db:"company_id"`
+	ID          string        `json:"id" db:"id"`
+	Name        string        `json:"name" db:"name"`
+	Description string        `json:"description" db:"description"`
+	CompanyID   string        `json:"companyId" db:"company_id"`
 	Permissions []*Permission `json:"permissions,omitempty"` // Populated via JOIN
-	CreatedAt   time.Time    `json:"createdAt" db:"created_at"`
-	UpdatedAt   time.Time    `json:"updatedAt" db:"updated_at"`
+	CreatedAt   time.Time     `json:"createdAt" db:"created_at"`
+	UpdatedAt   time.Time     `json:"updatedAt" db:"updated_at"`
 }
 
 // Permission represents a permission/resource action
@@ -529,15 +536,15 @@ type UserRole struct {
 
 // CreateRoleRequest represents a request to create a role
 type CreateRoleRequest struct {
-	Name        string   `json:"name" binding:"required"`
-	Description string   `json:"description"`
+	Name          string   `json:"name" binding:"required"`
+	Description   string   `json:"description"`
 	PermissionIDs []string `json:"permissionIds"`
 }
 
 // UpdateRoleRequest represents a request to update a role
 type UpdateRoleRequest struct {
-	Name        string   `json:"name"`
-	Description string   `json:"description"`
+	Name          string   `json:"name"`
+	Description   string   `json:"description"`
 	PermissionIDs []string `json:"permissionIds"`
 }
 
