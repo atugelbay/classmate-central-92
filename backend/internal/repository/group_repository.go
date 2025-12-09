@@ -446,6 +446,9 @@ func (r *GroupRepository) GenerateLessonsForGroup(group *models.Group, companyID
 				lessonEnd.UTC().Format("15:04:05 MST"))
 
 			// Check for room conflicts if room_id is set
+			// Conflict exists if intervals overlap, but NOT if they just touch at boundaries
+			// We round times to minutes for boundary comparison to allow lessons that touch at minute boundaries
+			// (e.g., one ends at 16:00:00 and another starts at 16:00:00 - no conflict)
 			if roomID.Valid {
 				var conflictCount int
 				err := r.db.QueryRow(`
@@ -453,10 +456,10 @@ func (r *GroupRepository) GenerateLessonsForGroup(group *models.Group, companyID
 					WHERE room_id = $1 
 					AND company_id = $2
 					AND id != $3
-					AND (
-						(start_time < $5 AND end_time > $4) OR
-						(start_time >= $4 AND start_time < $5)
-					)
+					AND start_time < $5 
+					AND end_time > $4
+					AND DATE_TRUNC('minute', end_time) <> DATE_TRUNC('minute', $4)
+					AND DATE_TRUNC('minute', start_time) <> DATE_TRUNC('minute', $5)
 				`, roomID.String, companyID, lessonID, lessonStart, lessonEnd).Scan(&conflictCount)
 
 				if err != nil {

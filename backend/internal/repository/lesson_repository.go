@@ -391,6 +391,9 @@ func (r *LessonRepository) CheckConflicts(teacherID, roomID string, start, end t
 	conflicts := []ConflictInfo{}
 
 	// Check teacher conflicts
+	// Conflict exists if intervals overlap, but NOT if they just touch at boundaries
+	// We round times to minutes for boundary comparison to allow lessons that touch at minute boundaries
+	// (e.g., one ends at 16:00:00 and another starts at 16:00:00 - no conflict)
 	if teacherID != "" {
 		query := `
 			SELECT l.id, l.title, l.start_time, l.end_time, t.name as teacher_name
@@ -400,10 +403,10 @@ func (r *LessonRepository) CheckConflicts(teacherID, roomID string, start, end t
 			AND l.company_id = $2
 			AND l.id != $3
 			AND l.status != 'cancelled'
-			AND (
-				(l.start_time < $5 AND l.end_time > $4) OR
-				(l.start_time >= $4 AND l.start_time < $5)
-			)
+			AND l.start_time < $5 
+			AND l.end_time > $4
+			AND DATE_TRUNC('minute', l.end_time) <> DATE_TRUNC('minute', $4)
+			AND DATE_TRUNC('minute', l.start_time) <> DATE_TRUNC('minute', $5)
 		`
 		rows, err := r.db.Query(query, teacherID, companyID, excludeLessonID, start, end)
 		if err != nil {
@@ -427,6 +430,9 @@ func (r *LessonRepository) CheckConflicts(teacherID, roomID string, start, end t
 	}
 
 	// Check room conflicts
+	// Conflict exists if intervals overlap, but NOT if they just touch at boundaries
+	// We round times to minutes for boundary comparison to allow lessons that touch at minute boundaries
+	// (e.g., one ends at 16:00:00 and another starts at 16:00:00 - no conflict)
 	if roomID != "" {
 		query := `
 			SELECT l.id, l.title, l.start_time, l.end_time, r.name as room_name
@@ -436,10 +442,10 @@ func (r *LessonRepository) CheckConflicts(teacherID, roomID string, start, end t
 			AND l.company_id = $2
 			AND l.id != $3
 			AND l.status != 'cancelled'
-			AND (
-				(l.start_time < $5 AND l.end_time > $4) OR
-				(l.start_time >= $4 AND l.start_time < $5)
-			)
+			AND l.start_time < $5 
+			AND l.end_time > $4
+			AND DATE_TRUNC('minute', l.end_time) <> DATE_TRUNC('minute', $4)
+			AND DATE_TRUNC('minute', l.start_time) <> DATE_TRUNC('minute', $5)
 		`
 		rows, err := r.db.Query(query, roomID, companyID, excludeLessonID, start, end)
 		if err != nil {

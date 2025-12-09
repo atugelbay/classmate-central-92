@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Mail, Phone, Trash2, Edit, Loader2, AlertCircle, Clock, X } from "lucide-react";
+import { Plus, Search, Mail, Phone, Trash2, Edit, Loader2, AlertCircle, Clock, X, FileText, FileSpreadsheet } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -37,15 +37,57 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
+  PaginationEllipsis,
 } from "@/components/ui/pagination";
 import { Student } from "@/types";
 import { formatKzPhone, normalizeKzPhone } from "@/lib/phone";
+import { useConfirmDelete } from "@/hooks/useConfirmDelete";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import moment from "moment";
 import "moment/locale/ru";
+import { ExportDialog } from "@/components/ExportDialog";
+import { toast } from "sonner";
 
 moment.locale("ru");
 
 const ITEMS_PER_PAGE = 39;
+
+// Helper function to generate pagination page numbers with ellipsis
+function generatePageNumbers(currentPage: number, totalPages: number): (number | 'ellipsis')[] {
+  if (totalPages <= 7) {
+    // Show all pages if 7 or fewer
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }
+
+  const pages: (number | 'ellipsis')[] = [];
+
+  if (currentPage <= 3) {
+    // Show first 5 pages, ellipsis, last page
+    for (let i = 1; i <= 5; i++) {
+      pages.push(i);
+    }
+    pages.push('ellipsis');
+    pages.push(totalPages);
+  } else if (currentPage >= totalPages - 2) {
+    // Show first page, ellipsis, last 5 pages
+    pages.push(1);
+    pages.push('ellipsis');
+    for (let i = totalPages - 4; i <= totalPages; i++) {
+      pages.push(i);
+    }
+  } else {
+    // Show first page, ellipsis, current-1, current, current+1, ellipsis, last page
+    pages.push(1);
+    pages.push('ellipsis');
+    pages.push(currentPage - 1);
+    pages.push(currentPage);
+    pages.push(currentPage + 1);
+    pages.push('ellipsis');
+    pages.push(totalPages);
+  }
+
+  return pages;
+}
 
 // Memoized grid to avoid unnecessary re-rendering of the whole page during search
 const StudentsGrid = React.memo(function StudentsGrid({
@@ -120,9 +162,26 @@ const StudentsGrid = React.memo(function StudentsGrid({
                     </p>
                   </div>
                 </div>
-                <Badge variant={isActive ? "default" : "secondary"}>
-                  {isActive ? "Активный" : "Неактивный"}
-                </Badge>
+                {(() => {
+                  // If status is manually set to inactive/frozen/graduated, use it
+                  // Otherwise use computed status (getIsActive) for consistency with filtering
+                  const displayStatus = student.status === "inactive" || student.status === "frozen" || student.status === "graduated"
+                    ? student.status
+                    : (isActive ? "active" : "inactive");
+                  
+                  const statusLabels: Record<string, string> = {
+                    active: "Активный",
+                    inactive: "Неактивный",
+                    frozen: "Заморожен",
+                    graduated: "Закончил",
+                  };
+                  
+                  return (
+                    <Badge variant={displayStatus === "active" ? "default" : "secondary"}>
+                      {statusLabels[displayStatus] || "Неактивный"}
+                    </Badge>
+                  );
+                })()}
               </div>
             </CardHeader>
             <CardContent>
@@ -312,18 +371,27 @@ function StudentsGridContainer({
                 className={page === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
               />
             </PaginationItem>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-              <PaginationItem key={p}>
-                <PaginationLink
-                  href="#"
-                  onClick={(e) => { e.preventDefault(); onPageChange(p); }}
-                  isActive={page === p}
-                  className="cursor-pointer"
-                >
-                  {p}
-                </PaginationLink>
-              </PaginationItem>
-            ))}
+            {generatePageNumbers(page, totalPages).map((p, idx) => {
+              if (p === 'ellipsis') {
+                return (
+                  <PaginationItem key={`ellipsis-${idx}`}>
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                );
+              }
+              return (
+                <PaginationItem key={p}>
+                  <PaginationLink
+                    href="#"
+                    onClick={(e) => { e.preventDefault(); onPageChange(p); }}
+                    isActive={page === p}
+                    className="cursor-pointer"
+                  >
+                    {p}
+                  </PaginationLink>
+                </PaginationItem>
+              );
+            })}
             <PaginationItem>
               <PaginationNext
                 href="#"
@@ -367,6 +435,7 @@ export default function Students() {
   
   const [activityFilter, setActivityFilter] = useState<"all" | "active" | "inactive">("active");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
 
   // Build quick lookup maps for balances and active subscriptions
@@ -524,15 +593,13 @@ export default function Students() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm("Вы уверены, что хотите удалить этого ученика?")) {
-      try {
-        await deleteStudent.mutateAsync(id);
-      } catch (error) {
-        // Error is handled by the mutation
-      }
+  const deleteConfirm = useConfirmDelete(async (id: string) => {
+    try {
+      await deleteStudent.mutateAsync(id);
+    } catch (error) {
+      // Error is handled by the mutation
     }
-  };
+  });
 
   // Показать общий лоадер только при самом первом запросе (когда данных ещё нет)
   if (isLoading && !paged) {
@@ -552,19 +619,27 @@ export default function Students() {
             Управление базой учащихся
           </p>
         </div>
-        <Dialog
-          open={isDialogOpen}
-          onOpenChange={(open) => {
-            setIsDialogOpen(open);
-            if (!open) setEditingStudent(null);
-          }}
-        >
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Добавить ученика
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setIsExportDialogOpen(true)}
+          >
+            <FileText className="mr-2 h-4 w-4" />
+            Экспорт
+          </Button>
+          <Dialog
+            open={isDialogOpen}
+            onOpenChange={(open) => {
+              setIsDialogOpen(open);
+              if (!open) setEditingStudent(null);
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Добавить ученика
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
@@ -628,6 +703,7 @@ export default function Students() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <div className="relative">
@@ -691,9 +767,31 @@ export default function Students() {
         activityFilter={activityFilter}
         getIsActive={getIsActive}
         onEdit={handleEdit}
-        onDelete={handleDelete}
+        onDelete={(id) => deleteConfirm.open(id)}
         onNavigate={(id) => navigate(`/students/${id}`)}
         onPageChange={setCurrentPage}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteConfirm.isOpen}
+        onOpenChange={(open) => !open && deleteConfirm.close()}
+        title="Удалить ученика"
+        description="Вы уверены, что хотите удалить этого ученика? Это действие нельзя отменить."
+        confirmText="Удалить"
+        cancelText="Отмена"
+        variant="destructive"
+        onConfirm={deleteConfirm.confirm}
+      />
+
+      {/* Export Dialog */}
+      <ExportDialog
+        open={isExportDialogOpen}
+        onOpenChange={setIsExportDialogOpen}
+        type="students"
+        teachers={teachers.map(t => ({ id: t.id, name: t.name }))}
+        groups={groups.map(g => ({ id: g.id, name: g.name }))}
+        students={allStudents.map(s => ({ id: s.id, name: s.name }))}
       />
     </div>
   );

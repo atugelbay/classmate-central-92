@@ -1,0 +1,670 @@
+openapi: 3.0.3
+info:
+  title: SmartCRM API
+  description: API для мобильного и веб-приложения SmartCRM
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@smartcrm.com
+
+servers:
+  - url: http://localhost:8080/api
+    description: Development server
+  - url: https://api.smartcrm.com/api
+    description: Production server
+
+tags:
+  - name: Auth
+    description: Аутентификация и авторизация
+  - name: Students
+    description: Управление студентами
+  - name: Lessons
+    description: Управление уроками и расписанием
+  - name: Attendance
+    description: Отметка посещаемости
+  - name: Finance
+    description: Финансовые операции
+  - name: Subscriptions
+    description: Абонементы
+  - name: Groups
+    description: Группы
+  - name: Teachers
+    description: Преподаватели
+  - name: Dashboard
+    description: Дашборд и статистика
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        companyId:
+          type: string
+          format: uuid
+
+    Student:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        age:
+          type: integer
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        status:
+          type: string
+          enum: [active, inactive, frozen, graduated]
+        subjects:
+          type: array
+          items:
+            type: string
+        groupIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        balance:
+          type: number
+          format: float
+        createdAt:
+          type: string
+          format: date-time
+
+    Lesson:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        teacherId:
+          type: string
+          format: uuid
+        teacherName:
+          type: string
+        groupId:
+          type: string
+          format: uuid
+        groupName:
+          type: string
+        subject:
+          type: string
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        room:
+          type: string
+        roomId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [scheduled, completed, cancelled]
+        studentIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    Attendance:
+      type: object
+      properties:
+        id:
+          type: integer
+        lessonId:
+          type: string
+          format: uuid
+        studentId:
+          type: string
+          format: uuid
+        subscriptionId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [attended, missed, late]
+        reason:
+          type: string
+          enum: [excused, unexcused, sick, other]
+        notes:
+          type: string
+        markedBy:
+          type: integer
+        markedAt:
+          type: string
+          format: date-time
+
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: integer
+        studentId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          format: float
+        type:
+          type: string
+          enum: [payment, refund, debt]
+        paymentMethod:
+          type: string
+          enum: [cash, card, transfer, other]
+        description:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    Subscription:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        studentId:
+          type: string
+          format: uuid
+        subscriptionTypeId:
+          type: string
+          format: uuid
+        totalLessons:
+          type: integer
+        usedLessons:
+          type: integer
+        remainingLessons:
+          type: integer
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [active, expired, frozen, cancelled]
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: integer
+        studentId:
+          type: string
+          format: uuid
+        type:
+          type: string
+        message:
+          type: string
+        isRead:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+
+    PaginatedResponse:
+      type: object
+      properties:
+        data:
+          type: array
+        total:
+          type: integer
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        totalPages:
+          type: integer
+
+security:
+  - bearerAuth: []
+
+paths:
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Вход в систему
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Успешный вход
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  refresh_token:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          description: Неверные учетные данные
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/me:
+    get:
+      tags:
+        - Auth
+      summary: Получить текущего пользователя
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  /students:
+    get:
+      tags:
+        - Students
+      summary: Получить список студентов
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: query
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResponse'
+    post:
+      tags:
+        - Students
+      summary: Создать студента
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                age:
+                  type: integer
+                email:
+                  type: string
+                  format: email
+                phone:
+                  type: string
+                subjects:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '201':
+          description: Студент создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Student'
+
+  /students/{id}:
+    get:
+      tags:
+        - Students
+      summary: Получить студента по ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Student'
+
+  /students/{id}/notifications:
+    get:
+      tags:
+        - Students
+      summary: Получить уведомления студента
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
+
+  /lessons:
+    get:
+      tags:
+        - Lessons
+      summary: Получить все уроки
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Lesson'
+
+  /attendance:
+    post:
+      tags:
+        - Attendance
+      summary: Отметить посещаемость
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - lessonId
+                - studentId
+                - status
+              properties:
+                lessonId:
+                  type: string
+                  format: uuid
+                studentId:
+                  type: string
+                  format: uuid
+                status:
+                  type: string
+                  enum: [attended, missed, late]
+                reason:
+                  type: string
+                  enum: [excused, unexcused, sick, other]
+                notes:
+                  type: string
+      responses:
+        '201':
+          description: Посещаемость отмечена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Attendance'
+
+  /attendance/lesson/{lessonId}:
+    get:
+      tags:
+        - Attendance
+      summary: Получить посещаемость по уроку
+      parameters:
+        - name: lessonId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Attendance'
+
+  /payments/transactions:
+    get:
+      tags:
+        - Finance
+      summary: Получить все транзакции
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Transaction'
+    post:
+      tags:
+        - Finance
+      summary: Создать транзакцию
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - studentId
+                - amount
+                - type
+              properties:
+                studentId:
+                  type: string
+                  format: uuid
+                amount:
+                  type: number
+                  format: float
+                type:
+                  type: string
+                  enum: [payment, refund, debt]
+                paymentMethod:
+                  type: string
+                  enum: [cash, card, transfer, other]
+                description:
+                  type: string
+      responses:
+        '201':
+          description: Транзакция создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+
+  /payments/balance/{studentId}:
+    get:
+      tags:
+        - Finance
+      summary: Получить баланс студента
+      parameters:
+        - name: studentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  studentId:
+                    type: string
+                    format: uuid
+                  balance:
+                    type: number
+                    format: float
+
+  /subscriptions:
+    get:
+      tags:
+        - Subscriptions
+      summary: Получить все абонементы
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Subscription'
+
+  /subscriptions/student/{studentId}:
+    get:
+      tags:
+        - Subscriptions
+      summary: Получить абонементы студента
+      parameters:
+        - name: studentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Subscription'
+
+  /dashboard/stats:
+    get:
+      tags:
+        - Dashboard
+      summary: Получить статистику
+      responses:
+        '200':
+          description: Успешно
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  students:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      active:
+                        type: integer
+                  lessons:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      completed:
+                        type: integer
+                  finance:
+                    type: object
+                    properties:
+                      totalRevenue:
+                        type: number
+                        format: float
+                  attendance:
+                    type: object
+                    properties:
+                      rate:
+                        type: number
+                        format: float
+                      todayPresent:
+                        type: integer
+

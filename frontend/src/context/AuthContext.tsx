@@ -8,6 +8,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string, companyName: string) => Promise<void>;
+  handleAuth: (response: AuthResponse) => void;
   logout: () => void;
   hasPermission: (permissionName: string) => boolean;
   hasRole: (roleName: string) => boolean;
@@ -62,6 +63,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     handleAuthResponse(response);
   };
 
+  const handleAuth = (response: AuthResponse) => {
+    handleAuthResponse(response);
+  };
+
   const logout = () => {
     authAPI.logout();
     setUser(null);
@@ -92,6 +97,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         login,
         register,
+        handleAuth,
         logout,
         hasPermission,
         hasRole,

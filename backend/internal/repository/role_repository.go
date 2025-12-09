@@ -16,7 +16,7 @@ func NewRoleRepository(db *sql.DB) *RoleRepository {
 	return &RoleRepository{db: db}
 }
 
-// GetAll gets all roles for a company
+// GetAll gets all roles for a company with their permissions
 func (r *RoleRepository) GetAll(companyID string) ([]*models.Role, error) {
 	query := `
 		SELECT id, name, description, company_id, created_at, updated_at
@@ -41,6 +41,15 @@ func (r *RoleRepository) GetAll(companyID string) ([]*models.Role, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error scanning role: %w", err)
 		}
+
+		// Load permissions for each role
+		permissions, err := r.GetRolePermissions(role.ID)
+		if err != nil {
+			// Log error but don't fail - permissions will be empty
+			permissions = []*models.Permission{}
+		}
+		role.Permissions = permissions
+
 		roles = append(roles, role)
 	}
 
@@ -298,4 +307,3 @@ func (r *RoleRepository) CheckUserPermission(userID int, companyID string, permi
 
 	return hasPermission, nil
 }
-

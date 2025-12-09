@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import moment from "moment";
 import "moment/locale/ru";
 import { useGroups, useCreateGroup, useUpdateGroup, useDeleteGroup, useTeachers, useStudents, useRooms, useCheckConflicts, useLessons, useExtendGroup } from "@/hooks/useData";
+import { useConfirmDelete } from "@/hooks/useConfirmDelete";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 moment.locale("ru");
 import { GroupScheduleForm } from "@/components/GroupScheduleForm";
@@ -361,15 +363,13 @@ export default function Groups() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm("Вы уверены, что хотите удалить эту группу?")) {
-      try {
-        await deleteGroup.mutateAsync(id);
-      } catch (error) {
-        // Error is handled by the mutation
-      }
+  const deleteConfirm = useConfirmDelete(async (id: string) => {
+    try {
+      await deleteGroup.mutateAsync(id);
+    } catch (error) {
+      // Error is handled by the mutation
     }
-  };
+  });
 
   const toggleStudent = (studentId: string) => {
     setSelectedStudents(prev => 
@@ -759,7 +759,7 @@ export default function Groups() {
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDelete(group.id);
+                        deleteConfirm.open(group.id);
                       }}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -973,6 +973,18 @@ export default function Groups() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteConfirm.isOpen}
+        onOpenChange={(open) => !open && deleteConfirm.close()}
+        title="Удалить группу"
+        description="Вы уверены, что хотите удалить эту группу? Это действие нельзя отменить."
+        confirmText="Удалить"
+        cancelText="Отмена"
+        variant="destructive"
+        onConfirm={deleteConfirm.confirm}
+      />
     </div>
   );
 }

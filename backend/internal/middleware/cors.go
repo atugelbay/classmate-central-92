@@ -1,18 +1,38 @@
 package middleware
 
 import (
+	"os"
+	"strings"
+
 	"github.com/gin-gonic/gin"
 )
 
 func CORSMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		origin := c.Request.Header.Get("Origin")
-
-		// Allow localhost on any port for development
-		if origin != "" {
-			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+		allowedOrigins := os.Getenv("ALLOWED_ORIGINS")
+		
+		// In production, use ALLOWED_ORIGINS env var
+		// In development, allow localhost and the origin from request
+		if allowedOrigins == "" {
+			// Development mode: allow localhost and request origin
+			if origin != "" && (strings.Contains(origin, "localhost") || strings.Contains(origin, "127.0.0.1")) {
+				c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+			} else if origin != "" {
+				c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+			} else {
+				c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+			}
 		} else {
-			c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+			// Production mode: check against allowed origins
+			allowedList := strings.Split(allowedOrigins, ",")
+			for _, allowed := range allowedList {
+				allowed = strings.TrimSpace(allowed)
+				if origin == allowed {
+					c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+					break
+				}
+			}
 		}
 
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")

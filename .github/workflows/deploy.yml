@@ -1,0 +1,38 @@
+name: Deploy
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deploy to production
+        run: |
+          echo "Deployment steps would go here"
+          echo "Examples:"
+          echo "- SSH to server"
+          echo "- Pull latest code"
+          echo "- Run migrations"
+          echo "- Restart services"
+          echo "- Health check"
+      
+      # Example deployment steps (uncomment and configure):
+      # - name: Deploy via SSH
+      #   uses: appleboy/ssh-action@v1
+      #   with:
+      #     host: ${{ secrets.HOST }}
+      #     username: ${{ secrets.USERNAME }}
+      #     key: ${{ secrets.SSH_KEY }}
+      #     script: |
+      #       cd /path/to/app
+      #       git pull
+      #       docker-compose -f docker-compose.prod.yml up -d --build
+      #       docker exec classmate_central_api_prod ./main migrate
+

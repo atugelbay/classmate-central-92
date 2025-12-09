@@ -1,110 +1,443 @@
-# Classmate Central Backend
+# SmartCRM Backend API
 
-REST API backend for the Classmate Central educational management system.
+REST API backend для системы управления образовательным центром SmartCRM.
 
-## Tech Stack
+## 🛠 Tech Stack
 
-- **Go** - Programming language
-- **Gin** - Web framework
-- **PostgreSQL** - Database
-- **JWT** - Authentication
+- **Go 1.21+** - основной язык программирования
+- **Gin** - веб-фреймворк
+- **PostgreSQL 15+** - база данных
+- **JWT** - аутентификация
+- **Zap** - структурированное логирование
+- **gofpdf** - генерация PDF документов
+- **excelize** - генерация Excel файлов
 
-## Setup
+## 📦 Основные возможности
 
-### Prerequisites
+### Аутентификация и безопасность
+- JWT токены с refresh механизмом
+- Email верификация при регистрации
+- Приглашения пользователей по email
+- RBAC система (роли и права доступа)
+- Мультитенантность (изоляция данных по компаниям)
+
+### Модули
+- **Студенты** - CRUD, балансы, история активности, заметки
+- **Преподаватели** - CRUD, статусы, загруженность
+- **Группы** - управление группами, расписание
+- **Расписание** - уроки, календарь, конфликты
+- **Финансы** - транзакции, балансы, долги, тарифы, скидки
+- **Абонементы** - типы, управление, заморозка, списание
+- **Посещаемость** - отметка, журнал, уведомления
+- **Лиды** - управление потенциальными студентами
+- **Экспорт** - PDF/Excel отчеты
+- **Email уведомления** - платежи, пропуски
+
+## 🚀 Быстрый старт
+
+### Предварительные требования
 
 - Go 1.21+
 - PostgreSQL 15+
-- Docker (optional, for database)
+- Docker (опционально)
 
-### Installation
+### Установка
 
-1. Install dependencies:
+1. **Клонируйте репозиторий и перейдите в директорию:**
+```bash
+cd backend
+```
+
+2. **Установите зависимости:**
 ```bash
 go mod download
 ```
 
-2. Start PostgreSQL (using Docker):
+3. **Запустите PostgreSQL (через Docker):**
 ```bash
 docker-compose up -d
 ```
 
-3. Copy environment variables:
+4. **Создайте .env файл:**
 ```bash
 cp .env.example .env
 ```
 
-4. Update `.env` with your configuration
+5. **Настройте переменные окружения в .env:**
+```env
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=classmate_central
+DB_SSLMODE=disable
 
-5. Run the server:
+JWT_SECRET=your-secret-key-change-in-production
+JWT_EXPIRATION=24h
+JWT_REFRESH_EXPIRATION=168h
+
+SERVER_PORT=8080
+FRONTEND_URL=http://localhost:5173
+ENV=development
+
+# Email (опционально, для уведомлений)
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=your-email@example.com
+SMTP_PASSWORD=your-password
+SMTP_FROM_EMAIL=noreply@example.com
+```
+
+6. **Запустите сервер:**
 ```bash
 go run cmd/api/main.go
 ```
 
-The server will start on `http://localhost:8080`
+Сервер будет доступен на `http://localhost:8080`
 
-## API Endpoints
+## 📚 API Документация
 
-### Authentication
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - Login
-- `POST /api/auth/refresh` - Refresh JWT token
-- `GET /api/auth/me` - Get current user (protected)
+Полная документация API доступна в следующих файлах:
 
-### Teachers
-- `GET /api/teachers` - Get all teachers
-- `GET /api/teachers/:id` - Get teacher by ID
-- `POST /api/teachers` - Create teacher
-- `PUT /api/teachers/:id` - Update teacher
-- `DELETE /api/teachers/:id` - Delete teacher
+- **[API_DOCUMENTATION.md](./API_DOCUMENTATION.md)** - Подробная документация всех endpoints
+- **[openapi.yaml](./openapi.yaml)** - OpenAPI 3.0 спецификация для генерации клиентов
+- **[MOBILE_API_CHECKLIST.md](./MOBILE_API_CHECKLIST.md)** - Чеклист покрытия API для мобильного приложения
 
-### Students
-- `GET /api/students` - Get all students
-- `GET /api/students/:id` - Get student by ID
-- `POST /api/students` - Create student
-- `PUT /api/students/:id` - Update student
-- `DELETE /api/students/:id` - Delete student
+### Генерация клиентов для мобильных приложений
 
-### Groups
-- `GET /api/groups` - Get all groups
-- `GET /api/groups/:id` - Get group by ID
-- `POST /api/groups` - Create group
-- `PUT /api/groups/:id` - Update group
-- `DELETE /api/groups/:id` - Delete group
+Используйте OpenAPI Generator для автоматической генерации клиентов:
 
-### Lessons
-- `GET /api/lessons` - Get all lessons
-- `GET /api/lessons/:id` - Get lesson by ID
-- `POST /api/lessons` - Create lesson
-- `PUT /api/lessons/:id` - Update lesson
-- `DELETE /api/lessons/:id` - Delete lesson
-
-### Settings
-- `GET /api/settings` - Get settings
-- `PUT /api/settings` - Update settings
-
-## Database Schema
-
-The database schema is automatically created when the server starts. See `migrations/001_init_schema.up.sql` for details.
-
-## Development
-
-### Running Tests
+**Swift (iOS):**
 ```bash
-go test ./...
+openapi-generator generate -i openapi.yaml -g swift5 -o ./mobile-client-ios
 ```
 
-### Building
+**Kotlin (Android):**
+```bash
+openapi-generator generate -i openapi.yaml -g kotlin -o ./mobile-client-android
+```
+
+**TypeScript (Web):**
+```bash
+openapi-generator generate -i openapi.yaml -g typescript-axios -o ./web-client
+```
+
+## 🔌 API Endpoints
+
+### Аутентификация
+
+- `POST /api/auth/register` - Регистрация нового пользователя
+- `POST /api/auth/login` - Вход в систему
+- `POST /api/auth/refresh` - Обновление JWT токена
+- `POST /api/auth/verify-email` - Подтверждение email
+- `POST /api/auth/resend-verification` - Повторная отправка кода
+- `POST /api/auth/accept-invite` - Принятие приглашения
+- `GET /api/auth/me` - Получить текущего пользователя (защищено)
+- `GET /api/auth/users` - Список пользователей компании (требует права)
+- `POST /api/auth/invite` - Пригласить пользователя (требует права)
+
+### Студенты
+
+- `GET /api/students` - Список студентов (пагинация, поиск)
+- `GET /api/students/:id` - Детали студента
+- `POST /api/students` - Создать студента
+- `PUT /api/students/:id` - Обновить студента
+- `DELETE /api/students/:id` - Удалить студента
+- `GET /api/students/:id/activities` - История активности
+- `GET /api/students/:id/notes` - Заметки о студенте
+- `POST /api/students/:id/notes` - Добавить заметку
+- `GET /api/students/:id/attendance` - Журнал посещаемости
+- `GET /api/students/:id/notifications` - Уведомления студента
+- `GET /api/students/:id/discounts` - Скидки студента
+
+### Преподаватели
+
+- `GET /api/teachers` - Список преподавателей
+- `GET /api/teachers/:id` - Детали преподавателя
+- `POST /api/teachers` - Создать преподавателя
+- `PUT /api/teachers/:id` - Обновить преподавателя
+- `DELETE /api/teachers/:id` - Удалить преподавателя
+
+### Группы
+
+- `GET /api/groups` - Список групп
+- `GET /api/groups/:id` - Детали группы
+- `POST /api/groups` - Создать группу
+- `PUT /api/groups/:id` - Обновить группу
+- `DELETE /api/groups/:id` - Удалить группу
+- `POST /api/groups/:id/generate-lessons` - Сгенерировать уроки
+- `POST /api/groups/:id/extend` - Продлить группу
+
+### Расписание (Lessons)
+
+- `GET /api/lessons` - Все уроки (фильтрация по датам)
+- `GET /api/lessons/:id` - Детали урока
+- `GET /api/lessons/individual` - Индивидуальные уроки
+- `GET /api/lessons/teacher/:teacherId` - Уроки преподавателя
+- `POST /api/lessons` - Создать урок
+- `POST /api/lessons/bulk` - Массовое создание уроков
+- `PUT /api/lessons/:id` - Обновить урок
+- `DELETE /api/lessons/:id` - Удалить урок
+- `POST /api/lessons/check-conflicts` - Проверить конфликты
+
+### Посещаемость (Attendance)
+
+- `POST /api/attendance` - Отметить посещаемость
+- `GET /api/attendance/lesson/:lessonId` - Посещаемость по уроку
+- `GET /api/attendance/student/:studentId` - Посещаемость студента
+
+### Финансы
+
+- `GET /api/payments/transactions` - Все транзакции
+- `GET /api/payments/transactions/student/:studentId` - Транзакции студента
+- `POST /api/payments/transactions` - Создать транзакцию
+- `PUT /api/payments/transactions/:id` - Обновить транзакцию
+- `GET /api/payments/balance/:studentId` - Баланс студента
+- `GET /api/payments/balances` - Все балансы
+- `GET /api/debts` - Долги (фильтрация по статусу)
+- `GET /api/debts/student/:studentId` - Долги студента
+- `POST /api/debts` - Создать долг
+- `PUT /api/debts/:id` - Обновить долг
+- `DELETE /api/debts/:id` - Удалить долг
+- `GET /api/tariffs` - Тарифы
+- `GET /api/discounts` - Скидки
+
+### Абонементы (Subscriptions)
+
+- `GET /api/subscriptions` - Все абонементы
+- `GET /api/subscriptions/student/:studentId` - Абонементы студента
+- `GET /api/subscriptions/:id` - Детали абонемента
+- `POST /api/subscriptions` - Создать абонемент
+- `PUT /api/subscriptions/:id` - Обновить абонемент
+- `DELETE /api/subscriptions/:id` - Удалить абонемент
+- `POST /api/subscriptions/:id/freeze` - Заморозить абонемент
+- `GET /api/subscriptions/:id/freezes` - История заморозок
+
+### Экспорт
+
+- `GET /api/export/transactions/pdf` - Экспорт транзакций в PDF
+- `GET /api/export/transactions/excel` - Экспорт транзакций в Excel
+- `GET /api/export/students/pdf` - Экспорт студентов в PDF
+- `GET /api/export/students/excel` - Экспорт студентов в Excel
+- `GET /api/export/schedule/pdf` - Экспорт расписания в PDF
+- `GET /api/export/schedule/excel` - Экспорт расписания в Excel
+
+### Дашборд
+
+- `GET /api/dashboard/stats` - Общая статистика
+- `GET /api/dashboard/today-lessons` - Уроки на сегодня
+- `GET /api/dashboard/revenue-chart` - График доходов
+- `GET /api/dashboard/attendance-stats` - Статистика посещаемости
+
+### RBAC (Роли и права)
+
+- `GET /api/permissions` - Все доступные права
+- `GET /api/roles` - Все роли компании
+- `GET /api/roles/:id` - Детали роли
+- `POST /api/roles` - Создать роль
+- `PUT /api/roles/:id` - Обновить роль
+- `DELETE /api/roles/:id` - Удалить роль
+- `GET /api/users/:userId/roles` - Роли пользователя
+- `POST /api/users/roles/assign` - Назначить роль
+- `POST /api/users/roles/remove` - Удалить роль
+
+### Настройки
+
+- `GET /api/settings` - Получить настройки
+- `PUT /api/settings` - Обновить настройки
+
+### Health Checks
+
+- `GET /health` - Проверка здоровья сервера
+- `GET /ready` - Проверка готовности (readiness probe)
+
+## 🗄 База данных
+
+### Миграции
+
+Миграции выполняются автоматически при запуске сервера. См. [migrations/README.md](./migrations/README.md) для подробностей.
+
+### Основные таблицы
+
+- `users` - Пользователи системы
+- `companies` - Компании (мультитенантность)
+- `roles` - Роли
+- `permissions` - Права доступа
+- `user_roles` - Связь пользователей и ролей
+- `teachers` - Преподаватели
+- `students` - Студенты
+- `groups` - Группы
+- `lessons` - Уроки
+- `lesson_attendance` - Посещаемость
+- `payment_transactions` - Транзакции
+- `student_balance` - Балансы студентов
+- `debt_records` - Долги
+- `student_subscriptions` - Абонементы
+- `subscription_types` - Типы абонементов
+- `notifications` - Уведомления
+- `student_activity_log` - История активности
+- `student_notes` - Заметки о студентах
+
+## 🏗 Структура проекта
+
+```
+backend/
+├── cmd/
+│   └── api/
+│       └── main.go          # Точка входа
+├── internal/
+│   ├── handlers/            # HTTP обработчики
+│   │   ├── auth_handler.go
+│   │   ├── student_handler.go
+│   │   ├── payment_handler.go
+│   │   └── ...
+│   ├── repository/           # Слой доступа к данным
+│   │   ├── student_repository.go
+│   │   ├── payment_repository.go
+│   │   └── ...
+│   ├── services/             # Бизнес-логика
+│   │   ├── email_service.go
+│   │   ├── export_service.go
+│   │   ├── attendance_service.go
+│   │   └── ...
+│   ├── models/               # Модели данных
+│   │   └── models.go
+│   ├── middleware/           # Middleware
+│   │   ├── auth.go          # JWT аутентификация
+│   │   ├── rbac.go          # Проверка прав
+│   │   ├── company.go       # Мультитенантность
+│   │   └── ...
+│   ├── database/             # Подключение к БД
+│   │   └── database.go
+│   ├── validation/           # Валидация
+│   │   └── validator.go
+│   └── logger/              # Логирование
+│       └── logger.go
+├── migrations/               # SQL миграции
+│   ├── 001_init_schema.up.sql
+│   ├── 002_leads_and_rooms.up.sql
+│   └── ...
+├── docker-compose.yml       # PostgreSQL для разработки
+├── Dockerfile               # Production образ
+└── README.md               # Этот файл
+```
+
+## 🔒 Безопасность
+
+### Аутентификация
+
+Все защищенные endpoints требуют JWT токен в заголовке:
+```
+Authorization: Bearer <access_token>
+```
+
+### RBAC
+
+Каждый endpoint защищен проверкой прав доступа. Права имеют формат:
+```
+<resource>:<action>
+```
+
+Например:
+- `students:view` - просмотр студентов
+- `students:create` - создание студентов
+- `finance:transactions` - управление транзакциями
+
+### Мультитенантность
+
+Все данные автоматически изолируются по `company_id`. Пользователь видит только данные своей компании.
+
+## 📝 Логирование
+
+Используется структурированное логирование через Zap:
+
+```go
+logger.Info("User logged in", zap.String("email", email))
+logger.Error("Failed to create student", logger.ErrorField(err))
+```
+
+Логи включают:
+- Request ID для трейсинга
+- User ID и Company ID
+- Время выполнения запросов
+- Детальная информация об ошибках
+
+## 🧪 Разработка
+
+### Запуск в режиме разработки
+
+```bash
+go run cmd/api/main.go
+```
+
+### Сборка
+
 ```bash
 go build -o bin/api cmd/api/main.go
 ```
 
-### Running Binary
+### Запуск бинарника
+
 ```bash
 ./bin/api
 ```
 
-## Environment Variables
+### Тестирование
 
-See `.env.example` for all available configuration options.
+```bash
+go test ./...
+```
 
+### Линтинг
+
+```bash
+golangci-lint run
+```
+
+## 🐳 Docker
+
+### Development
+
+```bash
+docker-compose up -d
+```
+
+### Production
+
+```bash
+docker build -t smartcrm-backend .
+docker run -p 8080:8080 --env-file .env smartcrm-backend
+```
+
+## 📦 Зависимости
+
+Основные зависимости:
+- `github.com/gin-gonic/gin` - веб-фреймворк
+- `github.com/lib/pq` - PostgreSQL драйвер
+- `github.com/golang-jwt/jwt/v5` - JWT
+- `go.uber.org/zap` - логирование
+- `github.com/jung-kurt/gofpdf/v2` - PDF генерация
+- `github.com/xuri/excelize/v2` - Excel генерация
+
+## 🔧 Environment Variables
+
+См. `.env.example` для полного списка переменных окружения.
+
+## 📚 Дополнительная документация
+
+- [API Documentation](./API_DOCUMENTATION.md)
+- [OpenAPI Spec](./openapi.yaml)
+- [Migrations Guide](./migrations/README.md)
+- [Fonts Setup](./FONTS_README.md) - для поддержки кириллицы в PDF
+
+## 🤝 Contributing
+
+1. Создайте feature branch
+2. Внесите изменения
+3. Добавьте тесты
+4. Убедитесь что все тесты проходят
+5. Создайте Pull Request
+
+## 📝 License
+
+MIT License

@@ -10,12 +10,41 @@
 
 # Output of the go coverage tool
 *.out
+coverage.out
+coverage.html
 
 # Dependency directories
 vendor/
 
-# Environment variables
+# Environment variables and secrets
 .env
+.env.local
+.env.test
+.env.production
+.env.*
+*.env
+*.env.example
+.env.example
+
+# API Keys and secrets
+*.key
+*.pem
+secrets/
+*.secret
+
+# Database backups
+backups/
+*.sql
+*.dump
+*.backup
+!migrations/*.sql
+!migrations/*.up.sql
+!migrations/*.down.sql
+
+# Build artifacts
+bin/
+main
+api
 
 # IDE
 .idea/
@@ -28,3 +57,5 @@ vendor/
 .DS_Store
 Thumbs.db
 
+# Logs
+*.log

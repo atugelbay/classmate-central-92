@@ -15,6 +15,9 @@ type AttendanceService struct {
 	consumptionRepo  *repository.SubscriptionConsumptionRepository
 	activityRepo     *repository.ActivityRepository
 	notificationRepo *repository.NotificationRepository
+	emailService     *EmailService
+	studentRepo      *repository.StudentRepository
+	lessonRepo       *repository.LessonRepository
 	db               *sql.DB
 }
 
@@ -23,6 +26,9 @@ func NewAttendanceService(
 	consumptionRepo *repository.SubscriptionConsumptionRepository,
 	activityRepo *repository.ActivityRepository,
 	notificationRepo *repository.NotificationRepository,
+	emailService *EmailService,
+	studentRepo *repository.StudentRepository,
+	lessonRepo *repository.LessonRepository,
 	db *sql.DB,
 ) *AttendanceService {
 	return &AttendanceService{
@@ -30,6 +36,9 @@ func NewAttendanceService(
 		consumptionRepo:  consumptionRepo,
 		activityRepo:     activityRepo,
 		notificationRepo: notificationRepo,
+		emailService:     emailService,
+		studentRepo:      studentRepo,
+		lessonRepo:       lessonRepo,
 		db:               db,
 	}
 }
@@ -387,7 +396,7 @@ func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendan
 				extendActivityLog := &models.StudentActivityLog{
 					StudentID:    req.StudentID,
 					ActivityType: "subscription_change",
-					Description:  fmt.Sprintf("Добавлен урок за пропуск по уважительной причине. Абонемент продлен на 1 день."),
+					Description:  "Добавлен урок за пропуск по уважительной причине. Абонемент продлен на 1 день.",
 					Metadata:     &extendMetadataStr,
 					CreatedBy:    markedBy,
 					CreatedAt:    time.Now(),
@@ -426,6 +435,33 @@ func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendan
 	// Commit transaction
 	if err = tx.Commit(); err != nil {
 		return nil, fmt.Errorf("error committing transaction: %w", err)
+	}
+
+	// Send email notification for missed lessons (non-critical, async)
+	if attendance.Status == "missed" {
+		go func() {
+			// Get student info
+			student, err := s.studentRepo.GetByID(attendance.StudentID, companyID)
+			if err != nil || student == nil || student.Email == "" {
+				return
+			}
+
+			// Get lesson info
+			lesson, err := s.lessonRepo.GetByID(attendance.LessonID, companyID)
+			if err != nil || lesson == nil {
+				return
+			}
+
+			// Send email notification
+			_ = s.emailService.SendAbsenceNotification(
+				student.Email,
+				student.Name,
+				lesson.Subject,
+				attendance.Reason,
+				attendance.Notes,
+				lesson.Start,
+			)
+		}()
 	}
 
 	return attendance, nil

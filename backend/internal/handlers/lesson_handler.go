@@ -84,7 +84,33 @@ func (h *LessonHandler) Create(c *gin.Context) {
 		return
 	}
 
+	// Validate duration (min 15 mins, max 6 hours)
+	duration := lesson.End.Sub(lesson.Start)
+	if duration < 15*time.Minute {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Lesson duration must be at least 15 minutes"})
+		return
+	}
+	if duration > 6*time.Hour {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Lesson duration cannot exceed 6 hours"})
+		return
+	}
+
 	companyID := c.GetString("company_id")
+
+	// Check for conflicts
+	conflicts, err := h.repo.CheckConflicts(lesson.TeacherID, lesson.RoomID, lesson.Start, lesson.End, "", companyID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check conflicts: " + err.Error()})
+		return
+	}
+	if len(conflicts) > 0 {
+		c.JSON(http.StatusConflict, gin.H{
+			"error":     "Scheduling conflict detected",
+			"conflicts": conflicts,
+		})
+		return
+	}
+
 	if err := h.repo.Create(&lesson, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -104,6 +130,31 @@ func (h *LessonHandler) Update(c *gin.Context) {
 	}
 
 	lesson.ID = id
+
+	// Validate duration (min 15 mins, max 6 hours)
+	duration := lesson.End.Sub(lesson.Start)
+	if duration < 15*time.Minute {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Lesson duration must be at least 15 minutes"})
+		return
+	}
+	if duration > 6*time.Hour {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Lesson duration cannot exceed 6 hours"})
+		return
+	}
+
+	// Check for conflicts (exclude current lesson)
+	conflicts, err := h.repo.CheckConflicts(lesson.TeacherID, lesson.RoomID, lesson.Start, lesson.End, id, companyID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check conflicts: " + err.Error()})
+		return
+	}
+	if len(conflicts) > 0 {
+		c.JSON(http.StatusConflict, gin.H{
+			"error":     "Scheduling conflict detected",
+			"conflicts": conflicts,
+		})
+		return
+	}
 
 	if err := h.repo.Update(&lesson, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

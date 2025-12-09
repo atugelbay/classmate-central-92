@@ -1,189 +1,269 @@
 # Database Migrations Guide
 
-## Overview
+Этот файл содержит руководство по работе с миграциями базы данных для SmartCRM.
 
-This directory contains all database migrations and seed data for the Classmate Central application.
+## 📋 Обзор
 
-## Migration Files
+В этой директории находятся все SQL миграции и seed данные для приложения Classmate Central.
 
-### Schema Migrations
+## 📦 Файлы миграций
 
-1. **001_init_schema** - Initial database schema
-2. **002_leads_and_rooms** - Leads and rooms functionality
-3. **003_finance** - Financial module (payments, debts, balances)
-4. **004_subscriptions** - Subscription system
-5. **005_student_enhancements** - Student management enhancements (activity log, notes, notifications)
+### Основные миграции схемы
+
+1. **001_init_schema** - Начальная схема базы данных
+   - Пользователи, компании, роли
+   - Преподаватели, студенты, группы
+   - Уроки, комнаты
+
+2. **002_leads_and_rooms** - Лиды и комнаты
+   - Таблица лидов (потенциальные студенты)
+   - Таблица комнат
+   - Активности лидов
+
+3. **003_finance** - Финансовый модуль
+   - Транзакции платежей
+   - Балансы студентов
+   - Долги
+   - Тарифы
+
+4. **004_subscriptions** - Система абонементов
+   - Типы абонементов
+   - Абонементы студентов
+   - Заморозка абонементов
+
+5. **005_student_enhancements** - Улучшения управления студентами
+   - История активности
+   - Заметки о студентах
+   - Уведомления
+
+6. **006_add_multi_tenancy** - Мультитенантность
+   - Добавление company_id в таблицы
+   - Индексы для изоляции данных
+
+7. **006_schedule_and_subscriptions** - Расписание и абонементы
+   - Улучшения расписания
+   - Расширение функционала абонементов
+
+8. **007_add_company_to_finance** - Компании в финансах
+   - Добавление company_id в финансовые таблицы
+
+9. **008_fix_missing_columns** - Исправление отсутствующих колонок
+
+10. **009_add_billing_type** - Типы биллинга абонементов
+
+11. **010_enhance_subscriptions** - Улучшения абонементов
+    - Расширенные поля
+    - Улучшенная логика
+
+12. **011_make_age_nullable** - Возраст опциональный
+
+13. **012_add_group_schedule** - Расписание групп
+
+14. **013_add_room_to_groups** - Комнаты в группах
+
+15. **014_add_enrollment** - Зачисление в группы
+
+16. **015_add_individual_enrollment** - Индивидуальные занятия
+
+17. **016_add_schedule_rule** - Правила расписания
+
+18. **017_add_lesson_occurrence** - Вхождения уроков
+
+19. **018_add_subscription_consumption** - Списание абонементов
+
+20. **019_add_invoice_tables** - Таблицы инвойсов
+
+21. **020_add_transaction_table** - Таблица транзакций
+
+22. **021_add_rbac_system** - RBAC система
+    - Роли и права доступа
+    - Связь пользователей и ролей
+
+23. **022_add_company_to_settings** - Компании в настройках
+
+24. **023_add_version_for_optimistic_locking** - Версионирование для оптимистичной блокировки
+
+25. **024_add_timezone_to_settings** - Часовые пояса в настройках
+
+26. **025_add_unique_idx_deduction** - Уникальные индексы для списаний
+
+27. **026_add_email_verification** - Email верификация
+    - Токены верификации
+    - Приглашения пользователей
 
 ### Seed Data Files
 
-- **seed_data.sql** - Production-like mock data (Russian/Cyrillic)
-- **seed_test_data.sql** - Test data (English/Latin)
-- **verify_data.sql** - Data verification queries
-- **SEED_DATA_GUIDE.md** - Comprehensive guide to using the mock data
+- **seed_data.sql** - Production-like mock данные (русский/кириллица)
+- **seed_test_data.sql** - Тестовые данные (английский/латиница)
+- **verify_data.sql** - SQL запросы для проверки данных
+- **SEED_DATA_GUIDE.md** - Подробное руководство по использованию mock данных
 
-## Quick Start
+## 🚀 Быстрый старт
 
-### Apply All Migrations
+### Применить все миграции
+
+Миграции применяются автоматически при запуске backend сервера.
+
+Для ручного применения:
 
 ```bash
-# Navigate to backend directory
+# Перейти в директорию backend
 cd backend
 
-# Run migrations up
-migrate -path migrations -database "postgres://user:password@localhost:5432/classmate_central?sslmode=disable" up
+# Миграции применяются автоматически при запуске
+go run cmd/api/main.go
 ```
 
-### Load Mock Data
+### Загрузить тестовые данные
 
 ```bash
-# Load Russian version
+# Русская версия (production-like)
 psql -U postgres -d classmate_central < migrations/seed_data.sql
 
-# OR load English version
+# ИЛИ английская версия (для тестирования)
 psql -U postgres -d classmate_central < migrations/seed_test_data.sql
 ```
 
-### Verify Data
+### Проверить данные
 
 ```bash
 psql -U postgres -d classmate_central < migrations/verify_data.sql
 ```
 
-## Migration Management
+## 📝 Управление миграциями
 
-### Create New Migration
+### Создать новую миграцию
 
-```bash
-migrate create -ext sql -dir migrations -seq migration_name
+Миграции создаются вручную. Формат имени файла:
+```
+XXX_description.up.sql
+XXX_description.down.sql
 ```
 
-This creates two files:
-- `XXX_migration_name.up.sql` - Apply migration
-- `XXX_migration_name.down.sql` - Rollback migration
+Где `XXX` - порядковый номер миграции.
 
-### Rollback Migrations
+### Откат миграций
 
-```bash
-# Rollback last migration
-migrate -path migrations -database "postgres://..." down 1
+Миграции поддерживают откат через `.down.sql` файлы. Для ручного отката:
 
-# Rollback all migrations
-migrate -path migrations -database "postgres://..." down
+```sql
+-- Выполнить SQL из соответствующего .down.sql файла
 ```
 
-### Check Migration Status
+### Проверить статус миграций
+
+Миграции отслеживаются через таблицу `schema_migrations` в базе данных.
+
+## 🐳 Использование с Docker
+
+Если используете Docker Compose:
 
 ```bash
-migrate -path migrations -database "postgres://..." version
-```
-
-## Docker Usage
-
-If using Docker Compose:
-
-```bash
-# Start database
+# Запустить базу данных
 docker-compose up -d postgres
 
-# Wait for database to be ready
+# Подождать пока база данных будет готова
 sleep 5
 
-# Apply migrations
-docker-compose exec postgres psql -U postgres -d classmate_central < migrations/001_init_schema.up.sql
-docker-compose exec postgres psql -U postgres -d classmate_central < migrations/002_leads_and_rooms.up.sql
-docker-compose exec postgres psql -U postgres -d classmate_central < migrations/003_finance.up.sql
-docker-compose exec postgres psql -U postgres -d classmate_central < migrations/004_subscriptions.up.sql
-docker-compose exec postgres psql -U postgres -d classmate_central < migrations/005_student_enhancements.up.sql
-
-# Load seed data
-docker-compose exec postgres psql -U postgres -d classmate_central < migrations/seed_data.sql
+# Миграции применяются автоматически при запуске backend
+# Или применить вручную:
+docker-compose exec postgres psql -U postgres -d classmate_central -f /path/to/migration.sql
 ```
 
-## Database Schema Overview
+## 📊 Обзор схемы базы данных
 
-### Core Tables
+### Основные таблицы
 
-- `users` - System users (admins, teachers)
-- `teachers` - Teacher profiles
-- `students` - Student profiles
-- `groups` - Study groups
-- `rooms` - Classrooms
-- `lessons` - Scheduled lessons
-- `leads` - Potential students
+- `users` - Пользователи системы (админы, преподаватели)
+- `companies` - Компании (мультитенантность)
+- `roles` - Роли пользователей
+- `permissions` - Права доступа
+- `user_roles` - Связь пользователей и ролей
+- `teachers` - Профили преподавателей
+- `students` - Профили студентов
+- `groups` - Учебные группы
+- `rooms` - Классные комнаты
+- `lessons` - Запланированные уроки
+- `leads` - Потенциальные студенты
 
-### Financial Tables
+### Финансовые таблицы
 
-- `payment_transactions` - All payment records
-- `student_balance` - Current student balances
-- `debt_records` - Student debts
-- `tariffs` - Pricing plans
+- `payment_transactions` - Все записи платежей
+- `student_balance` - Текущие балансы студентов
+- `debt_records` - Долги студентов
+- `tariffs` - Тарифные планы
+- `discounts` - Скидки
 
-### Subscription Tables
+### Таблицы абонементов
 
-- `subscription_types` - Available subscription packages
-- `student_subscriptions` - Active student subscriptions
-- `subscription_freezes` - Subscription freeze records
-- `lesson_attendance` - Lesson attendance tracking
+- `subscription_types` - Доступные пакеты абонементов
+- `student_subscriptions` - Активные абонементы студентов
+- `subscription_freezes` - Записи заморозки абонементов
+- `subscription_consumption` - История списаний
+- `lesson_attendance` - Отслеживание посещаемости уроков
 
-### Student Management Tables (New in 005)
+### Таблицы управления студентами
 
-- `student_activity_log` - Complete history of student actions
-- `student_notes` - Teacher notes about students
-- `notifications` - System notifications for students
+- `student_activity_log` - Полная история действий студента
+- `student_notes` - Заметки преподавателей о студентах
+- `notifications` - Системные уведомления для студентов
 
-### Junction Tables
+### Связующие таблицы
 
-- `student_subjects` - Student-subject relationships
-- `student_groups` - Student-group memberships
-- `lesson_students` - Lesson-student assignments
-- `lead_activities` - Lead interaction history
-- `lead_tasks` - Follow-up tasks for leads
+- `student_subjects` - Связь студент-предмет
+- `student_groups` - Членство студентов в группах
+- `lesson_students` - Назначение студентов на уроки
+- `lead_activities` - История взаимодействий с лидами
+- `lead_tasks` - Задачи для последующих действий с лидами
 
-## Best Practices
+## ✅ Best Practices
 
-1. **Always test migrations locally first**
-   - Apply migration: `up`
-   - Verify functionality
-   - Test rollback: `down`
-   - Reapply: `up`
+1. **Всегда тестируйте миграции локально сначала**
+   - Применить миграцию: выполнить `.up.sql`
+   - Проверить функциональность
+   - Протестировать откат: выполнить `.down.sql`
+   - Повторно применить: выполнить `.up.sql`
 
-2. **Write reversible migrations**
-   - Every `.up.sql` should have a corresponding `.down.sql`
-   - Test both directions
+2. **Пишите обратимые миграции**
+   - Каждый `.up.sql` должен иметь соответствующий `.down.sql`
+   - Тестируйте оба направления
 
-3. **Use transactions**
-   - Wrap DDL statements in transactions when possible
-   - Ensures atomic application
+3. **Используйте транзакции**
+   - Оберните DDL операторы в транзакции когда возможно
+   - Обеспечивает атомарное применение
 
-4. **Backup before production migrations**
+4. **Делайте резервную копию перед production миграциями**
    ```bash
    pg_dump classmate_central > backup_$(date +%Y%m%d_%H%M%S).sql
    ```
 
-5. **Document schema changes**
-   - Update this README
-   - Add comments in migration files
-   - Update SEED_DATA_GUIDE.md if affecting test data
+5. **Документируйте изменения схемы**
+   - Обновляйте этот README
+   - Добавляйте комментарии в файлы миграций
+   - Обновляйте SEED_DATA_GUIDE.md если затрагиваются тестовые данные
 
-## Troubleshooting
+## 🐛 Troubleshooting
 
-### Migration fails with "Dirty database version"
+### Миграция не применяется
 
-```bash
-# Force version (be careful!)
-migrate -path migrations -database "postgres://..." force VERSION_NUMBER
-```
+1. Проверьте что база данных существует
+2. Проверьте права доступа пользователя БД
+3. Проверьте логи backend сервера
 
-### Cannot connect to database
+### Ошибка "relation already exists"
 
-Check connection string format:
+Миграция уже была применена. Проверьте таблицу `schema_migrations`.
+
+### Не могу подключиться к базе данных
+
+Проверьте формат строки подключения:
 ```
 postgres://username:password@host:port/database?sslmode=disable
 ```
 
-### Seed data conflicts
+### Конфликты seed данных
 
-Clear all data first:
+Очистите все данные сначала:
 ```sql
 TRUNCATE TABLE lesson_students, lesson_attendance, student_groups, student_subjects, 
   lessons, groups, students, teachers, leads, rooms, debt_records, payment_transactions, 
@@ -191,25 +271,24 @@ TRUNCATE TABLE lesson_students, lesson_attendance, student_groups, student_subje
   student_activity_log, student_notes, notifications CASCADE;
 ```
 
-## Environment-Specific Notes
+## 🌍 Заметки по окружениям
 
 ### Development
-- Use `seed_test_data.sql` for quick English testing
-- Run verification queries frequently
+- Используйте `seed_test_data.sql` для быстрого английского тестирования
+- Часто запускайте проверочные запросы
 
 ### Staging
-- Use `seed_data.sql` for realistic data
-- Mirror production structure
+- Используйте `seed_data.sql` для реалистичных данных
+- Отражайте структуру production
 
 ### Production
-- Never run seed data scripts
-- Always backup before migrations
-- Test migrations in staging first
-- Plan maintenance windows
+- **НИКОГДА** не запускайте seed data скрипты
+- Всегда делайте резервную копию перед миграциями
+- Тестируйте миграции в staging сначала
+- Планируйте окна обслуживания
 
-## Additional Resources
+## 📚 Дополнительные ресурсы
 
 - [golang-migrate documentation](https://github.com/golang-migrate/migrate)
 - [PostgreSQL documentation](https://www.postgresql.org/docs/)
-- See `SEED_DATA_GUIDE.md` for detailed mock data guide
-
+- См. `SEED_DATA_GUIDE.md` для подробного руководства по mock данным

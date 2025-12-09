@@ -17,12 +17,12 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 
 func (r *UserRepository) Create(user *models.User) error {
 	query := `
-		INSERT INTO users (email, password, name, company_id, role_id, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+		INSERT INTO users (email, password, name, company_id, role_id, is_email_verified, email_verification_token, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
 		RETURNING id, created_at, updated_at
 	`
 
-	err := r.db.QueryRow(query, user.Email, user.Password, user.Name, user.CompanyID, user.RoleID).
+	err := r.db.QueryRow(query, user.Email, user.Password, user.Name, user.CompanyID, user.RoleID, user.IsEmailVerified, user.EmailVerificationToken).
 		Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("error creating user: %w", err)
@@ -33,11 +33,11 @@ func (r *UserRepository) Create(user *models.User) error {
 
 func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
 	user := &models.User{}
-	query := `SELECT id, email, password, name, company_id, role_id, created_at, updated_at FROM users WHERE email = $1`
+	query := `SELECT id, email, password, name, company_id, role_id, is_email_verified, created_at, updated_at FROM users WHERE email = $1`
 
 	var roleID sql.NullString
 	err := r.db.QueryRow(query, email).Scan(
-		&user.ID, &user.Email, &user.Password, &user.Name, &user.CompanyID, &roleID, &user.CreatedAt, &user.UpdatedAt,
+		&user.ID, &user.Email, &user.Password, &user.Name, &user.CompanyID, &roleID, &user.IsEmailVerified, &user.CreatedAt, &user.UpdatedAt,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -55,11 +55,11 @@ func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
 
 func (r *UserRepository) GetByID(id int) (*models.User, error) {
 	user := &models.User{}
-	query := `SELECT id, email, password, name, company_id, role_id, created_at, updated_at FROM users WHERE id = $1`
+	query := `SELECT id, email, password, name, company_id, role_id, is_email_verified, created_at, updated_at FROM users WHERE id = $1`
 
 	var roleID sql.NullString
 	err := r.db.QueryRow(query, id).Scan(
-		&user.ID, &user.Email, &user.Password, &user.Name, &user.CompanyID, &roleID, &user.CreatedAt, &user.UpdatedAt,
+		&user.ID, &user.Email, &user.Password, &user.Name, &user.CompanyID, &roleID, &user.IsEmailVerified, &user.CreatedAt, &user.UpdatedAt,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -169,4 +169,48 @@ func (r *UserRepository) RemoveRoleFromUser(userID int, roleID string, companyID
 	}
 
 	return nil
+}
+
+// GetAll gets all users for a company with their roles
+func (r *UserRepository) GetAll(companyID string) ([]*models.User, error) {
+	query := `
+		SELECT id, email, name, company_id, role_id, is_email_verified, created_at, updated_at
+		FROM users
+		WHERE company_id = $1
+		ORDER BY created_at DESC
+	`
+
+	rows, err := r.db.Query(query, companyID)
+	if err != nil {
+		return nil, fmt.Errorf("error getting users: %w", err)
+	}
+	defer rows.Close()
+
+	users := []*models.User{}
+	for rows.Next() {
+		user := &models.User{}
+		var roleID sql.NullString
+		err := rows.Scan(
+			&user.ID, &user.Email, &user.Name, &user.CompanyID, &roleID,
+			&user.IsEmailVerified, &user.CreatedAt, &user.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error scanning user: %w", err)
+		}
+
+		if roleID.Valid {
+			user.RoleID = &roleID.String
+		}
+
+		// Load roles for the user
+		roleRepo := NewRoleRepository(r.db)
+		roles, err := roleRepo.GetUserRoles(user.ID, companyID)
+		if err == nil {
+			user.Roles = roles
+		}
+
+		users = append(users, user)
+	}
+
+	return users, nil
 }

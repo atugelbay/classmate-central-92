@@ -447,3 +447,16 @@ export interface AssignRoleRequest {
   userId: number;
   roleId: string;
 }
+
+export interface InviteUserRequest {
+  name: string;
+  email: string;
+  roleId: string;
+}
+
+export interface AcceptInviteRequest {
+  email: string;
+  code: string;
+  password: string;
+  confirmPassword: string;
+}

@@ -7,15 +7,54 @@ frontend/node_modules/
 frontend/dist/
 frontend/.vite/
 
-# Environment variables
+# Environment variables and secrets
+# Ignore all .env files except .example files
 .env
-.env.example
+.env.local
 .env.development
 .env.production
-.env.company2
-.env.local
-.env.production
+.env.test
 .env.*.local
+.env.*.secret
+*.env
+!*.env.example
+!.env.example
+!**/.env.example
+!**/*.env.example
+
+# API Keys and secrets
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+*.cert
+secrets/
+*.secret
+*_secret
+*_secrets
+.secrets
+
+# Credentials
+credentials.json
+*.credentials
+config.local.*
+settings.local.*
+
+# Database dumps with sensitive data
+*.sql
+*.dump
+*.backup
+!**/migrations/*.sql
+!**/migrations/*.up.sql
+!**/migrations/*.down.sql
+backups/
+*.sql.gz
+*.sql.zip
+
+# Docker secrets
+docker-compose.override.yml
+docker-compose.local.yml
 
 # IDE
 .vscode/
@@ -40,3 +79,26 @@ yarn-debug.log*
 # Temporary files
 tmp/
 temp/
+
+# Test coverage reports
+coverage/
+*.coverage
+coverage.out
+coverage.html
+
+# Build artifacts
+build/
+dist/
+bin/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Cache directories
+.cache/
+.parcel-cache/
+.npm/
+.yarn/
+.pnp/
+.pnp.js

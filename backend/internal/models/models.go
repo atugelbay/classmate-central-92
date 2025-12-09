@@ -4,16 +4,18 @@ import "time"
 
 // User represents authentication user
 type User struct {
-	ID          int       `json:"id" db:"id"`
-	Email       string    `json:"email" db:"email"`
-	Password    string    `json:"-" db:"password"`
-	Name        string    `json:"name" db:"name"`
-	CompanyID   string    `json:"companyId" db:"company_id"`
-	RoleID      *string   `json:"roleId,omitempty" db:"role_id"`
-	Roles       []*Role   `json:"roles,omitempty"`       // Populated via JOIN
-	Permissions []string  `json:"permissions,omitempty"` // Populated from roles
-	CreatedAt   time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
+	ID                     int       `json:"id" db:"id"`
+	Email                  string    `json:"email" db:"email"`
+	Password               string    `json:"-" db:"password"`
+	Name                   string    `json:"name" db:"name"`
+	CompanyID              string    `json:"companyId" db:"company_id"`
+	RoleID                 *string   `json:"roleId,omitempty" db:"role_id"`
+	Roles                  []*Role   `json:"roles,omitempty"`       // Populated via JOIN
+	Permissions            []string  `json:"permissions,omitempty"` // Populated from roles
+	IsEmailVerified        bool      `json:"isEmailVerified" db:"is_email_verified"`
+	EmailVerificationToken *string   `json:"-" db:"email_verification_token"`
+	CreatedAt              time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt              time.Time `json:"updated_at" db:"updated_at"`
 }
 
 // Company represents a company/tenant in the system
@@ -111,6 +113,21 @@ type RegisterRequest struct {
 	Email       string `json:"email" binding:"required,email"`
 	Password    string `json:"password" binding:"required,min=6"`
 	CompanyName string `json:"companyName" binding:"required"`
+}
+
+// InviteUserRequest represents admin-driven user invitation
+type InviteUserRequest struct {
+	Name   string `json:"name" binding:"required"`
+	Email  string `json:"email" binding:"required,email"`
+	RoleID string `json:"roleId" binding:"required"`
+}
+
+// AcceptInviteRequest is used when invited user sets their password
+type AcceptInviteRequest struct {
+	Email           string `json:"email" binding:"required,email"`
+	Code            string `json:"code" binding:"required,len=6"`
+	Password        string `json:"password" binding:"required,min=6"`
+	ConfirmPassword string `json:"confirmPassword" binding:"required,min=6"`
 }
 
 // AuthResponse represents authentication response

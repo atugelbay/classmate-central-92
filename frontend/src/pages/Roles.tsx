@@ -1,12 +1,14 @@
 import { useState } from "react";
 import * as React from "react";
-import {
+import { 
   useRoles,
   usePermissions,
   useCreateRole,
   useUpdateRole,
   useDeleteRole,
   useRolePermissions,
+  useInviteUser,
+  useUsers,
 } from "@/hooks/useData";
 import { Role, Permission, CreateRoleRequest, UpdateRoleRequest } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -14,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Loader2, Shield, Check } from "lucide-react";
+import { Plus, Edit, Trash2, Loader2, Shield, Check, Users } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -34,18 +36,50 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+
+// Helper function to translate role names
+const translateRoleName = (name: string): string => {
+  const translations: Record<string, string> = {
+    admin: "Администратор",
+    manager: "Менеджер",
+    teacher: "Учитель",
+    accountant: "Бухгалтер",
+    view_only: "Только просмотр",
+  };
+  return translations[name.toLowerCase()] || name;
+};
+
+// Helper function to translate role descriptions
+const translateRoleDescription = (name: string, description: string): string => {
+  if (description) return description;
+  const translations: Record<string, string> = {
+    admin: "Полный доступ ко всем функциям системы",
+    manager: "Доступ ко всем функциям кроме управления ролями",
+    teacher: "Ограниченный доступ к ученикам и расписанию",
+    accountant: "Доступ к финансовым данным",
+    view_only: "Только просмотр без возможности изменений",
+  };
+  return translations[name.toLowerCase()] || description;
+};
 
 export default function Roles() {
   const { hasPermission } = useAuth();
   const { data: roles = [], isLoading } = useRoles();
   const { data: permissions = [] } = usePermissions();
+  const { data: users = [], isLoading: usersLoading } = useUsers();
   const createRole = useCreateRole();
   const updateRole = useUpdateRole();
   const deleteRole = useDeleteRole();
+  const inviteUser = useInviteUser();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
+  const [inviteRoleId, setInviteRoleId] = useState<string>("");
+  const [inviteEmail, setInviteEmail] = useState<string>("");
+  const [inviteName, setInviteName] = useState<string>("");
 
   const canManage = hasPermission("roles.manage");
 
@@ -83,14 +117,23 @@ export default function Roles() {
     }
   };
 
+  const [deleteRoleConfirm, setDeleteRoleConfirm] = useState<{ open: boolean; role: Role | null }>({
+    open: false,
+    role: null,
+  });
+
   const handleDelete = async (role: Role) => {
-    if (!confirm(`Вы уверены, что хотите удалить роль "${role.name}"?`)) {
-      return;
-    }
-    try {
-      await deleteRole.mutateAsync(role.id);
-    } catch (error) {
-      // Error handled by mutation
+    setDeleteRoleConfirm({ open: true, role });
+  };
+
+  const confirmDeleteRole = async () => {
+    if (deleteRoleConfirm.role) {
+      try {
+        await deleteRole.mutateAsync(deleteRoleConfirm.role.id);
+        setDeleteRoleConfirm({ open: false, role: null });
+      } catch (error) {
+        // Error handled by mutation
+      }
     }
   };
 
@@ -202,6 +245,78 @@ export default function Roles() {
         )}
       </div>
 
+      {canManage && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Пригласить пользователя</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form
+              className="grid gap-4 md:grid-cols-3"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!inviteRoleId) {
+                  toast.error("Выберите роль");
+                  return;
+                }
+                try {
+                  await inviteUser.mutateAsync({
+                    email: inviteEmail,
+                    name: inviteName,
+                    roleId: inviteRoleId,
+                  });
+                  setInviteEmail("");
+                  setInviteName("");
+                  setInviteRoleId("");
+                } catch (err) {
+                  // handled in hook
+                }
+              }}
+            >
+              <div className="space-y-2">
+                <Label>Имя</Label>
+                <Input
+                  required
+                  placeholder="Имя пользователя"
+                  value={inviteName}
+                  onChange={(e) => setInviteName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input
+                  required
+                  type="email"
+                  placeholder="user@example.com"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Роль</Label>
+                <Select value={inviteRoleId} onValueChange={setInviteRoleId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Выберите роль" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {roles.map((role) => (
+                      <SelectItem key={role.id} value={role.id}>
+                        {translateRoleName(role.name)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="md:col-span-3 flex justify-end">
+                <Button type="submit" disabled={inviteUser.isPending}>
+                  {inviteUser.isPending ? "Отправляем..." : "Отправить приглашение"}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -229,8 +344,8 @@ export default function Roles() {
               ) : (
                 roles.map((role) => (
                   <TableRow key={role.id}>
-                    <TableCell className="font-medium">{role.name}</TableCell>
-                    <TableCell>{role.description || "-"}</TableCell>
+                    <TableCell className="font-medium">{translateRoleName(role.name)}</TableCell>
+                    <TableCell>{translateRoleDescription(role.name, role.description || "")}</TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
                         {role.permissions && role.permissions.length > 0 ? (
@@ -288,6 +403,75 @@ export default function Roles() {
           </Table>
         </CardContent>
       </Card>
+
+      {canManage && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Пользователи компании
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {usersLoading ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            ) : users.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">Нет пользователей</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Имя</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Роли</TableHead>
+                    <TableHead>Статус</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {users.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell className="font-medium">{user.name}</TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {user.roles && user.roles.length > 0 ? (
+                            user.roles.map((role) => (
+                              <Badge key={role.id} variant="secondary" className="text-xs">
+                                {translateRoleName(role.name)}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-muted-foreground text-sm">Нет ролей</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={user.isEmailVerified ? "default" : "outline"}>
+                          {user.isEmailVerified ? "Подтвержден" : "Не подтвержден"}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Delete Role Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteRoleConfirm.open}
+        onOpenChange={(open) => setDeleteRoleConfirm({ open, role: deleteRoleConfirm.role })}
+        title="Удалить роль"
+        description={deleteRoleConfirm.role ? `Вы уверены, что хотите удалить роль "${translateRoleName(deleteRoleConfirm.role.name)}"? Это действие нельзя отменить.` : ""}
+        confirmText="Удалить"
+        cancelText="Отмена"
+        variant="destructive"
+        onConfirm={confirmDeleteRole}
+      />
     </div>
   );
 }

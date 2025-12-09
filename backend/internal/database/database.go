@@ -90,6 +90,7 @@ func (d *Database) RunMigrations() error {
 		"migrations/023_add_version_for_optimistic_locking.up.sql",
 		"migrations/024_add_timezone_to_settings.up.sql",
 		"migrations/025_add_unique_idx_deduction.up.sql",
+		"migrations/026_add_email_verification.up.sql",
 	}
 
 	log.Printf("📋 Total migrations to process: %d", len(migrations))

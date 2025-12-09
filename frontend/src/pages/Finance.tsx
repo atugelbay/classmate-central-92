@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, DollarSign, TrendingUp, TrendingDown, Users, Trash2, Edit } from "lucide-react";
+import { Loader2, Plus, DollarSign, TrendingUp, TrendingDown, Users, Trash2, Edit, Download, FileText, FileSpreadsheet } from "lucide-react";
 import { 
   Pagination,
   PaginationContent,
@@ -16,15 +16,55 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
+  PaginationEllipsis,
 } from "@/components/ui/pagination";
-import { useTransactions, useCreateTransaction, useAllBalances, useDiscounts, useCreateDiscount, useUpdateDiscount, useDeleteDiscount, useDebts, useCreateDebt, useUpdateDebt, useStudents } from "@/hooks/useData";
+import { useTransactions, useCreateTransaction, useAllBalances, useDiscounts, useCreateDiscount, useUpdateDiscount, useDeleteDiscount, useDebts, useCreateDebt, useUpdateDebt, useStudents, useTeachers, useGroups } from "@/hooks/useData";
 import { Discount, DebtRecord } from "@/types";
 import moment from "moment";
 import "moment/locale/ru";
+import { ExportDialog } from "@/components/ExportDialog";
+import { toast } from "sonner";
 
 moment.locale("ru");
 
 const ITEMS_PER_PAGE = 39;
+
+// Helper function to generate pagination page numbers with ellipsis
+function generatePageNumbers(currentPage: number, totalPages: number): (number | 'ellipsis')[] {
+  if (totalPages <= 7) {
+    // Show all pages if 7 or fewer
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }
+
+  const pages: (number | 'ellipsis')[] = [];
+
+  if (currentPage <= 3) {
+    // Show first 5 pages, ellipsis, last page
+    for (let i = 1; i <= 5; i++) {
+      pages.push(i);
+    }
+    pages.push('ellipsis');
+    pages.push(totalPages);
+  } else if (currentPage >= totalPages - 2) {
+    // Show first page, ellipsis, last 5 pages
+    pages.push(1);
+    pages.push('ellipsis');
+    for (let i = totalPages - 4; i <= totalPages; i++) {
+      pages.push(i);
+    }
+  } else {
+    // Show first page, ellipsis, current-1, current, current+1, ellipsis, last page
+    pages.push(1);
+    pages.push('ellipsis');
+    pages.push(currentPage - 1);
+    pages.push(currentPage);
+    pages.push(currentPage + 1);
+    pages.push('ellipsis');
+    pages.push(totalPages);
+  }
+
+  return pages;
+}
 
 export default function Finance() {
   const { data: transactions = [], isLoading: transactionsLoading } = useTransactions();
@@ -32,6 +72,8 @@ export default function Finance() {
   const { data: discounts = [], isLoading: discountsLoading } = useDiscounts();
   const { data: debts = [], isLoading: debtsLoading } = useDebts();
   const { data: students = [] } = useStudents();
+  const { data: teachers = [] } = useTeachers();
+  const { data: groups = [] } = useGroups();
   
   const createTransaction = useCreateTransaction();
   const createDiscount = useCreateDiscount();
@@ -43,6 +85,7 @@ export default function Finance() {
   const [isTransactionDialogOpen, setIsTransactionDialogOpen] = useState(false);
   const [isDiscountDialogOpen, setIsDiscountDialogOpen] = useState(false);
   const [isDebtDialogOpen, setIsDebtDialogOpen] = useState(false);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [selectedDiscount, setSelectedDiscount] = useState<Discount | null>(null);
   const [selectedDebt, setSelectedDebt] = useState<DebtRecord | null>(null);
   const [currentPageTransactions, setCurrentPageTransactions] = useState(1);
@@ -220,13 +263,21 @@ export default function Finance() {
         <TabsContent value="transactions" className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">История транзакций</h2>
-            <Dialog open={isTransactionDialogOpen} onOpenChange={setIsTransactionDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Добавить транзакцию
-                </Button>
-              </DialogTrigger>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsExportDialogOpen(true)}
+              >
+                <FileText className="mr-2 h-4 w-4" />
+                Экспорт
+              </Button>
+              <Dialog open={isTransactionDialogOpen} onOpenChange={setIsTransactionDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Добавить транзакцию
+                  </Button>
+                </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Новая транзакция</DialogTitle>
@@ -286,6 +337,7 @@ export default function Finance() {
                 </form>
               </DialogContent>
             </Dialog>
+            </div>
           </div>
 
           <Card>
@@ -345,21 +397,30 @@ export default function Finance() {
                     className={currentPageTransactions === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
                   />
                 </PaginationItem>
-                {Array.from({ length: totalPagesTransactions }, (_, i) => i + 1).map((page) => (
-                  <PaginationItem key={page}>
-                    <PaginationLink
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setCurrentPageTransactions(page);
-                      }}
-                      isActive={currentPageTransactions === page}
-                      className="cursor-pointer"
-                    >
-                      {page}
-                    </PaginationLink>
-                  </PaginationItem>
-                ))}
+                {generatePageNumbers(currentPageTransactions, totalPagesTransactions).map((p, idx) => {
+                  if (p === 'ellipsis') {
+                    return (
+                      <PaginationItem key={`ellipsis-${idx}`}>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    );
+                  }
+                  return (
+                    <PaginationItem key={p}>
+                      <PaginationLink
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setCurrentPageTransactions(p);
+                        }}
+                        isActive={currentPageTransactions === p}
+                        className="cursor-pointer"
+                      >
+                        {p}
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                })}
                 <PaginationItem>
                   <PaginationNext
                     href="#"
@@ -429,21 +490,30 @@ export default function Finance() {
                     className={currentPageBalances === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
                   />
                 </PaginationItem>
-                {Array.from({ length: totalPagesBalances }, (_, i) => i + 1).map((page) => (
-                  <PaginationItem key={page}>
-                    <PaginationLink
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setCurrentPageBalances(page);
-                      }}
-                      isActive={currentPageBalances === page}
-                      className="cursor-pointer"
-                    >
-                      {page}
-                    </PaginationLink>
-                  </PaginationItem>
-                ))}
+                {generatePageNumbers(currentPageBalances, totalPagesBalances).map((p, idx) => {
+                  if (p === 'ellipsis') {
+                    return (
+                      <PaginationItem key={`ellipsis-${idx}`}>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    );
+                  }
+                  return (
+                    <PaginationItem key={p}>
+                      <PaginationLink
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setCurrentPageBalances(p);
+                        }}
+                        isActive={currentPageBalances === p}
+                        className="cursor-pointer"
+                      >
+                        {p}
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                })}
                 <PaginationItem>
                   <PaginationNext
                     href="#"
@@ -699,21 +769,30 @@ export default function Finance() {
                     className={currentPageDebts === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
                   />
                 </PaginationItem>
-                {Array.from({ length: totalPagesDebts }, (_, i) => i + 1).map((page) => (
-                  <PaginationItem key={page}>
-                    <PaginationLink
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setCurrentPageDebts(page);
-                      }}
-                      isActive={currentPageDebts === page}
-                      className="cursor-pointer"
-                    >
-                      {page}
-                    </PaginationLink>
-                  </PaginationItem>
-                ))}
+                {generatePageNumbers(currentPageDebts, totalPagesDebts).map((p, idx) => {
+                  if (p === 'ellipsis') {
+                    return (
+                      <PaginationItem key={`ellipsis-${idx}`}>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    );
+                  }
+                  return (
+                    <PaginationItem key={p}>
+                      <PaginationLink
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setCurrentPageDebts(p);
+                        }}
+                        isActive={currentPageDebts === p}
+                        className="cursor-pointer"
+                      >
+                        {p}
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                })}
                 <PaginationItem>
                   <PaginationNext
                     href="#"
@@ -729,6 +808,18 @@ export default function Finance() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Export Dialog */}
+      <ExportDialog
+        open={isExportDialogOpen}
+        onOpenChange={setIsExportDialogOpen}
+        type="transactions"
+        teachers={teachers.map(t => ({ id: t.id, name: t.name }))}
+        groups={groups.map(g => ({ id: g.id, name: g.name }))}
+        students={students.map(s => ({ id: s.id, name: s.name }))}
+        defaultStartDate={moment().subtract(30, 'days').format('YYYY-MM-DD')}
+        defaultEndDate={moment().format('YYYY-MM-DD')}
+      />
     </div>
   );
 }

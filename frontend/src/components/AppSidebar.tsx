@@ -158,11 +158,8 @@ export function AppSidebar() {
             <SidebarMenu>
               {navItems
                 .filter((item) => {
-                  // If no permission is specified, always show the item
                   if (!item.permission) return true;
-                  // If user has no permissions at all (new user), show all items
-                  if (!user || !user.permissions || user.permissions.length === 0) return true;
-                  // Otherwise, check if user has the required permission
+                  if (!user || !user.permissions || user.permissions.length === 0) return false;
                   return hasPermission(item.permission);
                 })
                 .map((item) => (

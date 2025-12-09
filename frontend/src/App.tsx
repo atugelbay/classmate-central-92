@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
@@ -21,7 +21,10 @@ import Settings from "./pages/Settings";
 import Roles from "./pages/Roles";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import VerifyEmail from "./pages/VerifyEmail";
+import AcceptInvite from "./pages/AcceptInvite";
 import NotFound from "./pages/NotFound";
+import { ReactNode } from "react";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -52,8 +55,23 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+const RequirePermission = ({ permission, children }: { permission: string; children: ReactNode }) => {
+  const { hasPermission } = useAuth();
+
+  if (!hasPermission(permission)) {
+    return (
+      <div className="flex h-full min-h-[200px] items-center justify-center text-sm text-muted-foreground">
+        Нет доступа к этому разделу
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+};
+
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -63,7 +81,8 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  if (isAuthenticated) {
+  // Allow verify-email and invite pages even if already signed in
+  if (isAuthenticated && location.pathname !== "/verify-email" && location.pathname !== "/invite") {
     return <Navigate to="/" replace />;
   }
 
@@ -96,24 +115,124 @@ const App = () => (
                 }
               />
               <Route
+                path="/verify-email"
+                element={
+                  <PublicRoute>
+                    <VerifyEmail />
+                  </PublicRoute>
+                }
+              />
+              <Route
+                path="/invite"
+                element={
+                  <PublicRoute>
+                    <AcceptInvite />
+                  </PublicRoute>
+                }
+              />
+              <Route
                 path="/*"
                 element={
                   <ProtectedRoute>
                     <Layout>
                       <Routes>
                         <Route path="/" element={<Dashboard />} />
-                        <Route path="/leads" element={<Leads />} />
-                        <Route path="/teachers" element={<Teachers />} />
-                        <Route path="/teachers/:id" element={<TeacherDetail />} />
-                        <Route path="/students" element={<Students />} />
-                        <Route path="/students/:id" element={<StudentDetail />} />
-                        <Route path="/schedule" element={<Schedule />} />
-                        <Route path="/groups" element={<Groups />} />
-                        <Route path="/individual-lessons" element={<IndividualLessons />} />
-                        <Route path="/finance" element={<Finance />} />
-                        <Route path="/subscriptions" element={<Subscriptions />} />
-                        <Route path="/settings" element={<Settings />} />
-                        <Route path="/roles" element={<Roles />} />
+                        <Route
+                          path="/leads"
+                          element={
+                            <RequirePermission permission="leads.view">
+                              <Leads />
+                            </RequirePermission>
+                          }
+                        />
+                        <Route
+                          path="/teachers"
+                          element={
+                            <RequirePermission permission="teachers.view">
+                              <Teachers />
+                            </RequirePermission>
+                          }
+                        />
+                        <Route
+                          path="/teachers/:id"
+                          element={
+                            <RequirePermission permission="teachers.view">
+                              <TeacherDetail />
+                            </RequirePermission>
+                          }
+                        />
+                        <Route
+                          path="/students"
+                          element={
+                            <RequirePermission permission="students.view">
+                              <Students />
+                            </RequirePermission>
+                          }
+                        />
+                        <Route
+                          path="/students/:id"
+                          element={
+                            <RequirePermission permission="students.view">
+                              <StudentDetail />
+                            </RequirePermission>
+                          }
+                        />
+                        <Route
+                          path="/schedule"
+                          element={
+                            <RequirePermission permission="schedule.view">
+                              <Schedule />
+                            </RequirePermission>
+                          }
+                        />
+                        <Route
+                          path="/groups"
+                          element={
+                            <RequirePermission permission="groups.view">
+                              <Groups />
+                            </RequirePermission>
+                          }
+                        />
+                        <Route
+                          path="/individual-lessons"
+                          element={
+                            <RequirePermission permission="lessons.view">
+                              <IndividualLessons />
+                            </RequirePermission>
+                          }
+                        />
+                        <Route
+                          path="/finance"
+                          element={
+                            <RequirePermission permission="finance.view">
+                              <Finance />
+                            </RequirePermission>
+                          }
+                        />
+                        <Route
+                          path="/subscriptions"
+                          element={
+                            <RequirePermission permission="subscriptions.view">
+                              <Subscriptions />
+                            </RequirePermission>
+                          }
+                        />
+                        <Route
+                          path="/settings"
+                          element={
+                            <RequirePermission permission="settings.view">
+                              <Settings />
+                            </RequirePermission>
+                          }
+                        />
+                        <Route
+                          path="/roles"
+                          element={
+                            <RequirePermission permission="roles.view">
+                              <Roles />
+                            </RequirePermission>
+                          }
+                        />
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </Layout>

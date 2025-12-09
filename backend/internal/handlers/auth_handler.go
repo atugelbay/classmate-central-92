@@ -1,12 +1,15 @@
 package handlers
 
 import (
+	"crypto/rand"
+	"math/big"
 	"net/http"
 
 	"classmate-central/internal/logger"
 	"classmate-central/internal/middleware"
 	"classmate-central/internal/models"
 	"classmate-central/internal/repository"
+	"classmate-central/internal/services"
 	"classmate-central/internal/validation"
 
 	"github.com/gin-gonic/gin"
@@ -19,15 +22,32 @@ type AuthHandler struct {
 	companyRepo  *repository.CompanyRepository
 	roleRepo     *repository.RoleRepository
 	settingsRepo *repository.SettingsRepository
+	emailService *services.EmailService
 }
 
-func NewAuthHandler(userRepo *repository.UserRepository, companyRepo *repository.CompanyRepository, roleRepo *repository.RoleRepository, settingsRepo *repository.SettingsRepository) *AuthHandler {
+func NewAuthHandler(userRepo *repository.UserRepository, companyRepo *repository.CompanyRepository, roleRepo *repository.RoleRepository, settingsRepo *repository.SettingsRepository, emailService *services.EmailService) *AuthHandler {
 	return &AuthHandler{
 		userRepo:     userRepo,
 		companyRepo:  companyRepo,
 		roleRepo:     roleRepo,
 		settingsRepo: settingsRepo,
+		emailService: emailService,
 	}
+}
+
+// Helper to generate 6-char alphanumeric code
+func generateVerificationCode() string {
+	const letters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // avoid confusing chars
+	code := make([]byte, 6)
+	for i := 0; i < 6; i++ {
+		n, err := rand.Int(rand.Reader, big.NewInt(int64(len(letters))))
+		if err != nil {
+			code[i] = letters[i%len(letters)]
+			continue
+		}
+		code[i] = letters[n.Int64()]
+	}
+	return string(code)
 }
 
 func (h *AuthHandler) Register(c *gin.Context) {
@@ -110,23 +130,25 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		logger.Info("Default roles created", zap.String("companyId", company.ID))
 	}
 
-	// Find view_only role for the company (default role)
-	viewOnlyRoleID := company.ID + "_view_only"
-	viewOnlyRole, err := h.roleRepo.GetByID(viewOnlyRoleID, company.ID)
-	if err != nil || viewOnlyRole == nil {
-		logger.Warn("view_only role not found after creation attempt", zap.String("companyId", company.ID), zap.String("roleId", viewOnlyRoleID))
-		// Continue without role assignment - user can still access with default permissions
+	// For the first user of the company, grant admin role by default
+	adminRoleID := company.ID + "_admin"
+	adminRole, err := h.roleRepo.GetByID(adminRoleID, company.ID)
+	if err != nil || adminRole == nil {
+		logger.Warn("admin role not found after creation attempt", logger.ErrorField(err), zap.String("companyId", company.ID), zap.String("roleId", adminRoleID))
 	}
 
 	// Create user with company_id and default role
+	verificationCode := generateVerificationCode()
 	user := &models.User{
-		Email:     req.Email,
-		Password:  string(hashedPassword),
-		Name:      req.Name,
-		CompanyID: company.ID,
+		Email:                  req.Email,
+		Password:               string(hashedPassword),
+		Name:                   req.Name,
+		CompanyID:              company.ID,
+		IsEmailVerified:        false,
+		EmailVerificationToken: &verificationCode,
 	}
-	if viewOnlyRole != nil {
-		user.RoleID = &viewOnlyRoleID
+	if adminRole != nil {
+		user.RoleID = &adminRoleID
 	}
 
 	if err := h.userRepo.Create(user); err != nil {
@@ -135,11 +157,18 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
+	// Send verification email
+	go func() {
+		if err := h.emailService.SendVerificationCode(user.Email, verificationCode); err != nil {
+			logger.Error("Failed to send verification email", logger.ErrorField(err), zap.String("email", user.Email))
+		}
+	}()
+
 	logger.Info("User created", zap.Int("userId", user.ID), zap.String("email", user.Email), zap.String("companyId", company.ID))
 
-	// Assign default role to user
-	if viewOnlyRole != nil {
-		err = h.userRepo.AssignRoleToUser(user.ID, viewOnlyRoleID, company.ID, nil)
+	// Assign admin role to the first user
+	if adminRole != nil {
+		err = h.userRepo.AssignRoleToUser(user.ID, adminRoleID, company.ID, nil)
 		if err != nil {
 			// Log error but don't fail registration
 			_ = err
@@ -341,4 +370,188 @@ func (h *AuthHandler) Me(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, user)
+}
+
+// InviteUser allows an admin/manager to add a user by email and assign a role within the same company
+func (h *AuthHandler) InviteUser(c *gin.Context) {
+	companyID, exists := c.Get("company_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Company context required"})
+		return
+	}
+
+	var req models.InviteUserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": validation.FormatValidationErrors(err)})
+		return
+	}
+
+	if err := validation.ValidateName(req.Name); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if err := validation.ValidateEmail(req.Email); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Ensure role belongs to the same company
+	role, err := h.roleRepo.GetByID(req.RoleID, companyID.(string))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load role"})
+		return
+	}
+	if role == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Role not found for this company"})
+		return
+	}
+
+	// Check for existing user by email
+	existingUser, err := h.userRepo.GetByEmail(req.Email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+	if existingUser != nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "User with this email already exists"})
+		return
+	}
+
+	// Generate temp password and verification code
+	tempPassword := generateVerificationCode()
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(tempPassword), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating password"})
+		return
+	}
+
+	verificationCode := generateVerificationCode()
+	user := &models.User{
+		Email:                  req.Email,
+		Password:               string(hashedPassword),
+		Name:                   req.Name,
+		CompanyID:              companyID.(string),
+		RoleID:                 &req.RoleID,
+		IsEmailVerified:        false,
+		EmailVerificationToken: &verificationCode,
+	}
+
+	if err := h.userRepo.Create(user); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating user: " + err.Error()})
+		return
+	}
+
+	if err := h.userRepo.AssignRoleToUser(user.ID, req.RoleID, companyID.(string), nil); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error assigning role: " + err.Error()})
+		return
+	}
+
+	// Send invite/verification email
+	go func() {
+		if err := h.emailService.SendInviteEmail(user.Email, verificationCode); err != nil {
+			logger.Error("Failed to send invite verification email", logger.ErrorField(err), zap.String("email", user.Email))
+		}
+	}()
+
+	c.JSON(http.StatusCreated, gin.H{
+		"message": "User invited successfully",
+		"userId":  user.ID,
+	})
+}
+
+// AcceptInvite lets invited user set password and activate the account
+func (h *AuthHandler) AcceptInvite(c *gin.Context) {
+	var req models.AcceptInviteRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": validation.FormatValidationErrors(err)})
+		return
+	}
+
+	if req.Password != req.ConfirmPassword {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Passwords do not match"})
+		return
+	}
+	if len(req.Password) < 6 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Password must be at least 6 characters"})
+		return
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error hashing password"})
+		return
+	}
+
+	user, err := h.userRepo.CompleteInvite(req.Email, req.Code, string(hashedPassword))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	logger.Info("Invite completed", zap.Int("userId", user.ID), zap.String("email", user.Email), zap.String("companyId", user.CompanyID))
+
+	// Load roles/permissions for token - ensure we use the correct company_id
+	userWithRoles, err := h.userRepo.GetUserWithRoles(user.ID, user.CompanyID)
+	if err != nil {
+		logger.Warn("Failed to load user roles, using basic user", logger.ErrorField(err), zap.Int("userId", user.ID), zap.String("companyId", user.CompanyID))
+	} else if userWithRoles != nil {
+		user = userWithRoles
+		logger.Info("User roles loaded", zap.Int("userId", user.ID), zap.Int("rolesCount", len(user.Roles)), zap.Int("permissionsCount", len(user.Permissions)))
+	}
+
+	perms := []string{}
+	if user.Permissions != nil {
+		perms = user.Permissions
+	}
+
+	// Generate tokens
+	token, err := middleware.GenerateToken(user.ID, user.Email, user.RoleID, perms)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating token"})
+		return
+	}
+	refreshToken, err := middleware.GenerateRefreshToken(user.ID, user.Email, user.RoleID, perms)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating refresh token"})
+		return
+	}
+
+	c.JSON(http.StatusOK, models.AuthResponse{
+		Token:        token,
+		RefreshToken: refreshToken,
+		User:         user,
+	})
+}
+
+// GetUsers gets all users for the company (for admin/manager)
+func (h *AuthHandler) GetUsers(c *gin.Context) {
+	companyID, exists := c.Get("company_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Company context required"})
+		return
+	}
+
+	users, err := h.userRepo.GetAll(companyID.(string))
+	if err != nil {
+		logger.Error("Error getting users", logger.ErrorField(err), zap.String("companyId", companyID.(string)))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting users"})
+		return
+	}
+
+	c.JSON(http.StatusOK, users)
+}
+
+// Logout handles user logout
+// Note: For full token blacklist functionality, implement Redis or database-based token blacklist
+func (h *AuthHandler) Logout(c *gin.Context) {
+	// In a stateless JWT system, logout is handled client-side by removing tokens
+	// For enhanced security, you can implement token blacklisting here:
+	// 1. Extract token from Authorization header
+	// 2. Add token to blacklist (Redis or database)
+	// 3. Check blacklist in AuthMiddleware before validating token
+	
+	// For now, we just return success - client should remove tokens
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Logged out successfully",
+	})
 }

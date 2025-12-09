@@ -153,6 +153,57 @@ export default function StudentDetail() {
 
   const student = students.find((s) => s.id === id);
 
+  // Derive data safely even if student is not yet loaded; this keeps hook order stable
+  const studentGroups = student ? groups.filter((g) => student.groupIds?.includes(g.id)) : [];
+  
+  // Get student's lessons
+  const studentLessons = student ? lessons.filter((l) => 
+    l.studentIds?.includes(student.id) || 
+    (l.groupId && student.groupIds?.includes(l.groupId))
+  ) : [];
+  const upcomingLessons = studentLessons
+    .filter((l) => moment(l.start).isAfter(moment()))
+    .sort((a, b) => moment(a.start).diff(moment(b.start)));
+  const nextLesson = upcomingLessons[0];
+  const nextLessonGroup = nextLesson?.groupId ? groups.find((g) => g.id === nextLesson.groupId) : null;
+
+  // Calculate active status using the same logic as Students page
+  // This ensures consistency between StudentDetail and Students pages
+  const getIsActive = useMemo(() => {
+    if (!student) return false;
+    // If status is manually set to "inactive", student is inactive
+    if (student.status === "inactive") {
+      return false;
+    }
+    // Check if student has upcoming lessons
+    const bySchedule = studentLessons.some((l) => moment(l.start).isAfter(moment()));
+    // Check if student has positive balance
+    const byBalance = (balance?.balance ?? 0) > 0;
+    // Check if student has active subscription
+    const now = new Date();
+    const bySubscription = subscriptions.some((s: any) => {
+      const notExpired = s.paidTill ? (new Date(s.paidTill) >= now) : false;
+      const hasLessons = (s.lessonsRemaining ?? 0) > 0;
+      return s.status === "active" && (hasLessons || notExpired);
+    });
+    // Active only if ALL three conditions are met
+    return bySchedule && byBalance && bySubscription;
+  }, [student, studentLessons, balance, subscriptions]);
+
+  // Display status logic: match Students page behavior
+  // If status is manually set to inactive/frozen/graduated, use it
+  // Otherwise use computed status (getIsActive) for consistency with Students page filtering
+  const displayStatus = useMemo(() => {
+    if (!student) return "active";
+    // If status is manually set to inactive/frozen/graduated, use it
+    if (student.status === "inactive" || student.status === "frozen" || student.status === "graduated") {
+      return student.status;
+    }
+    // Otherwise use computed status to match Students page logic
+    return getIsActive ? "active" : "inactive";
+  }, [student, getIsActive]);
+
+  // If student still not loaded, show loader (after hooks to keep order stable)
   if (!student) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -160,19 +211,6 @@ export default function StudentDetail() {
       </div>
     );
   }
-
-  const studentGroups = groups.filter((g) => student.groupIds?.includes(g.id));
-  
-  // Get student's lessons
-  const studentLessons = lessons.filter((l) => 
-    l.studentIds?.includes(student.id) || 
-    (l.groupId && student.groupIds?.includes(l.groupId))
-  );
-  const upcomingLessons = studentLessons
-    .filter((l) => moment(l.start).isAfter(moment()))
-    .sort((a, b) => moment(a.start).diff(moment(b.start)));
-  const nextLesson = upcomingLessons[0];
-  const nextLessonGroup = nextLesson?.groupId ? groups.find((g) => g.id === nextLesson.groupId) : null;
 
   // Calculate attendance stats (use actual attendance records; fallback to journal)
   const attendanceStats = {
@@ -299,8 +337,8 @@ export default function StudentDetail() {
             <div>
               <h1 className="text-2xl font-bold">{student.name}</h1>
               <div className="flex items-center gap-2 mt-1">
-                <Badge className={statusColors[student.status || "active"]}>
-                  {statusNames[student.status || "active"]}
+                <Badge className={statusColors[displayStatus]}>
+                  {statusNames[displayStatus]}
                 </Badge>
               </div>
             </div>

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import moment from "moment";
 import "moment/locale/ru";
 import { useTeachers, useCreateTeacher, useUpdateTeacher, useDeleteTeacher, useGroups, useRooms, useStudents, useLessons } from "@/hooks/useData";
+import { useConfirmDelete } from "@/hooks/useConfirmDelete";
 
 moment.locale("ru");
 import { LessonFormModal } from "@/components/LessonFormModal";
@@ -26,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Teacher } from "@/types";
 import { formatKzPhone, normalizeKzPhone } from "@/lib/phone";
 
@@ -88,15 +90,13 @@ export default function Teachers() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm("Вы уверены, что хотите удалить этого преподавателя?")) {
-      try {
-        await deleteTeacher.mutateAsync(id);
-      } catch (error) {
-        // Error is handled by the mutation
-      }
+  const deleteConfirm = useConfirmDelete(async (id: string) => {
+    try {
+      await deleteTeacher.mutateAsync(id);
+    } catch (error) {
+      // Error is handled by the mutation
     }
-  };
+  });
 
   const handleCreateLesson = (teacher: Teacher) => {
     setLessonFormData({
@@ -374,6 +374,18 @@ export default function Teachers() {
         onSuccess={() => {
           setLessonFormData(null);
         }}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteConfirm.isOpen}
+        onOpenChange={(open) => !open && deleteConfirm.close()}
+        title="Удалить преподавателя"
+        description="Вы уверены, что хотите удалить этого преподавателя? Это действие нельзя отменить."
+        confirmText="Удалить"
+        cancelText="Отмена"
+        variant="destructive"
+        onConfirm={deleteConfirm.confirm}
       />
     </div>
   );

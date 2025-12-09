@@ -40,9 +40,8 @@ export default function Register() {
 
     try {
       await register(name, email, password, companyName);
-      toast.success("Регистрация успешна!");
-      // Полная перезагрузка страницы для сброса всех данных
-      window.location.href = "/";
+      toast.success("Регистрация успешна! Проверьте почту для подтверждения.");
+      navigate(`/verify-email?email=${encodeURIComponent(email)}`);
     } catch (error: any) {
       toast.error(error.response?.data?.error || "Ошибка регистрации");
     } finally {

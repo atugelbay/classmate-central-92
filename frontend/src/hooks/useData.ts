@@ -40,8 +40,11 @@ import {
   CreateRoleRequest,
   UpdateRoleRequest,
   AssignRoleRequest,
+  InviteUserRequest,
+  AcceptInviteRequest,
 } from "@/types";
 import { toast } from "sonner";
+import { authAPI } from "@/api/auth";
 
 // Teachers hooks
 export const useTeachers = () => {
@@ -1182,14 +1185,54 @@ export const useUpdateStudentStatus = () => {
   return useMutation({
     mutationFn: ({ studentId, status }: { studentId: string; status: StudentStatus }) =>
       studentsAPI.updateStatus(studentId, status),
+    onMutate: async ({ studentId, status }) => {
+      // Cancel any outgoing refetches to avoid overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: ["students"] });
+      await queryClient.cancelQueries({ queryKey: ["students", "paged"] });
+      
+      // Snapshot the previous values for rollback
+      const previousStudents = queryClient.getQueryData<Student[]>(["students"]);
+      
+      // Optimistically update all student caches
+      queryClient.setQueriesData<Student[]>({ queryKey: ["students"] }, (old) => {
+        if (!old || !Array.isArray(old)) return old;
+        return old.map((s) => (s.id === studentId ? { ...s, status } : s));
+      });
+      
+      // Update all paged queries
+      queryClient.setQueriesData<{ items: Student[]; total: number }>(
+        { queryKey: ["students", "paged"] },
+        (old) => {
+          if (!old || !old.items || !Array.isArray(old.items)) return old;
+          return {
+            ...old,
+            items: old.items.map((s) => (s.id === studentId ? { ...s, status } : s)),
+          };
+        }
+      );
+      
+      // Also update individual student query if it exists
+      queryClient.setQueryData<Student>(["students", studentId], (old) => {
+        if (!old) return old;
+        return { ...old, status };
+      });
+      
+      return { previousStudents };
+    },
+    onError: (error: any, variables, context) => {
+      // Rollback on error
+      if (context?.previousStudents) {
+        queryClient.setQueryData(["students"], context.previousStudents);
+      }
+      toast.error(error.response?.data?.error || "Ошибка при обновлении статуса");
+    },
     onSuccess: (_, variables) => {
+      // Invalidate all student-related queries to ensure consistency
       queryClient.invalidateQueries({ queryKey: ["students"] });
+      queryClient.invalidateQueries({ queryKey: ["students", "paged"] });
       queryClient.invalidateQueries({ queryKey: ["students", variables.studentId] });
       queryClient.invalidateQueries({ queryKey: ["students", variables.studentId, "activities"] });
       toast.success("Статус ученика обновлен");
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.error || "Ошибка при обновлении статуса");
     },
   });
 };
@@ -1372,5 +1415,33 @@ export const useRemoveRole = () => {
     onError: (error: any) => {
       toast.error(error.response?.data?.error || "Ошибка при удалении роли");
     },
+  });
+};
+
+export const useInviteUser = () => {
+  return useMutation({
+    mutationFn: (data: InviteUserRequest) => authAPI.invite(data),
+    onSuccess: () => {
+      toast.success("Приглашение отправлено");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при приглашении");
+    },
+  });
+};
+
+export const useAcceptInvite = () => {
+  return useMutation({
+    mutationFn: (data: AcceptInviteRequest) => authAPI.acceptInvite(data),
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Не удалось принять приглашение");
+    },
+  });
+};
+
+export const useUsers = () => {
+  return useQuery({
+    queryKey: ["users"],
+    queryFn: () => authAPI.getUsers(),
   });
 };

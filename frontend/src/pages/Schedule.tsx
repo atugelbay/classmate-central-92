@@ -7,7 +7,7 @@ import { useLessons, useDeleteLesson, useUpdateLesson, useTeachers, useGroups, u
 import { useLessonAttendances } from "@/hooks/useLessonAttendances";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Loader2, Trash2, ChevronLeft, ChevronRight, Building2, Calendar, CalendarDays, CalendarRange, CheckCircle2, XCircle, Clock, Edit, ClipboardCheck } from "lucide-react";
+import { Plus, Loader2, Trash2, ChevronLeft, ChevronRight, Building2, Calendar, CalendarDays, CalendarRange, CheckCircle2, XCircle, Clock, Edit, ClipboardCheck, FileText, FileSpreadsheet } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import RoomScheduleView from "@/components/RoomScheduleView";
@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/select";
 import { Lesson } from "@/types";
 import { toast } from "sonner";
+import { ExportDialog } from "@/components/ExportDialog";
 
 moment.locale("ru");
 
@@ -65,6 +66,7 @@ export default function Schedule() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isRoomDialogOpen, setIsRoomDialogOpen] = useState(false);
   const [isAttendanceDialogOpen, setIsAttendanceDialogOpen] = useState(false);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<"day" | "week" | "month">("day");
@@ -398,6 +400,13 @@ export default function Schedule() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setIsExportDialogOpen(true)}
+          >
+            <FileText className="mr-2 h-4 w-4" />
+            Экспорт
+          </Button>
           <Dialog open={isRoomDialogOpen} onOpenChange={setIsRoomDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline">
@@ -738,6 +747,18 @@ export default function Schedule() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Export Dialog */}
+      <ExportDialog
+        open={isExportDialogOpen}
+        onOpenChange={setIsExportDialogOpen}
+        type="schedule"
+        teachers={teachers.map(t => ({ id: t.id, name: t.name }))}
+        groups={groups.map(g => ({ id: g.id, name: g.name }))}
+        rooms={rooms.map(r => ({ id: r.id, name: r.name }))}
+        defaultStartDate={moment().subtract(30, 'days').format('YYYY-MM-DD')}
+        defaultEndDate={moment().add(30, 'days').format('YYYY-MM-DD')}
+      />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
