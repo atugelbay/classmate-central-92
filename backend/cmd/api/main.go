@@ -108,7 +108,7 @@ func main() {
 	router.Use(middleware.CORSMiddleware())
 	router.Use(middleware.RequestLoggerMiddleware()) // Request logging with request ID
 	router.Use(middleware.ErrorHandlerMiddleware())  // Centralized error handling
-	router.Use(middleware.MetricsMiddleware())        // Prometheus metrics
+	router.Use(middleware.MetricsMiddleware())      // Prometheus metrics
 
 	// Public routes with rate limiting for auth endpoints (brute-force protection)
 	auth := router.Group("/api/auth")

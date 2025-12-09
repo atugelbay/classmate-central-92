@@ -10,6 +10,10 @@ frontend/.vite/
 # Environment variables and secrets
 # Ignore all .env files except .example files
 .env
+.env.example
+.env.development
+.env.production
+.env.company2
 .env.local
 .env.development
 .env.production
