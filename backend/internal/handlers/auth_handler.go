@@ -549,7 +549,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	// 1. Extract token from Authorization header
 	// 2. Add token to blacklist (Redis or database)
 	// 3. Check blacklist in AuthMiddleware before validating token
-	
+
 	// For now, we just return success - client should remove tokens
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Logged out successfully",
