@@ -5,6 +5,10 @@ import (
 	"net/smtp"
 	"os"
 	"time"
+
+	"classmate-central/internal/logger"
+
+	"go.uber.org/zap"
 )
 
 type EmailService struct {
@@ -13,23 +17,48 @@ type EmailService struct {
 	smtpUser     string
 	smtpPassword string
 	fromEmail    string
+	enabled      bool
 }
 
 func NewEmailService() *EmailService {
-	return &EmailService{
+	service := &EmailService{
 		smtpHost:     os.Getenv("SMTP_HOST"),
 		smtpPort:     os.Getenv("SMTP_PORT"),
 		smtpUser:     os.Getenv("SMTP_USER"),
 		smtpPassword: os.Getenv("SMTP_PASSWORD"),
 		fromEmail:    os.Getenv("SMTP_FROM_EMAIL"),
 	}
+
+	// Check if SMTP is fully configured
+	service.enabled = service.smtpHost != "" && service.smtpPort != "" &&
+		service.smtpUser != "" && service.smtpPassword != "" && service.fromEmail != ""
+
+	if !service.enabled {
+		logger.Warn("SMTP is not configured. Email notifications will be logged to console only.",
+			zap.String("smtpHost", service.smtpHost),
+			zap.String("smtpPort", service.smtpPort),
+		)
+		logger.Info("To enable email notifications, set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, and SMTP_FROM_EMAIL environment variables")
+	} else {
+		logger.Info("Email service initialized",
+			zap.String("smtpHost", service.smtpHost),
+			zap.String("smtpPort", service.smtpPort),
+			zap.String("fromEmail", service.fromEmail),
+		)
+	}
+
+	return service
 }
 
 // SendVerificationCode sends a verification code via email
 func (s *EmailService) SendVerificationCode(toEmail, code string) error {
 	// If SMTP is not configured, just log the token (for dev/test)
-	if s.smtpHost == "" {
-		fmt.Printf("SMTP not configured. Verification code for %s: %s\n", toEmail, code)
+	if !s.enabled {
+		logger.Info("SMTP not configured - verification code logged to console",
+			zap.String("email", toEmail),
+			zap.String("code", code),
+		)
+		fmt.Printf("⚠️  SMTP not configured. Verification code for %s: %s\n", toEmail, code)
 		return nil
 	}
 
@@ -66,8 +95,13 @@ func (s *EmailService) SendInviteEmail(toEmail, code string) error {
 	inviteLink := fmt.Sprintf("%s/invite?email=%s&code=%s", frontendURL, toEmail, code)
 
 	// If SMTP is not configured, log to console
-	if s.smtpHost == "" {
-		fmt.Printf("SMTP not configured. Invite link for %s: %s (code: %s)\n", toEmail, inviteLink, code)
+	if !s.enabled {
+		logger.Info("SMTP not configured - invite link logged to console",
+			zap.String("email", toEmail),
+			zap.String("link", inviteLink),
+			zap.String("code", code),
+		)
+		fmt.Printf("⚠️  SMTP not configured. Invite link for %s: %s (code: %s)\n", toEmail, inviteLink, code)
 		return nil
 	}
 
@@ -98,8 +132,14 @@ func (s *EmailService) SendInviteEmail(toEmail, code string) error {
 // SendPaymentNotification sends a payment notification email
 func (s *EmailService) SendPaymentNotification(toEmail, studentName string, amount float64, paymentType, paymentMethod, description string) error {
 	// If SMTP is not configured, just log (for dev/test)
-	if s.smtpHost == "" {
-		fmt.Printf("SMTP not configured. Payment notification for %s: %.2f ₸ (%s)\n", toEmail, amount, paymentType)
+	if !s.enabled {
+		logger.Info("SMTP not configured - payment notification logged to console",
+			zap.String("email", toEmail),
+			zap.String("student", studentName),
+			zap.Float64("amount", amount),
+			zap.String("type", paymentType),
+		)
+		fmt.Printf("⚠️  SMTP not configured. Payment notification for %s: %.2f ₸ (%s)\n", toEmail, amount, paymentType)
 		return nil
 	}
 
@@ -155,8 +195,14 @@ func (s *EmailService) SendPaymentNotification(toEmail, studentName string, amou
 // SendAbsenceNotification sends an absence notification email
 func (s *EmailService) SendAbsenceNotification(toEmail, studentName, lessonSubject, reason, notes string, lessonDate time.Time) error {
 	// If SMTP is not configured, just log (for dev/test)
-	if s.smtpHost == "" {
-		fmt.Printf("SMTP not configured. Absence notification for %s: %s on %s\n", toEmail, lessonSubject, lessonDate.Format("02.01.2006"))
+	if !s.enabled {
+		logger.Info("SMTP not configured - absence notification logged to console",
+			zap.String("email", toEmail),
+			zap.String("student", studentName),
+			zap.String("subject", lessonSubject),
+			zap.String("date", lessonDate.Format("02.01.2006")),
+		)
+		fmt.Printf("⚠️  SMTP not configured. Absence notification for %s: %s on %s\n", toEmail, lessonSubject, lessonDate.Format("02.01.2006"))
 		return nil
 	}
 

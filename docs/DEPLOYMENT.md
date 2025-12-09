@@ -99,9 +99,10 @@ docker exec -it classmate_central_api_prod ./main
 
 ### Email
 
-- [ ] Configure SMTP settings
+- [ ] Configure SMTP settings (see `RAILWAY_SMTP_SETUP.md` for Railway)
 - [ ] Test email delivery
 - [ ] Set up email monitoring
+- [ ] **Note:** Without SMTP, emails are logged to console only (app still works)
 
 ## Docker Deployment
 
