@@ -272,7 +272,7 @@ func (s *EmailService) SendAbsenceNotification(toEmail, studentName, lessonSubje
 	return nil
 }
 
-// sendEmailWithTLS sends an email using TLS/STARTTLS connection
+// sendEmailWithTLS sends an email using TLS/STARTTLS or SSL connection
 // This is required for Gmail and most modern SMTP servers
 func (s *EmailService) sendEmailWithTLS(toEmail, msg string, auth smtp.Auth) error {
 	port, err := strconv.Atoi(s.smtpPort)
@@ -280,8 +280,18 @@ func (s *EmailService) sendEmailWithTLS(toEmail, msg string, auth smtp.Auth) err
 		return fmt.Errorf("invalid SMTP port: %w", err)
 	}
 
-	// Connect to SMTP server
-	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", s.smtpHost, port))
+	// Port 465 requires SSL from the start
+	if port == 465 {
+		return s.sendEmailWithSSL(toEmail, msg, auth)
+	}
+
+	// Port 587 uses STARTTLS
+	// Use DialTimeout to avoid hanging connections
+	dialer := &net.Dialer{
+		Timeout: 30 * time.Second,
+	}
+
+	conn, err := dialer.Dial("tcp", fmt.Sprintf("%s:%d", s.smtpHost, port))
 	if err != nil {
 		return fmt.Errorf("failed to connect to SMTP server: %w", err)
 	}
@@ -306,6 +316,78 @@ func (s *EmailService) sendEmailWithTLS(toEmail, msg string, auth smtp.Auth) err
 			return fmt.Errorf("failed to start TLS: %w", err)
 		}
 	}
+
+	// Authenticate
+	if auth != nil {
+		if err = client.Auth(auth); err != nil {
+			return fmt.Errorf("authentication failed: %w", err)
+		}
+	}
+
+	// Set sender
+	if err = client.Mail(s.fromEmail); err != nil {
+		return fmt.Errorf("failed to set sender: %w", err)
+	}
+
+	// Set recipient
+	if err = client.Rcpt(toEmail); err != nil {
+		return fmt.Errorf("failed to set recipient: %w", err)
+	}
+
+	// Send email body
+	writer, err := client.Data()
+	if err != nil {
+		return fmt.Errorf("failed to get data writer: %w", err)
+	}
+
+	_, err = writer.Write([]byte(msg))
+	if err != nil {
+		writer.Close()
+		return fmt.Errorf("failed to write email body: %w", err)
+	}
+
+	err = writer.Close()
+	if err != nil {
+		return fmt.Errorf("failed to close data writer: %w", err)
+	}
+
+	// Quit
+	err = client.Quit()
+	if err != nil {
+		return fmt.Errorf("failed to quit SMTP client: %w", err)
+	}
+
+	return nil
+}
+
+// sendEmailWithSSL sends an email using SSL connection (port 465)
+func (s *EmailService) sendEmailWithSSL(toEmail, msg string, auth smtp.Auth) error {
+	port, err := strconv.Atoi(s.smtpPort)
+	if err != nil {
+		return fmt.Errorf("invalid SMTP port: %w", err)
+	}
+
+	// Use DialTimeout to avoid hanging connections
+	dialer := &net.Dialer{
+		Timeout: 30 * time.Second,
+	}
+
+	// Connect with SSL from the start
+	conn, err := tls.DialWithDialer(dialer, "tcp", fmt.Sprintf("%s:%d", s.smtpHost, port), &tls.Config{
+		ServerName:         s.smtpHost,
+		InsecureSkipVerify: false,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to connect to SMTP server with SSL: %w", err)
+	}
+	defer conn.Close()
+
+	// Create SMTP client
+	client, err := smtp.NewClient(conn, s.smtpHost)
+	if err != nil {
+		return fmt.Errorf("failed to create SMTP client: %w", err)
+	}
+	defer client.Close()
 
 	// Authenticate
 	if auth != nil {

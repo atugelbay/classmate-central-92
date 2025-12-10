@@ -16,11 +16,23 @@
 
 ### Для Gmail
 
+**⚠️ ВАЖНО:** Railway может блокировать подключение к Gmail на порту 587. Если получаете ошибку "connection timed out", используйте порт **465** (SSL).
+
+**Вариант 1: Порт 465 (SSL) - РЕКОМЕНДУЕТСЯ для Railway:**
+```
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=465
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-app-password  # БЕЗ пробелов!
+SMTP_FROM_EMAIL=your-email@gmail.com
+```
+
+**Вариант 2: Порт 587 (STARTTLS) - может не работать на Railway:**
 ```
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your-email@gmail.com
-SMTP_PASSWORD=your-app-password
+SMTP_PASSWORD=your-app-password  # БЕЗ пробелов!
 SMTP_FROM_EMAIL=your-email@gmail.com
 ```
 
@@ -67,9 +79,28 @@ SMTP_FROM_EMAIL=your-verified-email@domain.com
 1. Перезапустите сервис на Railway
 2. Проверьте логи - должно появиться:
    ```
-   Email service initialized smtpHost=smtp.gmail.com smtpPort=587 fromEmail=your-email@gmail.com
+   Email service initialized smtpHost=smtp.gmail.com smtpPort=465 fromEmail=your-email@gmail.com
    ```
 3. Попробуйте зарегистрировать нового пользователя - код должен прийти на email
+
+## Решение проблем
+
+### Ошибка "connection timed out"
+
+Если видите ошибку `dial tcp: connect: connection timed out`:
+
+1. **Попробуйте порт 465 вместо 587:**
+   - Измените `SMTP_PORT=587` на `SMTP_PORT=465` на Railway
+   - Перезапустите сервис
+
+2. **Если порт 465 тоже не работает, используйте другой провайдер:**
+   - **Yandex** (рекомендуется для России/СНГ) - порт 465 работает стабильно
+   - **Mail.ru** - порт 465 работает стабильно
+   - **SendGrid** - бесплатный тариф до 100 писем/день
+
+3. **Проверьте, что App Password правильный:**
+   - Убедитесь, что пароль вставлен **БЕЗ пробелов**
+   - Проверьте, что 2FA включена в Google Account
 
 ## Если SMTP не настроен
 
