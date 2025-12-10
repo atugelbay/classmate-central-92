@@ -1,9 +1,12 @@
 package services
 
 import (
+	"crypto/tls"
 	"fmt"
+	"net"
 	"net/smtp"
 	"os"
+	"strconv"
 	"time"
 
 	"classmate-central/internal/logger"
@@ -78,11 +81,19 @@ func (s *EmailService) SendVerificationCode(toEmail, code string) error {
 		body
 
 	auth := smtp.PlainAuth("", s.smtpUser, s.smtpPassword, s.smtpHost)
-	err := smtp.SendMail(s.smtpHost+":"+s.smtpPort, auth, s.fromEmail, []string{toEmail}, []byte(msg))
+
+	err := s.sendEmailWithTLS(toEmail, msg, auth)
 	if err != nil {
-		return err
+		logger.Error("Failed to send verification email",
+			logger.ErrorField(err),
+			zap.String("to", toEmail),
+			zap.String("smtpHost", s.smtpHost),
+			zap.String("smtpPort", s.smtpPort),
+		)
+		return fmt.Errorf("failed to send verification email: %w", err)
 	}
 
+	logger.Info("Verification email sent successfully", zap.String("to", toEmail))
 	return nil
 }
 
@@ -121,11 +132,17 @@ func (s *EmailService) SendInviteEmail(toEmail, code string) error {
 		body
 
 	auth := smtp.PlainAuth("", s.smtpUser, s.smtpPassword, s.smtpHost)
-	err := smtp.SendMail(s.smtpHost+":"+s.smtpPort, auth, s.fromEmail, []string{toEmail}, []byte(msg))
+
+	err := s.sendEmailWithTLS(toEmail, msg, auth)
 	if err != nil {
-		return err
+		logger.Error("Failed to send invite email",
+			logger.ErrorField(err),
+			zap.String("to", toEmail),
+		)
+		return fmt.Errorf("failed to send invite email: %w", err)
 	}
 
+	logger.Info("Invite email sent successfully", zap.String("to", toEmail))
 	return nil
 }
 
@@ -184,11 +201,18 @@ func (s *EmailService) SendPaymentNotification(toEmail, studentName string, amou
 		body
 
 	auth := smtp.PlainAuth("", s.smtpUser, s.smtpPassword, s.smtpHost)
-	err := smtp.SendMail(s.smtpHost+":"+s.smtpPort, auth, s.fromEmail, []string{toEmail}, []byte(msg))
+
+	err := s.sendEmailWithTLS(toEmail, msg, auth)
 	if err != nil {
-		return err
+		logger.Error("Failed to send payment notification",
+			logger.ErrorField(err),
+			zap.String("to", toEmail),
+			zap.String("type", paymentType),
+		)
+		return fmt.Errorf("failed to send payment notification: %w", err)
 	}
 
+	logger.Info("Payment notification sent successfully", zap.String("to", toEmail), zap.String("type", paymentType))
 	return nil
 }
 
@@ -233,9 +257,94 @@ func (s *EmailService) SendAbsenceNotification(toEmail, studentName, lessonSubje
 		body
 
 	auth := smtp.PlainAuth("", s.smtpUser, s.smtpPassword, s.smtpHost)
-	err := smtp.SendMail(s.smtpHost+":"+s.smtpPort, auth, s.fromEmail, []string{toEmail}, []byte(msg))
+
+	err := s.sendEmailWithTLS(toEmail, msg, auth)
 	if err != nil {
-		return err
+		logger.Error("Failed to send absence notification",
+			logger.ErrorField(err),
+			zap.String("to", toEmail),
+			zap.String("student", studentName),
+		)
+		return fmt.Errorf("failed to send absence notification: %w", err)
+	}
+
+	logger.Info("Absence notification sent successfully", zap.String("to", toEmail), zap.String("student", studentName))
+	return nil
+}
+
+// sendEmailWithTLS sends an email using TLS/STARTTLS connection
+// This is required for Gmail and most modern SMTP servers
+func (s *EmailService) sendEmailWithTLS(toEmail, msg string, auth smtp.Auth) error {
+	port, err := strconv.Atoi(s.smtpPort)
+	if err != nil {
+		return fmt.Errorf("invalid SMTP port: %w", err)
+	}
+
+	// Connect to SMTP server
+	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", s.smtpHost, port))
+	if err != nil {
+		return fmt.Errorf("failed to connect to SMTP server: %w", err)
+	}
+	defer conn.Close()
+
+	// Create SMTP client
+	client, err := smtp.NewClient(conn, s.smtpHost)
+	if err != nil {
+		return fmt.Errorf("failed to create SMTP client: %w", err)
+	}
+	defer client.Close()
+
+	// Check if server supports STARTTLS
+	if ok, _ := client.Extension("STARTTLS"); ok {
+		// Configure TLS
+		tlsConfig := &tls.Config{
+			ServerName:         s.smtpHost,
+			InsecureSkipVerify: false,
+		}
+
+		if err = client.StartTLS(tlsConfig); err != nil {
+			return fmt.Errorf("failed to start TLS: %w", err)
+		}
+	}
+
+	// Authenticate
+	if auth != nil {
+		if err = client.Auth(auth); err != nil {
+			return fmt.Errorf("authentication failed: %w", err)
+		}
+	}
+
+	// Set sender
+	if err = client.Mail(s.fromEmail); err != nil {
+		return fmt.Errorf("failed to set sender: %w", err)
+	}
+
+	// Set recipient
+	if err = client.Rcpt(toEmail); err != nil {
+		return fmt.Errorf("failed to set recipient: %w", err)
+	}
+
+	// Send email body
+	writer, err := client.Data()
+	if err != nil {
+		return fmt.Errorf("failed to get data writer: %w", err)
+	}
+
+	_, err = writer.Write([]byte(msg))
+	if err != nil {
+		writer.Close()
+		return fmt.Errorf("failed to write email body: %w", err)
+	}
+
+	err = writer.Close()
+	if err != nil {
+		return fmt.Errorf("failed to close data writer: %w", err)
+	}
+
+	// Quit
+	err = client.Quit()
+	if err != nil {
+		return fmt.Errorf("failed to quit SMTP client: %w", err)
 	}
 
 	return nil
