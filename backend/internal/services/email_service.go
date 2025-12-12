@@ -1,9 +1,13 @@
 package services
 
 import (
+	"bytes"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net"
+	"net/http"
 	"net/smtp"
 	"os"
 	"strconv"
@@ -20,7 +24,21 @@ type EmailService struct {
 	smtpUser     string
 	smtpPassword string
 	fromEmail    string
+	resendAPIKey string
 	enabled      bool
+	useResend    bool // If true, use Resend API instead of SMTP
+}
+
+// Resend API request/response structures
+type resendEmailRequest struct {
+	From    string   `json:"from"`
+	To      []string `json:"to"`
+	Subject string   `json:"subject"`
+	Html    string   `json:"html"`
+}
+
+type resendEmailResponse struct {
+	Id string `json:"id"`
 }
 
 func NewEmailService() *EmailService {
@@ -30,24 +48,36 @@ func NewEmailService() *EmailService {
 		smtpUser:     os.Getenv("SMTP_USER"),
 		smtpPassword: os.Getenv("SMTP_PASSWORD"),
 		fromEmail:    os.Getenv("SMTP_FROM_EMAIL"),
+		resendAPIKey: os.Getenv("RESEND_API_KEY"),
 	}
 
-	// Check if SMTP is fully configured
+	// Check if Resend API is configured (preferred for Railway)
+	if service.resendAPIKey != "" && service.fromEmail != "" {
+		service.useResend = true
+		service.enabled = true
+		logger.Info("Email service initialized with Resend API",
+			zap.String("fromEmail", service.fromEmail),
+		)
+		logger.Info("Resend API is recommended for Railway as it works via HTTPS and is not blocked")
+		return service
+	}
+
+	// Fallback to SMTP if Resend is not configured
 	service.enabled = service.smtpHost != "" && service.smtpPort != "" &&
 		service.smtpUser != "" && service.smtpPassword != "" && service.fromEmail != ""
 
 	if !service.enabled {
-		logger.Warn("SMTP is not configured. Email notifications will be logged to console only.",
-			zap.String("smtpHost", service.smtpHost),
-			zap.String("smtpPort", service.smtpPort),
-		)
-		logger.Info("To enable email notifications, set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, and SMTP_FROM_EMAIL environment variables")
+		logger.Warn("Email service is not configured. Email notifications will be logged to console only.")
+		logger.Info("To enable email notifications, set one of:")
+		logger.Info("  - RESEND_API_KEY and SMTP_FROM_EMAIL (recommended for Railway)")
+		logger.Info("  - SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, and SMTP_FROM_EMAIL")
 	} else {
-		logger.Info("Email service initialized",
+		logger.Info("Email service initialized with SMTP",
 			zap.String("smtpHost", service.smtpHost),
 			zap.String("smtpPort", service.smtpPort),
 			zap.String("fromEmail", service.fromEmail),
 		)
+		logger.Warn("SMTP may be blocked on Railway. Consider using RESEND_API_KEY instead.")
 	}
 
 	return service
@@ -66,19 +96,33 @@ func (s *EmailService) SendVerificationCode(toEmail, code string) error {
 	}
 
 	subject := "Код подтверждения - SmartCRM"
-	body := fmt.Sprintf(`
+	htmlBody := fmt.Sprintf(`
 		<h1>Добро пожаловать в SmartCRM!</h1>
 		<p>Ваш код подтверждения:</p>
 		<h2 style="letter-spacing: 5px; font-family: monospace;">%s</h2>
 		<p>Введите этот код на странице входа для завершения регистрации.</p>
 	`, code)
 
+	if s.useResend {
+		err := s.sendEmailViaResend(toEmail, subject, htmlBody)
+		if err != nil {
+			logger.Error("Failed to send verification email via Resend",
+				logger.ErrorField(err),
+				zap.String("to", toEmail),
+			)
+			return fmt.Errorf("failed to send verification email: %w", err)
+		}
+		logger.Info("Verification email sent successfully via Resend", zap.String("to", toEmail))
+		return nil
+	}
+
+	// Fallback to SMTP
 	msg := "From: " + s.fromEmail + "\n" +
 		"To: " + toEmail + "\n" +
 		"Subject: " + subject + "\n" +
 		"MIME-Version: 1.0\n" +
 		"Content-Type: text/html; charset=UTF-8\n\n" +
-		body
+		htmlBody
 
 	auth := smtp.PlainAuth("", s.smtpUser, s.smtpPassword, s.smtpHost)
 
@@ -117,19 +161,33 @@ func (s *EmailService) SendInviteEmail(toEmail, code string) error {
 	}
 
 	subject := "Приглашение в SmartCRM"
-	body := fmt.Sprintf(`
+	htmlBody := fmt.Sprintf(`
 		<h1>Вас пригласили в SmartCRM</h1>
 		<p>Для завершения регистрации перейдите по ссылке и установите пароль:</p>
 		<p><a href="%s">%s</a></p>
 		<p>Если ссылка не открывается, используйте код: <strong>%s</strong></p>
 	`, inviteLink, inviteLink, code)
 
+	if s.useResend {
+		err := s.sendEmailViaResend(toEmail, subject, htmlBody)
+		if err != nil {
+			logger.Error("Failed to send invite email via Resend",
+				logger.ErrorField(err),
+				zap.String("to", toEmail),
+			)
+			return fmt.Errorf("failed to send invite email: %w", err)
+		}
+		logger.Info("Invite email sent successfully via Resend", zap.String("to", toEmail))
+		return nil
+	}
+
+	// Fallback to SMTP
 	msg := "From: " + s.fromEmail + "\n" +
 		"To: " + toEmail + "\n" +
 		"Subject: " + subject + "\n" +
 		"MIME-Version: 1.0\n" +
 		"Content-Type: text/html; charset=UTF-8\n\n" +
-		body
+		htmlBody
 
 	auth := smtp.PlainAuth("", s.smtpUser, s.smtpPassword, s.smtpHost)
 
@@ -161,11 +219,10 @@ func (s *EmailService) SendPaymentNotification(toEmail, studentName string, amou
 	}
 
 	var subject string
-	var body string
-
+	var htmlBody string
 	if paymentType == "payment" {
 		subject = "Получен платеж - SmartCRM"
-		body = fmt.Sprintf(`
+		htmlBody = fmt.Sprintf(`
 			<h1>Уважаемый(ая) %s!</h1>
 			<p>Мы получили ваш платеж:</p>
 			<ul>
@@ -178,7 +235,7 @@ func (s *EmailService) SendPaymentNotification(toEmail, studentName string, amou
 		`, studentName, amount, s.translatePaymentMethod(paymentMethod), s.formatDescription(description))
 	} else if paymentType == "refund" {
 		subject = "Возврат средств - SmartCRM"
-		body = fmt.Sprintf(`
+		htmlBody = fmt.Sprintf(`
 			<h1>Уважаемый(ая) %s!</h1>
 			<p>Был произведен возврат средств:</p>
 			<ul>
@@ -193,12 +250,27 @@ func (s *EmailService) SendPaymentNotification(toEmail, studentName string, amou
 		return nil
 	}
 
+	if s.useResend {
+		err := s.sendEmailViaResend(toEmail, subject, htmlBody)
+		if err != nil {
+			logger.Error("Failed to send payment notification via Resend",
+				logger.ErrorField(err),
+				zap.String("to", toEmail),
+				zap.String("type", paymentType),
+			)
+			return fmt.Errorf("failed to send payment notification: %w", err)
+		}
+		logger.Info("Payment notification sent successfully via Resend", zap.String("to", toEmail), zap.String("type", paymentType))
+		return nil
+	}
+
+	// Fallback to SMTP
 	msg := "From: " + s.fromEmail + "\n" +
 		"To: " + toEmail + "\n" +
 		"Subject: " + subject + "\n" +
 		"MIME-Version: 1.0\n" +
 		"Content-Type: text/html; charset=UTF-8\n\n" +
-		body
+		htmlBody
 
 	auth := smtp.PlainAuth("", s.smtpUser, s.smtpPassword, s.smtpHost)
 
@@ -236,7 +308,7 @@ func (s *EmailService) SendAbsenceNotification(toEmail, studentName, lessonSubje
 		reasonText = s.translateAbsenceReason(reason)
 	}
 
-	body := fmt.Sprintf(`
+	htmlBody := fmt.Sprintf(`
 		<h1>Уважаемый(ая) %s!</h1>
 		<p>Вы пропустили занятие:</p>
 		<ul>
@@ -249,12 +321,27 @@ func (s *EmailService) SendAbsenceNotification(toEmail, studentName, lessonSubje
 		<p>С уважением,<br>SmartCRM</p>
 	`, studentName, lessonSubject, lessonDate.Format("02.01.2006 15:04"), reasonText, s.formatDescription(notes))
 
+	if s.useResend {
+		err := s.sendEmailViaResend(toEmail, subject, htmlBody)
+		if err != nil {
+			logger.Error("Failed to send absence notification via Resend",
+				logger.ErrorField(err),
+				zap.String("to", toEmail),
+				zap.String("student", studentName),
+			)
+			return fmt.Errorf("failed to send absence notification: %w", err)
+		}
+		logger.Info("Absence notification sent successfully via Resend", zap.String("to", toEmail), zap.String("student", studentName))
+		return nil
+	}
+
+	// Fallback to SMTP
 	msg := "From: " + s.fromEmail + "\n" +
 		"To: " + toEmail + "\n" +
 		"Subject: " + subject + "\n" +
 		"MIME-Version: 1.0\n" +
 		"Content-Type: text/html; charset=UTF-8\n\n" +
-		body
+		htmlBody
 
 	auth := smtp.PlainAuth("", s.smtpUser, s.smtpPassword, s.smtpHost)
 
@@ -464,4 +551,60 @@ func (s *EmailService) formatDescription(desc string) string {
 		return ""
 	}
 	return fmt.Sprintf(`<li><strong>Описание:</strong> %s</li>`, desc)
+}
+
+// sendEmailViaResend sends an email using Resend API (works via HTTPS, not blocked on Railway)
+func (s *EmailService) sendEmailViaResend(toEmail, subject, htmlBody string) error {
+	reqBody := resendEmailRequest{
+		From:    s.fromEmail,
+		To:      []string{toEmail},
+		Subject: subject,
+		Html:    htmlBody,
+	}
+
+	jsonData, err := json.Marshal(reqBody)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", "https://api.resend.com/emails", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "Bearer "+s.resendAPIKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send request to Resend API: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		logger.Error("Resend API returned error",
+			zap.Int("statusCode", resp.StatusCode),
+			zap.String("response", string(body)),
+		)
+		return fmt.Errorf("resend API error: status %d, response: %s", resp.StatusCode, string(body))
+	}
+
+	var resendResp resendEmailResponse
+	if err := json.Unmarshal(body, &resendResp); err != nil {
+		// If unmarshal fails, but status is OK, email was likely sent
+		logger.Warn("Failed to parse Resend response, but status was OK", zap.Error(err))
+		return nil
+	}
+
+	logger.Info("Email sent via Resend API", zap.String("emailId", resendResp.Id))
+	return nil
 }
