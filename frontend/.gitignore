@@ -23,11 +23,9 @@ out/
 .env
 .env.local
 .env.development
-.env.production
 .env.test
 *.env
 !*.env.example
-!.env.production.example
 
 # API Keys and secrets
 *.key
