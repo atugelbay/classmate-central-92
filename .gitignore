@@ -12,11 +12,11 @@ frontend/.vite/
 .env
 .env.example
 .env.development
-.env.production
+
 .env.company2
 .env.local
 .env.development
-.env.production
+
 .env.test
 .env.*.local
 .env.*.secret

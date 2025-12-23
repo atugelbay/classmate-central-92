@@ -364,13 +364,19 @@ func main() {
 	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	// Start server
+	host := os.Getenv("SERVER_HOST")
+	if host == "" {
+		host = "0.0.0.0"
+	}
+
 	port := os.Getenv("SERVER_PORT")
 	if port == "" {
 		port = "8080"
 	}
+	addr := host + ":" + port
+	logger.Info("Server starting", zap.String("addr", addr))
 
-	logger.Info("Server starting", zap.String("port", port))
-	if err := router.Run(":" + port); err != nil {
+	if err := router.Run(addr); err != nil {
 		logger.Fatal("Failed to start server", logger.ErrorField(err))
 	}
 }
