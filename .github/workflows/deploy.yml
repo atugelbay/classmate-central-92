@@ -1,0 +1,86 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ---------- Checkout ----------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ---------- Setup Node ----------
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # ---------- Build Landing ----------
+      - name: Build landing
+        working-directory: ./landing
+        run: |
+          npm ci
+          npm run build
+
+      # ---------- Build App ----------
+      - name: Build app
+        working-directory: ./frontend
+        run: |
+          npm ci
+          npm run build
+
+      # ---------- Setup SSH ----------
+      - name: Setup SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_KEY }}
+
+      - name: Add server to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -p ${{ secrets.DEPLOY_PORT }} ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+
+      # ---------- Deploy Landing ----------
+      - name: Deploy landing to server
+        run: |
+          rsync -az --delete \
+            ./landing/dist/ \
+            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/home/ubuntu/site/landing/
+
+      # ---------- Deploy App ----------
+      - name: Deploy app to server
+        run: |
+          rsync -az --delete \
+            ./frontend/dist/ \
+            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/home/ubuntu/site/app/
+
+      # ---------- Deploy Backend ----------
+      - name: Deploy backend via docker-compose
+        run: |
+          ssh -p ${{ secrets.DEPLOY_PORT }} ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'SSH'
+            set -e
+
+            echo "▶ Fix permissions for static files"
+            sudo find /home/ubuntu/site/landing -type d -exec chmod 755 {} \;
+            sudo find /home/ubuntu/site/landing -type f -exec chmod 644 {} \;
+            sudo find /home/ubuntu/site/app -type d -exec chmod 755 {} \;
+            sudo find /home/ubuntu/site/app -type f -exec chmod 644 {} \;
+
+            echo "▶ Ensure docker network exists"
+            docker network create neosmart-net >/dev/null 2>&1 || true
+
+            echo "▶ Update backend"
+            cd /home/ubuntu/services/api
+            git pull
+
+            echo "▶ Build & run backend"
+            docker-compose -f docker-compose.prod.yml up -d --build
+
+            echo "▶ Restart nginx (safe)"
+            docker restart neosmart-nginx || true
+          SSH
