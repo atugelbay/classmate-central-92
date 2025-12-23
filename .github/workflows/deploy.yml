@@ -9,29 +9,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # ---------- Checkout ----------
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ---------- Setup Node ----------
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-
-      # ---------- Build Landing ----------
-      - name: Build landing
-        working-directory: ./landing
-        run: |
-          npm ci
-          npm run build
 
       # ---------- Build App ----------
       - name: Build app
         working-directory: ./frontend
         run: |
-          npm ci
+          npm install
           npm run build
 
       # ---------- Setup SSH ----------
@@ -44,13 +34,6 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan -p ${{ secrets.DEPLOY_PORT }} ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
-
-      # ---------- Deploy Landing ----------
-      - name: Deploy landing to server
-        run: |
-          rsync -az --delete \
-            ./landing/dist/ \
-            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/home/ubuntu/site/landing/
 
       # ---------- Deploy App ----------
       - name: Deploy app to server
@@ -65,9 +48,7 @@ jobs:
           ssh -p ${{ secrets.DEPLOY_PORT }} ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'SSH'
             set -e
 
-            echo "▶ Fix permissions for static files"
-            sudo find /home/ubuntu/site/landing -type d -exec chmod 755 {} \;
-            sudo find /home/ubuntu/site/landing -type f -exec chmod 644 {} \;
+            echo "▶ Fix permissions for app static"
             sudo find /home/ubuntu/site/app -type d -exec chmod 755 {} \;
             sudo find /home/ubuntu/site/app -type f -exec chmod 644 {} \;
 
