@@ -6,7 +6,6 @@ WORKDIR /app
 # Install build dependencies
 RUN apk add --no-cache ca-certificates && update-ca-certificates
 
-
 # Copy go mod files
 COPY go.mod go.sum ./
 # Use auto toolchain to download the required Go version
