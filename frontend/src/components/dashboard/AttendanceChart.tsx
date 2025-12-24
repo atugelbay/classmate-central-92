@@ -45,7 +45,7 @@ export function AttendanceChart() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <ClipboardCheck className="h-5 w-5 text-blue-600" />
+            <ClipboardCheck className="h-5 w-5" style={{ color: 'hsl(var(--dashboard-icon-muted))' }} />
             <CardTitle>Посещаемость</CardTitle>
           </div>
           <div className="flex gap-1 rounded-lg border p-1">
@@ -75,18 +75,18 @@ export function AttendanceChart() {
         ) : (
           <div className="space-y-4 flex-1 flex flex-col overflow-hidden min-h-0">
             {/* Summary Stats */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="text-center rounded-lg border p-3 bg-green-50 dark:bg-green-950/20">
-                <div className="text-xl font-bold text-green-600">{totalAttended}</div>
-                <div className="text-xs text-muted-foreground mt-1">Присутствовали</div>
+            <div className="grid grid-cols-3 gap-2.5">
+              <div className="text-center rounded-lg border p-2.5" style={{ backgroundColor: 'hsl(var(--dashboard-stat-neutral-bg))' }}>
+                <div className="text-lg font-bold" style={{ color: 'hsl(var(--dashboard-stat-positive))' }}>{totalAttended}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">Присутствовали</div>
               </div>
-              <div className="text-center rounded-lg border p-3 bg-red-50 dark:bg-red-950/20">
-                <div className="text-xl font-bold text-red-600">{totalMissed}</div>
-                <div className="text-xs text-muted-foreground mt-1">Отсутствовали</div>
+              <div className="text-center rounded-lg border p-2.5" style={{ backgroundColor: 'hsl(var(--dashboard-stat-neutral-bg))' }}>
+                <div className="text-lg font-bold" style={{ color: 'hsl(var(--dashboard-stat-negative))' }}>{totalMissed}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">Отсутствовали</div>
               </div>
-              <div className="text-center rounded-lg border p-3 bg-primary/5">
-                <div className="text-xl font-bold text-primary">{attendanceRate}%</div>
-                <div className="text-xs text-muted-foreground mt-1">Посещаемость</div>
+              <div className="text-center rounded-lg border p-2.5" style={{ backgroundColor: 'hsl(var(--dashboard-accent-subtle))' }}>
+                <div className="text-lg font-bold text-primary">{attendanceRate}%</div>
+                <div className="text-xs text-muted-foreground mt-0.5">Посещаемость</div>
               </div>
             </div>
 
@@ -120,17 +120,17 @@ export function AttendanceChart() {
                   type="monotone"
                   dataKey="attended"
                   name="Присутствовали"
-                  stroke="#22c55e"
+                  stroke="hsl(var(--dashboard-stat-positive))"
                   strokeWidth={2}
-                  dot={{ fill: "#22c55e", r: 3 }}
+                  dot={{ fill: "hsl(var(--dashboard-stat-positive))", r: 3 }}
                 />
                 <Line
                   type="monotone"
                   dataKey="missed"
                   name="Отсутствовали"
-                  stroke="#ef4444"
+                  stroke="hsl(var(--dashboard-stat-negative))"
                   strokeWidth={2}
-                  dot={{ fill: "#ef4444", r: 3 }}
+                  dot={{ fill: "hsl(var(--dashboard-stat-negative))", r: 3 }}
                 />
               </LineChart>
               </ResponsiveContainer>

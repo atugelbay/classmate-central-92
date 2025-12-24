@@ -28,13 +28,11 @@ export function QuickActions() {
     {
       label: "Создать урок",
       icon: Calendar,
-      color: "bg-blue-500/10 text-blue-600 hover:bg-blue-500/20",
       onClick: () => setIsLessonFormOpen(true),
     },
     {
       label: "Добавить ученика",
       icon: UserPlus,
-      color: "bg-green-500/10 text-green-600 hover:bg-green-500/20",
       onClick: () => {
         toast.info("Перенаправление на страницу учеников");
         navigate("/students");
@@ -43,7 +41,6 @@ export function QuickActions() {
     {
       label: "Принять платёж",
       icon: DollarSign,
-      color: "bg-purple-500/10 text-purple-600 hover:bg-purple-500/20",
       onClick: () => {
         toast.info("Перенаправление на страницу финансов");
         navigate("/finance");
@@ -52,7 +49,6 @@ export function QuickActions() {
     {
       label: "Создать группу",
       icon: Users,
-      color: "bg-orange-500/10 text-orange-600 hover:bg-orange-500/20",
       onClick: () => {
         toast.info("Перенаправление на страницу групп");
         navigate("/groups");
@@ -61,7 +57,6 @@ export function QuickActions() {
     {
       label: "Новый абонемент",
       icon: BookOpen,
-      color: "bg-pink-500/10 text-pink-600 hover:bg-pink-500/20",
       onClick: () => {
         toast.info("Перенаправление на страницу абонементов");
         navigate("/subscriptions");
@@ -74,26 +69,26 @@ export function QuickActions() {
       <Card className="h-full flex flex-col overflow-hidden">
         <CardHeader>
           <div className="flex items-center gap-2">
-            <Zap className="h-5 w-5 text-yellow-600" />
+            <Zap className="h-5 w-5" style={{ color: 'hsl(var(--dashboard-icon-muted))' }} />
             <CardTitle>Быстрые действия</CardTitle>
           </div>
         </CardHeader>
         <CardContent className="flex-1 overflow-hidden min-h-0 flex flex-col">
-          <div className="grid grid-cols-1 gap-2 flex-1 overflow-y-auto min-h-0">
+          <div className="grid grid-cols-1 gap-2 flex-1 overflow-hidden min-h-0">
             {actions.map((action) => (
               <Button
                 key={action.label}
                 variant="ghost"
-                className={`h-auto py-4 px-4 justify-start gap-3 ${action.color} transition-all`}
+                className="h-auto py-3 px-3 justify-start gap-3 hover:bg-muted transition-all"
                 onClick={action.onClick}
               >
-                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-background/50">
-                  <action.icon className="h-5 w-5" />
+                <div className="flex items-center justify-center w-9 h-9 rounded-lg border" style={{ backgroundColor: 'hsl(var(--dashboard-stat-neutral-bg))' }}>
+                  <action.icon className="h-4 w-4 text-primary" />
                 </div>
                 <div className="flex flex-col items-start">
-                  <span className="font-medium">{action.label}</span>
+                  <span className="font-medium text-sm">{action.label}</span>
                 </div>
-                <Plus className="h-4 w-4 ml-auto" />
+                <Plus className="h-3.5 w-3.5 ml-auto" style={{ color: 'hsl(var(--dashboard-icon-muted))' }} />
               </Button>
             ))}
           </div>

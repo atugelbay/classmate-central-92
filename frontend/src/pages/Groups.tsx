@@ -38,8 +38,23 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { Group } from "@/types";
+import { PageHeader } from "@/components/PageHeader";
 
 const ITEMS_PER_PAGE = 39;
+
+const formatDateRu = (input: string | Date) =>
+  new Date(input).toLocaleDateString("ru-RU", {
+    day: "2-digit",
+    month: "long",
+    weekday: "long",
+  });
+
+const formatTimeRu = (input: string | Date) =>
+  new Date(input).toLocaleTimeString("ru-RU", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
 
 export default function Groups() {
   const { data: groups = [], isLoading } = useGroups();
@@ -393,21 +408,23 @@ export default function Groups() {
 
   return (
     <div className="space-y-6 animate-fade-in-up">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Группы</h1>
-          <p className="text-muted-foreground">Управление учебными группами</p>
-        </div>
-        <Button onClick={() => {
-          setLessonFormData({ lessonType: "group" });
-          setIsLessonFormOpen(true);
-        }}>
-          <Plus className="mr-2 h-4 w-4" />
-          Создать группу
-        </Button>
-        
-        {/* Dialog for editing existing groups */}
-        <Dialog
+      <PageHeader
+        title="Группы"
+        description="Управление учебными группами"
+        actions={
+          <Button onClick={() => {
+            setLessonFormData({ lessonType: "group" });
+            setIsLessonFormOpen(true);
+          }} size="sm" className="sm:size-default">
+            <Plus className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Создать группу</span>
+            <span className="sm:hidden">Создать</span>
+          </Button>
+        }
+      />
+      
+      {/* Dialog for editing existing groups */}
+      <Dialog
           open={isDialogOpen}
           onOpenChange={(open) => {
             setIsDialogOpen(open);
@@ -585,7 +602,6 @@ export default function Groups() {
             </form>
           </DialogContent>
         </Dialog>
-      </div>
 
       <div className="space-y-4">
         <div className="relative">
@@ -598,21 +614,23 @@ export default function Groups() {
           />
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">Статус:</span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-medium hidden sm:inline">Статус:</span>
           <Button
             variant={activityFilter === "active" ? "default" : "outline"}
             size="sm"
             onClick={() => setActivityFilter("active")}
           >
-            Активные ({groups.filter(g => getGroupActivity(g).isActive).length})
+            <span className="hidden sm:inline">Активные ({groups.filter(g => getGroupActivity(g).isActive).length})</span>
+            <span className="sm:hidden">Активн. ({groups.filter(g => getGroupActivity(g).isActive).length})</span>
           </Button>
           <Button
             variant={activityFilter === "inactive" ? "default" : "outline"}
             size="sm"
             onClick={() => setActivityFilter("inactive")}
           >
-            Неактивные ({groups.filter(g => !getGroupActivity(g).isActive).length})
+            <span className="hidden sm:inline">Неактивные ({groups.filter(g => !getGroupActivity(g).isActive).length})</span>
+            <span className="sm:hidden">Неакт. ({groups.filter(g => !getGroupActivity(g).isActive).length})</span>
           </Button>
           <Button
             variant={activityFilter === "all" ? "default" : "outline"}
@@ -663,10 +681,10 @@ export default function Groups() {
                         Следующее занятие:
                       </p>
                       <p className="text-sm text-green-800">
-                        {moment(activity.nextLesson.start).format("DD MMMM, dddd")}
+                        {formatDateRu(activity.nextLesson.start)}
                       </p>
                       <p className="text-sm text-green-800">
-                        {moment(activity.nextLesson.start).format("HH:mm")} - {moment(activity.nextLesson.end).format("HH:mm")}
+                        {formatTimeRu(activity.nextLesson.start)} - {formatTimeRu(activity.nextLesson.end)}
                       </p>
                     </div>
                   )}
@@ -834,9 +852,9 @@ export default function Groups() {
       {/* Group Details Modal */}
       {selectedGroupForDetails && (
         <Dialog open={!!selectedGroupForDetails} onOpenChange={() => setSelectedGroupForDetails(null)}>
-          <DialogContent className="max-w-3xl">
+          <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="text-2xl">{selectedGroupForDetails.name}</DialogTitle>
+              <DialogTitle className="text-xl sm:text-2xl truncate">{selectedGroupForDetails.name}</DialogTitle>
             </DialogHeader>
             
             {(() => {
@@ -850,59 +868,59 @@ export default function Groups() {
               const upcomingLessons = groupLessons.filter((l) => moment(l.start).isAfter(moment())).sort((a, b) => moment(a.start).diff(moment(b.start)));
 
               return (
-                <div className="space-y-6">
+                <div className="space-y-4 sm:space-y-6 pb-2">
                   {/* Status and Subject */}
-                  <div className="flex gap-2">
-                    <Badge variant="secondary" className="text-base px-3 py-1">
+                  <div className="flex gap-2 flex-wrap">
+                    <Badge variant="secondary" className="text-sm sm:text-base px-2 sm:px-3 py-1">
                       {selectedGroupForDetails.subject}
                     </Badge>
-                    <Badge variant={activity.isActive ? "default" : "outline"} className="text-base px-3 py-1">
+                    <Badge variant={activity.isActive ? "default" : "outline"} className="text-sm sm:text-base px-2 sm:px-3 py-1">
                       {activity.isActive ? "Активна" : "Неактивна"}
                     </Badge>
                   </div>
 
                   {/* Main Info */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2 sm:space-y-3">
                       <div>
-                        <p className="text-sm text-muted-foreground">Преподаватель</p>
-                        <p className="font-semibold">{selectedGroupForDetails.teacherName || "Не назначен"}</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">Преподаватель</p>
+                        <p className="font-semibold text-sm sm:text-base truncate">{selectedGroupForDetails.teacherName || "Не назначен"}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Расписание</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">Расписание</p>
                         {getGroupSchedule(selectedGroupForDetails) ? (
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            <p className="font-medium">{getGroupSchedule(selectedGroupForDetails)}</p>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+                            <p className="font-medium text-sm sm:text-base truncate">{getGroupSchedule(selectedGroupForDetails)}</p>
                           </div>
                         ) : (
-                          <p className="font-medium text-muted-foreground">Не установлено</p>
+                          <p className="font-medium text-sm sm:text-base text-muted-foreground">Не установлено</p>
                         )}
                       </div>
                       {room && (
                         <div>
-                          <p className="text-sm text-muted-foreground">Аудитория</p>
-                          <div className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4 text-muted-foreground" />
-                            <p className="font-medium">{room.name}</p>
+                          <p className="text-xs sm:text-sm text-muted-foreground">Аудитория</p>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
+                            <p className="font-medium text-sm sm:text-base truncate">{room.name}</p>
                           </div>
                         </div>
                       )}
                     </div>
 
-                    <div className="space-y-3">
-                      <div className="p-4 bg-blue-50 rounded-lg">
-                        <p className="text-sm text-muted-foreground mb-1">Всего занятий</p>
-                        <p className="text-2xl font-bold text-blue-900">{activity.totalLessons}</p>
+                    <div className="space-y-2 sm:space-y-3">
+                      <div className="p-3 sm:p-4 bg-blue-50 rounded-lg">
+                        <p className="text-xs sm:text-sm text-muted-foreground mb-1">Всего занятий</p>
+                        <p className="text-xl sm:text-2xl font-bold text-blue-900">{activity.totalLessons}</p>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
-                        <div className="p-3 bg-green-50 rounded-lg">
-                          <p className="text-xs text-muted-foreground">Проведено</p>
-                          <p className="text-xl font-semibold text-green-900">{activity.completedLessons}</p>
+                        <div className="p-2 sm:p-3 bg-green-50 rounded-lg">
+                          <p className="text-[10px] sm:text-xs text-muted-foreground">Проведено</p>
+                          <p className="text-base sm:text-xl font-semibold text-green-900">{activity.completedLessons}</p>
                         </div>
-                        <div className="p-3 bg-orange-50 rounded-lg">
-                          <p className="text-xs text-muted-foreground">Запланировано</p>
-                          <p className="text-xl font-semibold text-orange-900">{activity.upcomingLessons}</p>
+                        <div className="p-2 sm:p-3 bg-orange-50 rounded-lg">
+                          <p className="text-[10px] sm:text-xs text-muted-foreground">Запланировано</p>
+                          <p className="text-base sm:text-xl font-semibold text-orange-900">{activity.upcomingLessons}</p>
                         </div>
                       </div>
                     </div>
@@ -910,13 +928,25 @@ export default function Groups() {
 
                   {/* Next Lesson */}
                   {activity.nextLesson && (
-                    <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
-                      <p className="text-sm font-medium text-green-900 mb-2">Ближайшее занятие:</p>
-                      <p className="text-lg font-semibold text-green-800">
-                        {moment(activity.nextLesson.start).format("DD MMMM, dddd")}
+                    <div className="p-3 sm:p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
+                      <p className="text-xs sm:text-sm font-medium text-green-900 mb-2">Ближайшее занятие:</p>
+                      <p className="text-base sm:text-lg font-semibold text-green-800">
+                        {new Date(activity.nextLesson.start).toLocaleDateString("ru-RU", {
+                          day: "numeric",
+                          month: "long",
+                          weekday: "long",
+                        })}
                       </p>
-                      <p className="text-md text-green-700">
-                        {moment(activity.nextLesson.start).format("HH:mm")} - {moment(activity.nextLesson.end).format("HH:mm")}
+                      <p className="text-sm sm:text-md text-green-700">
+                        {new Date(activity.nextLesson.start).toLocaleTimeString("ru-RU", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}{" "}
+                        -{" "}
+                        {new Date(activity.nextLesson.end).toLocaleTimeString("ru-RU", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
                       </p>
                     </div>
                   )}
@@ -925,42 +955,46 @@ export default function Groups() {
                   <div>
                     <div className="flex items-center gap-2 mb-3">
                       <Users className="h-5 w-5 text-muted-foreground" />
-                      <h3 className="font-semibold text-lg">Студенты ({groupStudents.length})</h3>
+                      <h3 className="font-semibold text-base sm:text-lg">Студенты ({groupStudents.length})</h3>
                     </div>
                     {groupStudents.length > 0 ? (
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {groupStudents.map((student) => (
-                          <div key={student.id} className="p-3 border rounded-lg hover:bg-muted/50 transition-colors">
-                            <p className="font-medium">{student.name}</p>
+                          <div key={student.id} className="p-2 sm:p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                            <p className="font-medium text-sm sm:text-base truncate">{student.name}</p>
                             {student.phone && (
-                              <p className="text-sm text-muted-foreground">{student.phone}</p>
+                              <p className="text-xs sm:text-sm text-muted-foreground truncate">{student.phone}</p>
                             )}
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-muted-foreground">Нет студентов в группе</p>
+                      <p className="text-sm text-muted-foreground">Нет студентов в группе</p>
                     )}
                   </div>
 
                   {/* Upcoming Lessons */}
                   {upcomingLessons.length > 0 && (
                     <div>
-                      <h3 className="font-semibold text-lg mb-3">Предстоящие занятия</h3>
+                      <h3 className="font-semibold text-base sm:text-lg mb-3">Предстоящие занятия</h3>
                       <div className="space-y-2 max-h-60 overflow-y-auto">
                         {upcomingLessons.slice(0, 10).map((lesson) => (
-                          <div key={lesson.id} className="p-3 border rounded-lg flex justify-between items-center">
-                            <div>
-                              <p className="font-medium">{lesson.title}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {moment(lesson.start).format("DD MMMM, dddd")}
+                          <div key={lesson.id} className="p-2 sm:p-3 border rounded-lg flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium text-sm sm:text-base truncate">{lesson.title}</p>
+                              <p className="text-xs sm:text-sm text-muted-foreground">
+                                {new Date(lesson.start).toLocaleDateString("ru-RU", {
+                                  day: "numeric",
+                                  month: "long",
+                                  weekday: "long",
+                                })}
                               </p>
                             </div>
-                            <div className="text-right">
-                              <p className="font-medium">
+                            <div className="text-left sm:text-right shrink-0">
+                              <p className="font-medium text-sm sm:text-base">
                                 {moment(lesson.start).format("HH:mm")} - {moment(lesson.end).format("HH:mm")}
                               </p>
-                              <p className="text-sm text-muted-foreground">{room?.name}</p>
+                              <p className="text-xs sm:text-sm text-muted-foreground truncate">{room?.name}</p>
                             </div>
                           </div>
                         ))}

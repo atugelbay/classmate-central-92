@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import moment from "moment";
+import { PageHeader } from "@/components/PageHeader";
 import "moment/locale/ru";
 import { useIndividualLessons, useTeachers, useStudents, useRooms, useUpdateLesson, useDeleteLesson } from "@/hooks/useData";
 import { LessonFormModal } from "@/components/LessonFormModal";
@@ -440,17 +441,17 @@ export default function IndividualLessons() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Индивидуальные занятия</h1>
-          <p className="text-muted-foreground">Управление индивидуальными уроками</p>
-        </div>
-        <Button onClick={handleCreateLesson}>
-          <Plus className="mr-2 h-4 w-4" />
-          Создать занятие
-        </Button>
-      </div>
+      <PageHeader
+        title="Индивидуальные занятия"
+        description="Управление индивидуальными уроками"
+        actions={
+          <Button onClick={handleCreateLesson} size="sm" className="sm:size-default">
+            <Plus className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Создать занятие</span>
+            <span className="sm:hidden">Создать</span>
+          </Button>
+        }
+      />
 
       {/* Search */}
       <div className="relative">

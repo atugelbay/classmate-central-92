@@ -1,7 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import moment from "moment";
-import "moment/locale/ru";
+import { PageHeader } from "@/components/PageHeader";
+import "moment/dist/locale/ru";
 
 import { useLessons, useDeleteLesson, useUpdateLesson, useTeachers, useGroups, useRooms, useCreateRoom, useStudents, useMarkAttendance, useAllSubscriptions } from "@/hooks/useData";
 import { useLessonAttendances } from "@/hooks/useLessonAttendances";
@@ -13,7 +14,9 @@ import { Textarea } from "@/components/ui/textarea";
 import RoomScheduleView from "@/components/RoomScheduleView";
 import WeekScheduleView from "@/components/WeekScheduleView";
 import MonthScheduleView from "@/components/MonthScheduleView";
+import MobileScheduleView from "@/components/MobileScheduleView";
 import { LessonFormModal } from "@/components/LessonFormModal";
+import { RoomsManagementDialog } from "@/components/RoomsManagementDialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -71,6 +74,27 @@ export default function Schedule() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<"day" | "week" | "month">("day");
   const [attendanceData, setAttendanceData] = useState<Record<string, { status: string; reason: string; notes: string }>>({});
+  
+  // Check if mobile device
+  const [isMobile, setIsMobile] = useState(() => {
+    const width = document.documentElement.clientWidth || window.innerWidth;
+    return width <= 1024;
+  });
+  
+  useEffect(() => {
+    const checkMobile = () => {
+      const width = document.documentElement.clientWidth || window.innerWidth;
+      const mobile = width <= 1024;
+      setIsMobile(mobile);
+    };
+    
+    // Check immediately on mount
+    checkMobile();
+    
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
   
   // Get all passed lessons that need attendance check
   const passedLessonIds = useMemo(() => {
@@ -392,97 +416,40 @@ export default function Schedule() {
 
   return (
     <div className="space-y-6 animate-fade-in-up min-w-0">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Расписание по аудиториям</h1>
-          <p className="text-muted-foreground">
-            Кликните на временной слот для создания урока
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setIsExportDialogOpen(true)}
-          >
-            <FileText className="mr-2 h-4 w-4" />
-            Экспорт
-          </Button>
-          <Dialog open={isRoomDialogOpen} onOpenChange={setIsRoomDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline">
-                <Building2 className="mr-2 h-4 w-4" />
-                Добавить аудиторию
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Новая аудитория</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleRoomSubmit} className="space-y-4">
-                <div>
-                  <Label htmlFor="room-name">Название</Label>
-                  <Input
-                    id="room-name"
-                    name="name"
-                    required
-                    placeholder="Например: Аудитория 101"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="room-capacity">Вместимость</Label>
-                  <Input
-                    id="room-capacity"
-                    name="capacity"
-                    type="number"
-                    min="1"
-                    defaultValue={10}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="room-color">Цвет</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="room-color"
-                      name="color"
-                      type="color"
-                      defaultValue="#8B5CF6"
-                      className="w-20 h-10"
-                    />
-                    <span className="text-sm text-muted-foreground flex items-center">
-                      Цвет для визуального отображения
-                    </span>
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="room-status">Статус</Label>
-                  <Select name="status" defaultValue="active">
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Активна</SelectItem>
-                      <SelectItem value="inactive">Неактивна</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button type="submit" className="w-full">
-                  Создать аудиторию
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
-          
-          <Button onClick={() => {
-            setLessonFormData({});
-            setLessonFormMode("create");
-            setIsLessonFormOpen(true);
-          }}>
-            <Plus className="mr-2 h-4 w-4" />
-            Добавить урок
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Расписание по аудиториям"
+        description="Кликните на временной слот для создания урока"
+        actions={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => setIsExportDialogOpen(true)}
+              size="sm"
+              className="sm:size-default"
+            >
+              <FileText className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Экспорт</span>
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setIsRoomDialogOpen(true)}
+              size="sm"
+              className="sm:size-default"
+            >
+              <Building2 className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Аудитории</span>
+            </Button>
+            <Button onClick={() => {
+              setLessonFormData({});
+              setLessonFormMode("create");
+              setIsLessonFormOpen(true);
+            }} size="sm" className="sm:size-default">
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Добавить урок</span>
+            </Button>
+          </>
+        }
+      />
 
       {/* View Mode and Date Navigation */}
       <div className="flex items-center justify-between flex-wrap gap-4">
@@ -522,53 +489,79 @@ export default function Schedule() {
 
       <Card className="min-w-0 w-full overflow-hidden">
         <CardHeader>
-          <CardTitle>
-            {viewMode === "day" && "Расписание по аудиториям"}
-            {viewMode === "week" && "Расписание на неделю"}
-            {viewMode === "month" && "Календарь на месяц"}
+          <CardTitle className="text-lg sm:text-xl">
+            {isMobile ? (
+              <>
+                {viewMode === "day" && "Уроки на день"}
+                {viewMode === "week" && "Уроки на неделю"}
+                {viewMode === "month" && "Календарь на месяц"}
+              </>
+            ) : (
+              <>
+                {viewMode === "day" && "Расписание по аудиториям"}
+                {viewMode === "week" && "Расписание на неделю"}
+                {viewMode === "month" && "Календарь на месяц"}
+              </>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="min-w-0 w-full p-0 sm:p-6">
-          {viewMode === "day" && (
-            <RoomScheduleView
-              rooms={rooms}
+          {isMobile && viewMode !== "month" ? (
+            <MobileScheduleView
               lessons={lessons}
               teachers={teachers}
               groups={groups}
               students={students}
-              subscriptions={subscriptions}
-              selectedDate={selectedDate}
-              onLessonClick={handleEditLesson}
-              onSlotClick={handleSlotClick}
-              onLessonUpdate={handleLessonUpdate}
-              onCancelLesson={handleCancelLesson}
-              onResumeLesson={handleResumeLesson}
-              onOpenAttendance={openAttendanceForLesson}
-              unmarkedLessonIds={unmarkedLessonIds}
-            />
-          )}
-          {viewMode === "week" && (
-            <WeekScheduleView
               rooms={rooms}
-              lessons={lessons}
-              teachers={teachers}
-              groups={groups}
-              students={students}
-              subscriptions={subscriptions}
               selectedDate={selectedDate}
-              unmarkedLessonIds={unmarkedLessonIds}
+              viewMode={viewMode}
               onLessonClick={handleEditLesson}
-              onSlotClick={handleSlotClick}
-              onLessonUpdate={handleLessonUpdate}
+              unmarkedLessonIds={unmarkedLessonIds}
             />
-          )}
-          {viewMode === "month" && (
-            <MonthScheduleView
-              lessons={lessons}
-              groups={groups}
-              selectedDate={selectedDate}
-              onDateClick={handleDateClick}
-            />
+          ) : (
+            <>
+              {viewMode === "day" && (
+                <RoomScheduleView
+                  rooms={rooms}
+                  lessons={lessons}
+                  teachers={teachers}
+                  groups={groups}
+                  students={students}
+                  subscriptions={subscriptions}
+                  selectedDate={selectedDate}
+                  onLessonClick={handleEditLesson}
+                  onSlotClick={handleSlotClick}
+                  onLessonUpdate={handleLessonUpdate}
+                  onCancelLesson={handleCancelLesson}
+                  onResumeLesson={handleResumeLesson}
+                  onOpenAttendance={openAttendanceForLesson}
+                  unmarkedLessonIds={unmarkedLessonIds}
+                />
+              )}
+              {viewMode === "week" && (
+                <WeekScheduleView
+                  rooms={rooms}
+                  lessons={lessons}
+                  teachers={teachers}
+                  groups={groups}
+                  students={students}
+                  subscriptions={subscriptions}
+                  selectedDate={selectedDate}
+                  unmarkedLessonIds={unmarkedLessonIds}
+                  onLessonClick={handleEditLesson}
+                  onSlotClick={handleSlotClick}
+                  onLessonUpdate={handleLessonUpdate}
+                />
+              )}
+              {viewMode === "month" && (
+                <MonthScheduleView
+                  lessons={lessons}
+                  groups={groups}
+                  selectedDate={selectedDate}
+                  onDateClick={handleDateClick}
+                />
+              )}
+            </>
           )}
         </CardContent>
       </Card>
@@ -779,6 +772,12 @@ export default function Schedule() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Rooms Management Dialog */}
+      <RoomsManagementDialog
+        open={isRoomDialogOpen}
+        onOpenChange={setIsRoomDialogOpen}
+      />
     </div>
   );
 }

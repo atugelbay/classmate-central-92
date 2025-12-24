@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { useAuth } from "@/context/AuthContext";
 
 interface Widget {
   id: string;
@@ -45,6 +46,21 @@ interface Widget {
 }
 
 const STORAGE_KEY = "dashboard-widgets-config";
+
+// Function to get greeting based on time of day
+const getGreeting = (): string => {
+  const hour = new Date().getHours();
+  
+  if (hour >= 6 && hour < 12) {
+    return "Доброе утро";
+  } else if (hour >= 12 && hour < 18) {
+    return "Добрый день";
+  } else if (hour >= 18 && hour < 23) {
+    return "Добрый вечер";
+  } else {
+    return "Доброй ночи";
+  }
+};
 
 const defaultWidgets: Widget[] = [
   {
@@ -134,6 +150,7 @@ function SortableWidget({ widget, isDragging }: SortableWidgetProps) {
 }
 
 export function DashboardGrid() {
+  const { user } = useAuth();
   const [widgets, setWidgets] = useState<Widget[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
@@ -226,17 +243,64 @@ export function DashboardGrid() {
   const visibleWidgets = widgets.filter((w) => w.visible);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Аналитика и обзор вашего учебного центра
-          </p>
+    <div className="space-y-4 sm:space-y-6 lg:space-y-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex-1">
+          <h1 className="text-xl sm:text-3xl font-bold">
+            {getGreeting()}, {user?.name || 'Гость'}
+          </h1>
+          <div className="flex items-center justify-between sm:justify-start gap-4 mt-2">
+            <p className="text-muted-foreground text-sm sm:text-base">
+              Аналитика и обзор вашего учебного центра
+            </p>
+            <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="gap-2 shrink-0 sm:hidden">
+                  <Settings className="h-4 w-4" />
+                  <span className="text-xs">Настройки</span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Настройки Dashboard</DialogTitle>
+                  <DialogDescription>
+                    Выберите, какие виджеты отображать на главной странице. Вы также можете
+                    перетаскивать виджеты для изменения их порядка.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-3">
+                  {widgets.map((widget) => (
+                    <div key={widget.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={widget.id}
+                        checked={widget.visible}
+                        onCheckedChange={() => toggleWidgetVisibility(widget.id)}
+                      />
+                      <Label
+                        htmlFor={widget.id}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        {widget.name}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+                <div className="pt-3 border-t shrink-0">
+                  <Button
+                    variant="outline"
+                    onClick={resetToDefaults}
+                    className="w-full"
+                  >
+                    Сбросить к настройкам по умолчанию
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
         <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
           <DialogTrigger asChild>
-            <Button variant="outline" className="gap-2">
+            <Button variant="outline" className="gap-2 hidden sm:flex shrink-0">
               <Settings className="h-4 w-4" />
               Настройки виджетов
             </Button>
@@ -249,7 +313,7 @@ export function DashboardGrid() {
                 перетаскивать виджеты для изменения их порядка.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
+            <div className="space-y-3">
               {widgets.map((widget) => (
                 <div key={widget.id} className="flex items-center space-x-2">
                   <Checkbox
@@ -265,15 +329,15 @@ export function DashboardGrid() {
                   </Label>
                 </div>
               ))}
-              <div className="pt-4 border-t">
-                <Button
-                  variant="outline"
-                  onClick={resetToDefaults}
-                  className="w-full"
-                >
-                  Сбросить к настройкам по умолчанию
-                </Button>
-              </div>
+            </div>
+            <div className="pt-3 border-t shrink-0">
+              <Button
+                variant="outline"
+                onClick={resetToDefaults}
+                className="w-full"
+              >
+                Сбросить к настройкам по умолчанию
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -288,7 +352,7 @@ export function DashboardGrid() {
           items={visibleWidgets.map((w) => w.id)}
           strategy={rectSortingStrategy}
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-[500px]">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 auto-rows-[420px] sm:auto-rows-[480px]">
             {visibleWidgets.map((widget) => (
               <SortableWidget key={widget.id} widget={widget} />
             ))}

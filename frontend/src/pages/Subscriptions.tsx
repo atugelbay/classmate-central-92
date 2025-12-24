@@ -31,6 +31,7 @@ import {
 } from "@/hooks/useData";
 import { SubscriptionType, StudentSubscription } from "@/types";
 import moment from "moment";
+import { PageHeader } from "@/components/PageHeader";
 import "moment/locale/ru";
 
 moment.locale("ru");
@@ -206,12 +207,10 @@ export default function Subscriptions() {
 
   return (
     <div className="space-y-6 animate-fade-in-up">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Абонементы</h1>
-          <p className="text-muted-foreground">Управление абонементами и посещаемостью</p>
-        </div>
-      </div>
+      <PageHeader
+        title="Абонементы"
+        description="Управление абонементами и посещаемостью"
+      />
 
       {/* Statistics */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -269,13 +268,14 @@ export default function Subscriptions() {
 
         {/* Subscriptions Tab */}
         <TabsContent value="subscriptions" className="space-y-4">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <h2 className="text-xl font-semibold">Абонементы студентов</h2>
             <Dialog open={isSubscriptionDialogOpen} onOpenChange={(open) => { setIsSubscriptionDialogOpen(open); if (!open) setSelectedSubscription(null); }}>
               <DialogTrigger asChild>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Выдать абонемент
+                <Button size="sm" className="sm:size-default">
+                  <Plus className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Выдать абонемент</span>
+                  <span className="sm:hidden">Выдать</span>
                 </Button>
               </DialogTrigger>
               <DialogContent>
@@ -511,11 +511,11 @@ export default function Subscriptions() {
 
         {/* Types Tab */}
         <TabsContent value="types" className="space-y-4">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <h2 className="text-xl font-semibold">Типы абонементов</h2>
-            <div className="flex gap-3 items-center">
+            <div className="flex gap-2 items-center flex-wrap">
               <Select value={billingTypeFilter} onValueChange={setBillingTypeFilter}>
-                <SelectTrigger className="w-[200px]">
+                <SelectTrigger className="w-[150px] sm:w-[200px]">
                   <SelectValue placeholder="Все типы" />
                 </SelectTrigger>
                 <SelectContent>
@@ -527,9 +527,10 @@ export default function Subscriptions() {
               </Select>
               <Dialog open={isTypeDialogOpen} onOpenChange={(open) => { setIsTypeDialogOpen(open); if (!open) setSelectedType(null); }}>
                 <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Создать тип
+                  <Button size="sm" className="sm:size-default">
+                    <Plus className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Создать тип</span>
+                    <span className="sm:hidden">Создать</span>
                   </Button>
                 </DialogTrigger>
                 <DialogContent>

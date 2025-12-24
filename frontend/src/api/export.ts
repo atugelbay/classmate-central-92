@@ -7,6 +7,7 @@ export interface ScheduleExportFilters {
   groupId?: string;
   roomId?: string;
   status?: string; // 'scheduled' | 'cancelled' | 'completed'
+  studentId?: string;
 }
 
 export interface StudentsExportFilters {
@@ -93,6 +94,7 @@ export const exportAPI = {
     if (filters?.groupId) params.append('groupId', filters.groupId);
     if (filters?.roomId) params.append('roomId', filters.roomId);
     if (filters?.status) params.append('status', filters.status);
+    if (filters?.studentId) params.append('studentId', filters.studentId);
     const queryString = params.toString();
     const response = await apiClient.get(`/export/schedule/pdf${queryString ? `?${queryString}` : ''}`, {
       responseType: 'blob',
@@ -108,6 +110,7 @@ export const exportAPI = {
     if (filters?.groupId) params.append('groupId', filters.groupId);
     if (filters?.roomId) params.append('roomId', filters.roomId);
     if (filters?.status) params.append('status', filters.status);
+    if (filters?.studentId) params.append('studentId', filters.studentId);
     const queryString = params.toString();
     const response = await apiClient.get(`/export/schedule/excel${queryString ? `?${queryString}` : ''}`, {
       responseType: 'blob',

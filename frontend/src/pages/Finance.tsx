@@ -21,6 +21,7 @@ import {
 import { useTransactions, useCreateTransaction, useAllBalances, useDiscounts, useCreateDiscount, useUpdateDiscount, useDeleteDiscount, useDebts, useCreateDebt, useUpdateDebt, useStudents, useTeachers, useGroups } from "@/hooks/useData";
 import { Discount, DebtRecord } from "@/types";
 import moment from "moment";
+import { PageHeader } from "@/components/PageHeader";
 import "moment/locale/ru";
 import { ExportDialog } from "@/components/ExportDialog";
 import { toast } from "sonner";
@@ -196,12 +197,10 @@ export default function Finance() {
 
   return (
     <div className="space-y-6 animate-fade-in-up">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Финансы</h1>
-          <p className="text-muted-foreground">Управление финансами и платежами</p>
-        </div>
-      </div>
+      <PageHeader
+        title="Финансы"
+        description="Управление финансами и платежами"
+      />
 
       {/* Statistics */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -261,21 +260,24 @@ export default function Finance() {
 
         {/* Transactions Tab */}
         <TabsContent value="transactions" className="space-y-4">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <h2 className="text-xl font-semibold">История транзакций</h2>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button
                 variant="outline"
                 onClick={() => setIsExportDialogOpen(true)}
+                size="sm"
+                className="sm:size-default"
               >
-                <FileText className="mr-2 h-4 w-4" />
-                Экспорт
+                <FileText className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Экспорт</span>
               </Button>
               <Dialog open={isTransactionDialogOpen} onOpenChange={setIsTransactionDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Добавить транзакцию
+                  <Button size="sm" className="sm:size-default">
+                    <Plus className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Добавить транзакцию</span>
+                    <span className="sm:hidden">Добавить</span>
                   </Button>
                 </DialogTrigger>
               <DialogContent>
@@ -531,13 +533,14 @@ export default function Finance() {
 
         {/* Discounts Tab */}
         <TabsContent value="discounts" className="space-y-4">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <h2 className="text-xl font-semibold">Скидки</h2>
             <Dialog open={isDiscountDialogOpen} onOpenChange={(open) => { setIsDiscountDialogOpen(open); if (!open) setSelectedDiscount(null); }}>
               <DialogTrigger asChild>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Создать скидку
+                <Button size="sm" className="sm:size-default">
+                  <Plus className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Создать скидку</span>
+                  <span className="sm:hidden">Создать</span>
                 </Button>
               </DialogTrigger>
               <DialogContent>
@@ -657,13 +660,14 @@ export default function Finance() {
 
         {/* Debts Tab */}
         <TabsContent value="debts" className="space-y-4">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <h2 className="text-xl font-semibold">Долги</h2>
             <Dialog open={isDebtDialogOpen} onOpenChange={(open) => { setIsDebtDialogOpen(open); if (!open) setSelectedDebt(null); }}>
               <DialogTrigger asChild>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Добавить долг
+                <Button size="sm" className="sm:size-default">
+                  <Plus className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Добавить долг</span>
+                  <span className="sm:hidden">Добавить</span>
                 </Button>
               </DialogTrigger>
               <DialogContent>

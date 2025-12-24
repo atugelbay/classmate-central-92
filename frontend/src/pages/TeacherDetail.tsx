@@ -31,7 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Mail, Phone, Plus, Loader2, Calendar, List, Edit, Trash2 } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Plus, Loader2, Calendar, List, Edit, Trash2, Clock, Users, MapPin } from "lucide-react";
 import { Lesson } from "@/types";
 import { toast } from "sonner";
 import {
@@ -201,49 +201,64 @@ export default function TeacherDetail() {
   return (
     <div className="space-y-6 animate-fade-in-up">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-start gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/teachers")}>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="flex items-start gap-2 sm:gap-4 min-w-0">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/teachers")} className="shrink-0">
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold">{teacher.name}</h1>
-            <p className="text-muted-foreground">{teacher.subject}</p>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-2xl sm:text-3xl font-bold truncate">{teacher.name}</h1>
+            <p className="text-sm sm:text-base text-muted-foreground truncate">{teacher.subject}</p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Badge variant={teacher.status === "active" ? "default" : "secondary"}>
+        <div className="flex flex-wrap gap-2 shrink-0">
+          <Badge variant={teacher.status === "active" ? "default" : "secondary"} className="shrink-0">
             {teacher.status === "active" ? "Активен" : "Неактивен"}
           </Badge>
-          <Button variant="outline" onClick={() => setIsEditDialogOpen(true)}>
-            <Edit className="mr-2 h-4 w-4" />
-            Редактировать
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setIsEditDialogOpen(true)}
+            className="sm:size-default"
+          >
+            <Edit className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Редактировать</span>
           </Button>
-          <Button variant="destructive" onClick={() => setIsDeleteDialogOpen(true)}>
-            <Trash2 className="mr-2 h-4 w-4" />
-            Удалить
+          <Button 
+            variant="destructive" 
+            size="sm" 
+            onClick={() => setIsDeleteDialogOpen(true)}
+            className="sm:size-default"
+          >
+            <Trash2 className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Удалить</span>
           </Button>
-          <Button onClick={handleCreateLesson}>
-            <Plus className="mr-2 h-4 w-4" />
-            Создать урок
+          <Button 
+            size="sm" 
+            onClick={handleCreateLesson}
+            className="sm:size-default w-full sm:w-auto"
+          >
+            <Plus className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Создать урок</span>
+            <span className="sm:hidden">Урок</span>
           </Button>
         </div>
       </div>
 
       {/* Teacher Info */}
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium">Контактная информация</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="flex items-center gap-2 text-sm">
-              <Mail className="h-4 w-4 text-muted-foreground" />
-              <span>{teacher.email}</span>
+              <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+              <span className="truncate">{teacher.email}</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
-              <Phone className="h-4 w-4 text-muted-foreground" />
-              <span>{teacher.phone}</span>
+              <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
+              <span className="truncate">{teacher.phone}</span>
             </div>
           </CardContent>
         </Card>
@@ -310,25 +325,27 @@ export default function TeacherDetail() {
             {/* Calendar View */}
             <TabsContent value="calendar" className="space-y-4">
               {/* Week Navigation */}
-              <div className="flex items-center justify-between">
-                <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
+                <div className="flex gap-2 flex-wrap">
                   <Button variant="outline" size="sm" onClick={handlePreviousWeek}>
-                    Предыдущая
+                    <span className="hidden sm:inline">Предыдущая</span>
+                    <span className="sm:hidden">Пред.</span>
                   </Button>
                   <Button variant="outline" size="sm" onClick={handleToday}>
                     Сегодня
                   </Button>
                   <Button variant="outline" size="sm" onClick={handleNextWeek}>
-                    Следующая
+                    <span className="hidden sm:inline">Следующая</span>
+                    <span className="sm:hidden">След.</span>
                   </Button>
                 </div>
-                <h3 className="text-sm font-medium">
+                <h3 className="text-sm font-medium text-center sm:text-right">
                   {weekStart.format("D MMM")} - {weekEnd.format("D MMM YYYY")}
                 </h3>
               </div>
 
               {/* Week Grid */}
-              <div className="grid grid-cols-7 gap-2">
+              <div className="grid grid-cols-3 sm:grid-cols-7 gap-2">
                 {Array.from({ length: 7 }, (_, i) => {
                   const day = weekStart.clone().add(i, "days");
                   const dayKey = day.format("YYYY-MM-DD");
@@ -336,29 +353,35 @@ export default function TeacherDetail() {
                   const isToday = day.isSame(moment(), "day");
 
                   return (
-                    <div key={dayKey} className={`border rounded-lg p-2 min-h-[150px] ${isToday ? "bg-blue-50 border-blue-200" : ""}`}>
+                    <div key={dayKey} className={`border rounded-lg p-2 min-h-[120px] sm:min-h-[150px] ${isToday ? "bg-blue-50 border-blue-200" : ""}`}>
                       <div className="text-center mb-2">
-                        <div className="text-xs text-muted-foreground">{day.format("dd")}</div>
-                        <div className={`text-sm font-medium ${isToday ? "text-blue-600" : ""}`}>{day.format("D")}</div>
+                        <div className="text-[10px] sm:text-xs text-muted-foreground">{day.format("dd")}</div>
+                        <div className={`text-xs sm:text-sm font-medium ${isToday ? "text-blue-600" : ""}`}>{day.format("D")}</div>
+                        <div className="text-[9px] sm:text-xs text-muted-foreground hidden sm:block">{day.format("MMM")}</div>
                       </div>
                       <div className="space-y-1">
-                        {dayLessons.map((lesson) => {
+                        {dayLessons.slice(0, 3).map((lesson) => {
                           const group = groups.find((g) => g.id === lesson.groupId);
                           return (
                             <div
                               key={lesson.id}
                               onClick={() => handleEditLesson(lesson)}
-                              className="text-xs p-1 rounded bg-primary/10 hover:bg-primary/20 cursor-pointer transition-colors"
+                              className="text-[9px] sm:text-xs p-0.5 sm:p-1 rounded bg-primary/10 hover:bg-primary/20 cursor-pointer transition-colors"
                             >
                               <div className="font-medium truncate">
                                 {group?.name || lesson.title}
                               </div>
-                              <div className="text-muted-foreground">
-                                {moment(lesson.start).format("HH:mm")} - {moment(lesson.end).format("HH:mm")}
+                              <div className="text-muted-foreground truncate">
+                                {moment(lesson.start).format("HH:mm")}
                               </div>
                             </div>
                           );
                         })}
+                        {dayLessons.length > 3 && (
+                          <div className="text-[9px] sm:text-xs text-muted-foreground text-center">
+                            +{dayLessons.length - 3}
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -368,31 +391,83 @@ export default function TeacherDetail() {
 
             {/* List View */}
             <TabsContent value="list">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Дата</TableHead>
-                    <TableHead>Время</TableHead>
-                    <TableHead>Название</TableHead>
-                    <TableHead>Группа</TableHead>
-                    <TableHead>Аудитория</TableHead>
-                    <TableHead>Статус</TableHead>
-                    <TableHead className="text-right">Действия</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {lessons.length === 0 ? (
+              {/* Mobile View - Cards */}
+              <div className="md:hidden space-y-3">
+                {lessons.length === 0 ? (
+                  <div className="text-center text-muted-foreground py-8">
+                    Уроков не найдено
+                  </div>
+                ) : (
+                  lessons
+                    .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
+                    .map((lesson) => {
+                      const group = groups.find((g) => g.id === lesson.groupId);
+                      const room = rooms.find((r) => r.id === lesson.roomId);
+
+                      return (
+                        <Card key={lesson.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleEditLesson(lesson)}>
+                          <CardContent className="p-4 space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="font-semibold text-sm truncate">{lesson.title}</div>
+                                <div className="text-xs text-muted-foreground">{moment(lesson.start).format("DD.MM.YYYY, dddd")}</div>
+                              </div>
+                              <Badge variant={lesson.status === "completed" ? "secondary" : "default"} className="shrink-0 text-[10px]">
+                                {lesson.status === "completed" ? "Завер." : "Запл."}
+                              </Badge>
+                            </div>
+                            <div className="space-y-1 text-xs">
+                              <div className="flex items-center gap-2 text-muted-foreground">
+                                <Clock className="h-3 w-3 shrink-0" />
+                                <span>{moment(lesson.start).format("HH:mm")} - {moment(lesson.end).format("HH:mm")}</span>
+                              </div>
+                              {group && (
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                  <Users className="h-3 w-3 shrink-0" />
+                                  <span className="truncate">{group.name}</span>
+                                </div>
+                              )}
+                              {room && (
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                  <MapPin className="h-3 w-3 shrink-0" />
+                                  <span className="truncate">{room.name}</span>
+                                </div>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })
+                )}
+              </div>
+
+              {/* Desktop View - Table */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground">
-                        Уроков не найдено
-                      </TableCell>
+                      <TableHead>Дата</TableHead>
+                      <TableHead>Время</TableHead>
+                      <TableHead>Название</TableHead>
+                      <TableHead>Группа</TableHead>
+                      <TableHead>Аудитория</TableHead>
+                      <TableHead>Статус</TableHead>
+                      <TableHead className="text-right">Действия</TableHead>
                     </TableRow>
-                  ) : (
-                    lessons
-                      .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
-                      .map((lesson) => {
-                        const group = groups.find((g) => g.id === lesson.groupId);
-                        const room = rooms.find((r) => r.id === lesson.roomId);
+                  </TableHeader>
+                  <TableBody>
+                    {lessons.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center text-muted-foreground">
+                          Уроков не найдено
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      lessons
+                        .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
+                        .map((lesson) => {
+                          const group = groups.find((g) => g.id === lesson.groupId);
+                          const room = rooms.find((r) => r.id === lesson.roomId);
 
                         return (
                           <TableRow key={lesson.id}>
@@ -435,6 +510,7 @@ export default function TeacherDetail() {
                   )}
                 </TableBody>
               </Table>
+              </div>
             </TabsContent>
           </Tabs>
         </CardContent>

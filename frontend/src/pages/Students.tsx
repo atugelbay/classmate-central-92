@@ -47,6 +47,7 @@ import moment from "moment";
 import "moment/locale/ru";
 import { ExportDialog } from "@/components/ExportDialog";
 import { toast } from "sonner";
+import { PageHeader } from "@/components/PageHeader";
 
 moment.locale("ru");
 
@@ -226,7 +227,7 @@ const StudentsGrid = React.memo(function StudentsGrid({
                       <p className="text-sm font-medium text-green-900">Ближайшее занятие:</p>
                     </div>
                     <p className="text-sm text-green-800">
-                      {moment(nextLesson.start).format("DD MMMM, dddd")} в {moment(nextLesson.start).format("HH:mm")}
+                      {moment(nextLesson.start).locale("ru").format("DD MMMM, dddd")} в {moment(nextLesson.start).locale("ru").format("HH:mm")}
                     </p>
                     {nextLesson?.teacherName && (
                       <p className="text-xs text-green-700 mt-1">
@@ -602,7 +603,7 @@ export default function Students() {
   });
 
   // Показать общий лоадер только при самом первом запросе (когда данных ещё нет)
-  if (isLoading && !paged) {
+  if (isLoading && allStudents.length === 0) {
     return (
       <div className="flex h-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -612,34 +613,34 @@ export default function Students() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Ученики</h1>
-          <p className="text-muted-foreground">
-            Управление базой учащихся
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setIsExportDialogOpen(true)}
-          >
-            <FileText className="mr-2 h-4 w-4" />
-            Экспорт
-          </Button>
-          <Dialog
-            open={isDialogOpen}
-            onOpenChange={(open) => {
-              setIsDialogOpen(open);
-              if (!open) setEditingStudent(null);
-            }}
-          >
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Добавить ученика
-              </Button>
-            </DialogTrigger>
+      <PageHeader
+        title="Ученики"
+        description="Управление базой учащихся"
+        actions={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => setIsExportDialogOpen(true)}
+              size="sm"
+              className="sm:size-default"
+            >
+              <FileText className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Экспорт</span>
+            </Button>
+            <Dialog
+              open={isDialogOpen}
+              onOpenChange={(open) => {
+                setIsDialogOpen(open);
+                if (!open) setEditingStudent(null);
+              }}
+            >
+              <DialogTrigger asChild>
+                <Button size="sm" className="sm:size-default">
+                  <Plus className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Добавить ученика</span>
+                  <span className="sm:hidden">Добавить</span>
+                </Button>
+              </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
@@ -702,9 +703,10 @@ export default function Students() {
               </Button>
             </form>
           </DialogContent>
-        </Dialog>
-        </div>
-      </div>
+            </Dialog>
+          </>
+        }
+      />
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -730,21 +732,23 @@ export default function Students() {
       </div>
 
       {/* Activity Filter */}
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-medium">Статус:</span>
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-sm font-medium hidden sm:inline">Статус:</span>
         <Button
           variant={activityFilter === "active" ? "default" : "outline"}
           size="sm"
           onClick={() => setActivityFilter("active")}
         >
-          Активные ({(allStudents as Student[]).filter(s => getIsActive(s)).length})
+          <span className="hidden sm:inline">Активные ({(allStudents as Student[]).filter(s => getIsActive(s)).length})</span>
+          <span className="sm:hidden">Активн. ({(allStudents as Student[]).filter(s => getIsActive(s)).length})</span>
         </Button>
         <Button
           variant={activityFilter === "inactive" ? "default" : "outline"}
           size="sm"
           onClick={() => setActivityFilter("inactive")}
         >
-          Неактивные ({(allStudents as Student[]).filter(s => !getIsActive(s)).length})
+          <span className="hidden sm:inline">Неактивные ({(allStudents as Student[]).filter(s => !getIsActive(s)).length})</span>
+          <span className="sm:hidden">Неакт. ({(allStudents as Student[]).filter(s => !getIsActive(s)).length})</span>
         </Button>
         <Button
           variant={activityFilter === "all" ? "default" : "outline"}

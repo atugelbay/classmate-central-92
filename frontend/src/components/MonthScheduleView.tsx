@@ -1,12 +1,10 @@
 import { useState } from "react";
 import moment from "moment";
-import "moment/locale/ru";
+import "moment/dist/locale/ru";
 import { Lesson, Group } from "@/types";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
-
-moment.locale("ru");
 
 interface MonthScheduleViewProps {
   lessons: Lesson[];
@@ -78,15 +76,15 @@ export default function MonthScheduleView({
   }
 
   return (
-    <div className="relative min-w-0 w-full p-2 sm:p-0">
-      <div className="overflow-x-hidden pb-4 w-full">
-        <div className="w-full max-w-full">
+    <div className="relative min-w-0 w-full p-1 sm:p-0">
+      <div className="overflow-x-auto pb-4 w-full">
+        <div className="w-full max-w-full min-w-[280px]">
           {/* Week days header */}
-          <div className="grid grid-cols-7 border-b">
+          <div className="grid grid-cols-7 border-b bg-muted/30">
             {weekDays.map((day, index) => (
               <div 
                 key={index} 
-                className="h-8 flex items-center justify-center font-semibold text-xs border-r last:border-r-0"
+                className="h-6 sm:h-8 flex items-center justify-center font-semibold text-[10px] sm:text-xs border-r last:border-r-0"
               >
                 {day}
               </div>
@@ -104,17 +102,17 @@ export default function MonthScheduleView({
                 return (
                   <div
                     key={dayIndex}
-                    className={`border-r last:border-r-0 p-1 cursor-pointer transition-colors overflow-hidden ${
-                      today ? 'bg-blue-50' : ''
-                    } ${!currentMonth ? 'bg-gray-50/50' : 'hover:bg-gray-50'}`}
-                    style={{ minHeight: "70px", maxHeight: "90px" }}
+                    className={`border-r last:border-r-0 p-0.5 sm:p-1 cursor-pointer transition-colors overflow-hidden ${
+                      today ? 'bg-blue-50 dark:bg-blue-950/20' : ''
+                    } ${!currentMonth ? 'bg-gray-50/50 dark:bg-gray-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-900/30'}`}
+                    style={{ minHeight: "60px", maxHeight: "80px" }}
                     onClick={() => handleDayClick(day)}
                   >
-                    <div className="flex items-start justify-between mb-1">
+                    <div className="flex items-start justify-between mb-0.5 sm:mb-1">
                       <span 
-                        className={`text-xs font-semibold ${
+                        className={`text-[10px] sm:text-xs font-semibold ${
                           today 
-                            ? 'bg-blue-600 text-white w-5 h-5 rounded-full flex items-center justify-center' 
+                            ? 'bg-blue-600 text-white w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[9px] sm:text-xs' 
                             : !currentMonth 
                             ? 'text-muted-foreground' 
                             : ''
@@ -123,35 +121,35 @@ export default function MonthScheduleView({
                         {moment(day).format('D')}
                       </span>
                       {dayLessons.length > 0 && (
-                        <Badge variant="secondary" className="text-[10px] h-4 px-1">
+                        <Badge variant="secondary" className="text-[8px] sm:text-[10px] h-3 sm:h-4 px-0.5 sm:px-1">
                           {dayLessons.length}
                         </Badge>
                       )}
                     </div>
 
                     <div className="space-y-0.5 overflow-hidden">
-                      {dayLessons.slice(0, 2).map((lesson) => (
+                      {dayLessons.slice(0, 1).map((lesson) => (
                         <Card 
                           key={lesson.id} 
-                          className="p-1 hover:shadow-md transition-shadow overflow-hidden"
+                          className="p-0.5 sm:p-1 hover:shadow-md transition-shadow overflow-hidden"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <div className="text-[10px] font-semibold truncate leading-tight overflow-hidden text-ellipsis whitespace-nowrap">
+                          <div className="text-[9px] sm:text-[10px] font-semibold truncate leading-tight overflow-hidden text-ellipsis whitespace-nowrap">
                             {getGroupName(lesson.groupId) || lesson.title}
                           </div>
-                          <div className="text-[9px] text-muted-foreground leading-tight truncate overflow-hidden text-ellipsis whitespace-nowrap">
+                          <div className="text-[8px] sm:text-[9px] text-muted-foreground leading-tight truncate overflow-hidden text-ellipsis whitespace-nowrap">
                             {moment.utc(lesson.start).local().format("HH:mm")}
                           </div>
                         </Card>
                       ))}
-                      {dayLessons.length > 2 && (
+                      {dayLessons.length > 1 && (
                         <Popover>
                           <PopoverTrigger asChild>
                             <div 
-                              className="text-[10px] text-muted-foreground text-center pt-0.5 cursor-pointer hover:text-primary transition-colors"
+                              className="text-[9px] sm:text-[10px] text-muted-foreground text-center pt-0.5 cursor-pointer hover:text-primary transition-colors"
                               onClick={(e) => e.stopPropagation()}
                             >
-                              +{dayLessons.length - 2}
+                              +{dayLessons.length - 1}
                             </div>
                           </PopoverTrigger>
                           <PopoverContent 
@@ -193,8 +191,8 @@ export default function MonthScheduleView({
                     </div>
 
                     {dayLessons.length === 0 && currentMonth && (
-                      <div className="flex items-center justify-center h-16">
-                        <p className="text-xs text-muted-foreground/50">Нет уроков</p>
+                      <div className="flex items-center justify-center h-12 sm:h-16">
+                        <p className="text-[9px] sm:text-xs text-muted-foreground/50">—</p>
                       </div>
                     )}
                   </div>

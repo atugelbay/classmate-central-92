@@ -25,7 +25,7 @@ export function StudentStatistics() {
     <Card className="h-full flex flex-col overflow-hidden">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <div className="flex items-center gap-2">
-          <Users className="h-5 w-5 text-primary" />
+          <Users className="h-5 w-5" style={{ color: 'hsl(var(--dashboard-icon-muted))' }} />
           <CardTitle>Статистика учеников</CardTitle>
         </div>
         <Button
@@ -39,43 +39,43 @@ export function StudentStatistics() {
         </Button>
       </CardHeader>
       <CardContent className="flex-1 overflow-hidden min-h-0 flex flex-col">
-        <div className="space-y-3 flex-1 overflow-y-auto min-h-0">
+        <div className="space-y-3 flex-1 overflow-hidden min-h-0">
           {/* Total Count - Prominent */}
-          <div className="rounded-lg border bg-gradient-to-r from-primary/10 to-primary/5 p-4">
+          <div className="rounded-lg border p-4" style={{ backgroundColor: 'hsl(var(--dashboard-accent-subtle))' }}>
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-xs font-medium text-muted-foreground mb-1">
+                <div className="text-xs font-medium text-muted-foreground mb-1.5">
                   Всего учеников
                 </div>
                 <div className="text-2xl font-bold text-primary">
                   {total}
                 </div>
               </div>
-              <Users className="h-10 w-10 text-primary/20" />
+              <Users className="h-10 w-10 text-primary opacity-20" />
             </div>
           </div>
 
           {/* Summary Cards */}
-          <div className="grid grid-cols-3 gap-2">
-            <div className="rounded-lg border bg-green-50 dark:bg-green-950/20 p-3 text-center">
-              <UserCheck className="h-4 w-4 mx-auto mb-1.5 text-green-600" />
-              <div className="text-xl font-bold text-green-700 dark:text-green-400">
+          <div className="grid grid-cols-3 gap-2.5">
+            <div className="rounded-lg border p-2.5 text-center" style={{ backgroundColor: 'hsl(var(--dashboard-stat-neutral-bg))' }}>
+              <UserCheck className="h-3.5 w-3.5 mx-auto mb-1.5" style={{ color: 'hsl(var(--dashboard-icon-muted))' }} />
+              <div className="text-lg font-bold">
                 {students.active}
               </div>
               <div className="text-xs text-muted-foreground mt-0.5">Активные</div>
             </div>
 
-            <div className="rounded-lg border bg-blue-50 dark:bg-blue-950/20 p-3 text-center">
-              <UserPlus className="h-4 w-4 mx-auto mb-1.5 text-blue-600" />
-              <div className="text-xl font-bold text-blue-700 dark:text-blue-400">
+            <div className="rounded-lg border p-2.5 text-center" style={{ backgroundColor: 'hsl(var(--dashboard-stat-neutral-bg))' }}>
+              <UserPlus className="h-3.5 w-3.5 mx-auto mb-1.5" style={{ color: 'hsl(var(--dashboard-icon-muted))' }} />
+              <div className="text-lg font-bold">
                 {students.new}
               </div>
               <div className="text-xs text-muted-foreground mt-0.5">Новые</div>
             </div>
 
-            <div className="rounded-lg border bg-slate-50 dark:bg-slate-950/20 p-3 text-center">
-              <Snowflake className="h-4 w-4 mx-auto mb-1.5 text-slate-600" />
-              <div className="text-xl font-bold text-slate-700 dark:text-slate-400">
+            <div className="rounded-lg border p-2.5 text-center" style={{ backgroundColor: 'hsl(var(--dashboard-stat-neutral-bg))' }}>
+              <Snowflake className="h-3.5 w-3.5 mx-auto mb-1.5" style={{ color: 'hsl(var(--dashboard-icon-muted))' }} />
+              <div className="text-lg font-bold">
                 {students.frozen}
               </div>
               <div className="text-xs text-muted-foreground mt-0.5">Заморожены</div>
@@ -84,11 +84,11 @@ export function StudentStatistics() {
 
           {/* New Students Notice - only if significant */}
           {students.new > 0 && students.new >= 5 && (
-            <div className="rounded-lg border bg-blue-50 dark:bg-blue-950/20 p-2.5">
+            <div className="rounded-lg border p-2.5" style={{ backgroundColor: 'hsl(var(--dashboard-stat-neutral-bg))' }}>
               <div className="flex items-center gap-2">
-                <UserPlus className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                <UserPlus className="h-3.5 w-3.5 shrink-0" style={{ color: 'hsl(var(--dashboard-icon-muted))' }} />
                 <div className="text-xs">
-                  <span className="font-semibold text-blue-700 dark:text-blue-400">
+                  <span className="font-semibold">
                     {students.new} новых
                   </span>
                   <span className="text-muted-foreground"> за месяц</span>

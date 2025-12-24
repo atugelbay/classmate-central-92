@@ -1,15 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import moment from "moment";
-import "moment/locale/ru";
+import "moment/dist/locale/ru";
 import { Room, Lesson, Teacher, Group, Student, StudentSubscription } from "@/types";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Edit2, X, Clock, User, Users } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
-
-moment.locale("ru");
 
 interface WeekScheduleViewProps {
   rooms: Room[];
@@ -44,6 +42,12 @@ export default function WeekScheduleView({
   const [draggingLesson, setDraggingLesson] = useState<Lesson | null>(null);
   const [tempLessonPosition, setTempLessonPosition] = useState<{ start: Date; end: Date; roomId?: string } | null>(null);
   const [hoveredCell, setHoveredCell] = useState<{ dayIndex: number; roomId: string } | null>(null);
+  
+  // Track mouse position to distinguish click from drag
+  const [mouseDownPosition, setMouseDownPosition] = useState<{ x: number; y: number } | null>(null);
+  const [hasActuallyMoved, setHasActuallyMoved] = useState(false);
+  const [pendingDragLesson, setPendingDragLesson] = useState<Lesson | null>(null);
+  const DRAG_THRESHOLD = 5; // pixels
   
   // Track container width for responsive column sizing
   const [containerWidth, setContainerWidth] = useState(0);
@@ -127,20 +131,35 @@ export default function WeekScheduleView({
   const calculateDayColumnWidth = () => {
     if (containerWidth === 0) return 120;
     
-    const roomColumnWidth = containerWidth < 640 ? 112 : 128;
-    const padding = 20; // Internal padding
+    // Smaller room column on mobile (w-20 = 80px on mobile)
+    const roomColumnWidth = containerWidth < 640 ? 80 : (containerWidth < 768 ? 112 : 128);
+    const padding = containerWidth < 640 ? 10 : 20; // Smaller padding on mobile
     
     const availableWidth = containerWidth - roomColumnWidth - padding;
     const columnWidth = Math.floor(availableWidth / 7); // 7 days
     
-    // Ensure minimum readability but prioritize fitting in viewport
-    return Math.max(80, columnWidth);
+    // Smaller minimum for mobile devices
+    const minWidth = containerWidth < 640 ? 50 : 80;
+    return Math.max(minWidth, columnWidth);
   };
   
   const dayColumnWidth = calculateDayColumnWidth();
 
   const handleLessonClick = (lesson: Lesson, e: React.MouseEvent) => {
     e.stopPropagation();
+    
+    // Don't open popover if the lesson was actually dragged
+    if (hasActuallyMoved) {
+      setHasActuallyMoved(false);
+      setPendingDragLesson(null);
+      setMouseDownPosition(null);
+      return;
+    }
+    
+    // Clean up drag states
+    setPendingDragLesson(null);
+    setMouseDownPosition(null);
+    
     setSelectedLesson(lesson);
     setPopoverOpen(true);
   };
@@ -172,8 +191,11 @@ export default function WeekScheduleView({
   const handleLessonDragStart = (lesson: Lesson, e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    setDraggingLesson(lesson);
-    setTempLessonPosition({ start: lesson.start, end: lesson.end, roomId: lesson.roomId });
+    
+    // Store initial mouse position
+    setMouseDownPosition({ x: e.clientX, y: e.clientY });
+    setHasActuallyMoved(false);
+    setPendingDragLesson(lesson);
   };
 
   const handleLessonDragMove = (
@@ -205,6 +227,8 @@ export default function WeekScheduleView({
       setDraggingLesson(null);
       setTempLessonPosition(null);
       setHoveredCell(null);
+      setPendingDragLesson(null);
+      setMouseDownPosition(null);
       return;
     }
     
@@ -225,6 +249,8 @@ export default function WeekScheduleView({
     setDraggingLesson(null);
     setTempLessonPosition(null);
     setHoveredCell(null);
+    setPendingDragLesson(null);
+    setMouseDownPosition(null);
   };
 
   useEffect(() => {
@@ -235,6 +261,53 @@ export default function WeekScheduleView({
       };
     }
   }, [draggingLesson, tempLessonPosition]);
+
+  // Check mouse movement distance to start dragging
+  useEffect(() => {
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (pendingDragLesson && mouseDownPosition && !draggingLesson) {
+        const dx = e.clientX - mouseDownPosition.x;
+        const dy = e.clientY - mouseDownPosition.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        // Start actual drag if moved beyond threshold
+        if (distance > DRAG_THRESHOLD) {
+          setHasActuallyMoved(true);
+          setDraggingLesson(pendingDragLesson);
+          setTempLessonPosition({ 
+            start: pendingDragLesson.start, 
+            end: pendingDragLesson.end, 
+            roomId: pendingDragLesson.roomId 
+          });
+        }
+      }
+    };
+
+    if (pendingDragLesson && !draggingLesson) {
+      document.addEventListener('mousemove', handleGlobalMouseMove);
+      return () => {
+        document.removeEventListener('mousemove', handleGlobalMouseMove);
+      };
+    }
+  }, [pendingDragLesson, draggingLesson, mouseDownPosition, DRAG_THRESHOLD]);
+
+  // Clean up pending drag on mouseup if no actual drag happened
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      if (pendingDragLesson && !draggingLesson) {
+        setPendingDragLesson(null);
+        setMouseDownPosition(null);
+        setHasActuallyMoved(false);
+      }
+    };
+
+    if (pendingDragLesson && !draggingLesson) {
+      document.addEventListener('mouseup', handleGlobalMouseUp);
+      return () => {
+        document.removeEventListener('mouseup', handleGlobalMouseUp);
+      };
+    }
+  }, [pendingDragLesson, draggingLesson]);
 
   // Track container resize for responsive columns
   useEffect(() => {
@@ -268,12 +341,12 @@ export default function WeekScheduleView({
       className="relative isolate min-w-0 w-full p-2 sm:p-0" 
       style={{ userSelect: draggingLesson ? 'none' : 'auto' }}
     >
-      <div className="overflow-x-hidden pb-4 w-full">
-        <div className="flex flex-col w-full">
+      <div className="overflow-x-auto pb-4 w-full">
+        <div className="flex flex-col min-w-fit">
           {/* Header with days */}
           <div className="flex gap-0 border-b">
-            <div className="flex-shrink-0 w-28 sm:w-32 sticky left-0 z-[5] bg-background border-r">
-              <div className="h-12 flex items-center justify-center font-semibold text-sm">
+            <div className="flex-shrink-0 w-20 sm:w-28 md:w-32 sticky left-0 z-[5] bg-background border-r">
+              <div className="h-12 flex items-center justify-center font-semibold text-[10px] sm:text-sm px-1">
                 Аудитория
               </div>
             </div>
@@ -286,13 +359,13 @@ export default function WeekScheduleView({
                   style={{ width: `${dayColumnWidth}px` }}
                 >
                   <div className="h-12 flex flex-col items-center justify-center gap-0 py-1">
-                    <div className={`text-[9px] leading-tight ${isToday ? 'text-blue-600 font-semibold' : 'text-muted-foreground'}`}>
+                    <div className={`text-[9px] leading-tight capitalize ${isToday ? 'text-blue-600 font-semibold' : 'text-muted-foreground'}`}>
                       {moment(day).format('dd')}
                     </div>
                     <div className={`text-sm font-semibold leading-tight ${isToday ? 'text-blue-600' : ''}`}>
                       {moment(day).format('D')}
                     </div>
-                    <div className={`text-[9px] leading-tight ${isToday ? 'text-blue-600' : 'text-muted-foreground'}`}>
+                    <div className={`text-[9px] leading-tight capitalize ${isToday ? 'text-blue-600' : 'text-muted-foreground'}`}>
                       {moment(day).format('MMM')}
                     </div>
                   </div>
@@ -305,14 +378,19 @@ export default function WeekScheduleView({
           {activeRooms.map((room) => (
             <div key={room.id} className="flex gap-0 border-b">
               {/* Room name */}
-              <div className="flex-shrink-0 w-28 sm:w-32 sticky left-0 z-[4] bg-background border-r">
-                <div className="h-20 flex flex-col items-center justify-center p-1 text-center">
-                  <div className="font-semibold text-xs">{room.name}</div>
+              <div 
+                className="flex-shrink-0 w-20 sm:w-28 md:w-32 sticky left-0 z-[4] bg-background border-r"
+                style={{ 
+                  minHeight: containerWidth < 640 ? "60px" : "80px"
+                }}
+              >
+                <div className="h-full flex flex-col items-center justify-center p-0.5 sm:p-1 text-center">
+                  <div className="font-semibold text-[10px] sm:text-xs truncate max-w-full px-1">{room.name}</div>
                   <div 
                     className="w-2 h-2 rounded-full mt-0.5" 
                     style={{ backgroundColor: room.color }}
                   />
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-[10px] sm:text-xs text-muted-foreground">
                     {room.capacity}
                   </div>
                 </div>
@@ -336,12 +414,12 @@ export default function WeekScheduleView({
                 return (
                   <div 
                     key={dayIndex}
-                    className={`flex-shrink-0 border-r p-1 cursor-pointer transition-colors overflow-hidden ${
+                    className={`flex-shrink-0 border-r p-0.5 sm:p-1 cursor-pointer transition-colors overflow-hidden ${
                       isToday ? 'bg-blue-50/30' : ''
                     } ${isHovered && draggingLesson ? 'bg-blue-100/50' : 'hover:bg-gray-50'}`}
                     style={{ 
-                      minHeight: "80px",
-                      maxHeight: "100px",
+                      minHeight: containerWidth < 640 ? "60px" : "80px",
+                      maxHeight: containerWidth < 640 ? "80px" : "100px",
                       width: `${dayColumnWidth}px`
                     }}
                     onClick={(e) => handleCellClick(day, room.id, e)}
@@ -368,11 +446,13 @@ export default function WeekScheduleView({
                           }}>
                             <PopoverTrigger asChild>
                               <Card
-                                className={`p-1 hover:shadow-md transition-shadow cursor-pointer select-none overflow-hidden ${
+                                className={`p-0.5 sm:p-1 hover:shadow-md transition-shadow cursor-pointer select-none overflow-hidden ${
                                   isDragged ? 'opacity-50' : ''
                                 } ${
                                   unmarkedLessonIds.has(lesson.id)
                                     ? 'border-red-500 border-2 animate-pulse bg-red-50'
+                                    : moment(lesson.start).isBefore(moment()) && lesson.status !== 'cancelled'
+                                    ? 'opacity-50 grayscale'
                                     : ''
                                 }`}
                                 onClick={(e) => {
@@ -389,10 +469,10 @@ export default function WeekScheduleView({
                                 }}
                                 style={{ userSelect: 'none' }}
                               >
-                                <div className="text-[10px] font-semibold truncate leading-tight overflow-hidden text-ellipsis whitespace-nowrap">
+                                <div className="text-[8px] sm:text-[10px] font-semibold truncate leading-tight overflow-hidden text-ellipsis whitespace-nowrap">
                                   {getGroupName(lesson.groupId) || lesson.title}
                                 </div>
-                                <div className="text-[9px] text-muted-foreground truncate leading-tight overflow-hidden text-ellipsis whitespace-nowrap">
+                                <div className="text-[7px] sm:text-[9px] text-muted-foreground truncate leading-tight overflow-hidden text-ellipsis whitespace-nowrap">
                                   {moment.utc(lesson.start).local().format("HH:mm")}
                                 </div>
                               </Card>
@@ -494,10 +574,10 @@ export default function WeekScheduleView({
                         <Popover>
                           <PopoverTrigger asChild>
                             <div 
-                              className="text-[9px] text-blue-600 font-medium text-center pt-0.5 cursor-pointer hover:text-blue-800 transition-colors"
+                              className="text-[7px] sm:text-[9px] text-blue-600 font-medium text-center pt-0.5 cursor-pointer hover:text-blue-800 transition-colors"
                               onClick={(e) => e.stopPropagation()}
                             >
-                              +{sortedLessons.length - 2} еще
+                              +{sortedLessons.length - 2}
                             </div>
                           </PopoverTrigger>
                           <PopoverContent 
@@ -515,7 +595,13 @@ export default function WeekScheduleView({
                                   return (
                                     <Card 
                                       key={lesson.id} 
-                                      className="p-2 cursor-pointer hover:shadow-md transition-shadow"
+                                      className={`p-2 cursor-pointer hover:shadow-md transition-shadow ${
+                                        unmarkedLessonIds.has(lesson.id)
+                                          ? 'border-red-500 border-2 animate-pulse bg-red-50'
+                                          : moment(lesson.start).isBefore(moment()) && lesson.status !== 'cancelled'
+                                          ? 'opacity-50 grayscale'
+                                          : ''
+                                      }`}
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         setSelectedLesson(lesson);

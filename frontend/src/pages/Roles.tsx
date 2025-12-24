@@ -38,6 +38,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { PageHeader } from "@/components/PageHeader";
 
 // Helper function to translate role names
 const translateRoleName = (name: string): string => {
@@ -164,21 +165,19 @@ export default function Roles() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Роли и права доступа</h1>
-          <p className="text-muted-foreground">
-            Управление ролями и разрешениями пользователей
-          </p>
-        </div>
-        {canManage && (
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={() => setEditingRole(null)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Создать роль
-              </Button>
-            </DialogTrigger>
+      <PageHeader
+        title="Роли и права доступа"
+        description="Управление ролями и разрешениями пользователей"
+        actions={
+          canManage ? (
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={() => setEditingRole(null)} size="sm" className="sm:size-default">
+                  <Plus className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Создать роль</span>
+                  <span className="sm:hidden">Создать</span>
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
@@ -241,9 +240,10 @@ export default function Roles() {
                 </div>
               </form>
             </DialogContent>
-          </Dialog>
-        )}
-      </div>
+            </Dialog>
+          ) : undefined
+        }
+      />
 
       {canManage && (
         <Card>

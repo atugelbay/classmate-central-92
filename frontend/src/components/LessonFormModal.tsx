@@ -292,12 +292,12 @@ export function LessonFormModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{mode === "edit" ? "Редактировать урок" : "Новый урок"}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 pb-2">
           {/* Lesson Type Toggle */}
           {mode === "create" && allowLessonTypeChange && (
             <div className="space-y-2">
@@ -365,7 +365,7 @@ export function LessonFormModal({
           {/* Group or Students */}
           {lessonType === "group" ? (
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <Label htmlFor="groupId">Группа *</Label>
                 <Button
                   type="button"
@@ -377,9 +377,11 @@ export function LessonFormModal({
                       setGroupId("");
                     }
                   }}
+                  className="w-full sm:w-auto"
                 >
                   <Plus className="h-4 w-4 mr-1" />
-                  {isCreatingNewGroup ? "Выбрать существующую" : "Создать новую"}
+                  <span className="hidden sm:inline">{isCreatingNewGroup ? "Выбрать существующую" : "Создать новую"}</span>
+                  <span className="sm:hidden">{isCreatingNewGroup ? "Выбрать" : "Создать"}</span>
                 </Button>
               </div>
               
@@ -434,7 +436,7 @@ export function LessonFormModal({
           </div>
 
           {/* Time */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="startTime">Время начала *</Label>
               <Input id="startTime" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} required />
@@ -467,7 +469,7 @@ export function LessonFormModal({
             <>
               <div>
                 <Label className="mb-3 block">Дни недели *</Label>
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-3 sm:flex sm:flex-wrap gap-2">
                   {WEEKDAYS.map((day) => (
                     <div key={day.value} className="flex items-center space-x-2">
                       <Checkbox
@@ -549,12 +551,12 @@ export function LessonFormModal({
           )}
 
           {/* Actions */}
-          <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4">
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
               Отмена
             </Button>
             {conflicts?.hasConflicts && (
-              <Button variant="secondary" onClick={() => handleSubmit(true)}>
+              <Button variant="secondary" onClick={() => handleSubmit(true)} className="w-full sm:w-auto">
                 Создать несмотря на конфликты
               </Button>
             )}
@@ -569,6 +571,7 @@ export function LessonFormModal({
                 (lessonType === "individual" && selectedStudentIds.length === 0) ||
                 (seriesMode && (selectedWeekdays.length === 0 || !seriesEndDate))
               }
+              className="w-full sm:w-auto"
             >
               {mode === "edit" ? "Сохранить" : "Создать"}
             </Button>

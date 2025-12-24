@@ -26,6 +26,10 @@ interface ExportDialogProps {
   // For transactions
   defaultStartDate?: string;
   defaultEndDate?: string;
+  // Single student mode (for student detail page)
+  singleStudentMode?: boolean;
+  singleStudentId?: string;
+  singleStudentName?: string;
 }
 
 export function ExportDialog({
@@ -38,6 +42,9 @@ export function ExportDialog({
   students = [],
   defaultStartDate,
   defaultEndDate,
+  singleStudentMode = false,
+  singleStudentId,
+  singleStudentName,
 }: ExportDialogProps) {
   const [format, setFormat] = useState<"pdf" | "excel">("pdf");
   const [loading, setLoading] = useState(false);
@@ -87,6 +94,7 @@ export function ExportDialog({
           groupId: scheduleGroupId && scheduleGroupId !== "all" ? scheduleGroupId : undefined,
           roomId: scheduleRoomId && scheduleRoomId !== "all" ? scheduleRoomId : undefined,
           status: scheduleStatus && scheduleStatus !== "all" ? scheduleStatus : undefined,
+          studentId: singleStudentMode && singleStudentId ? singleStudentId : undefined,
         };
 
         if (format === "pdf") {
@@ -118,7 +126,9 @@ export function ExportDialog({
           startDate: transactionStartDate || undefined,
           endDate: transactionEndDate || undefined,
           type: transactionType && transactionType !== "all" ? transactionType : undefined,
-          studentId: transactionStudentId && transactionStudentId !== "all" ? transactionStudentId : undefined,
+          studentId: singleStudentMode && singleStudentId 
+            ? singleStudentId 
+            : (transactionStudentId && transactionStudentId !== "all" ? transactionStudentId : undefined),
           teacherId: transactionTeacherId && transactionTeacherId !== "all" ? transactionTeacherId : undefined,
           groupId: transactionGroupId && transactionGroupId !== "all" ? transactionGroupId : undefined,
         };
@@ -199,71 +209,86 @@ export function ExportDialog({
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="schedule-teacher">Учитель</Label>
-                <Select value={scheduleTeacherId} onValueChange={setScheduleTeacherId}>
-                  <SelectTrigger id="schedule-teacher">
-                    <SelectValue placeholder="Все учителя" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Все учителя</SelectItem>
-                    {teachers.map((teacher) => (
-                      <SelectItem key={teacher.id} value={teacher.id}>
-                        {teacher.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {singleStudentMode && singleStudentName && (
+                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-sm text-blue-900">
+                    <span className="font-medium">Студент:</span> {singleStudentName}
+                  </p>
+                  <p className="text-xs text-blue-700 mt-1">
+                    Будут включены все занятия студента за выбранный период (посещенные, пропущенные, запланированные)
+                  </p>
+                </div>
+              )}
 
-              <div className="space-y-2">
-                <Label htmlFor="schedule-group">Группа</Label>
-                <Select value={scheduleGroupId} onValueChange={setScheduleGroupId}>
-                  <SelectTrigger id="schedule-group">
-                    <SelectValue placeholder="Все группы" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Все группы</SelectItem>
-                    {groups.map((group) => (
-                      <SelectItem key={group.id} value={group.id}>
-                        {group.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {!singleStudentMode && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="schedule-teacher">Учитель</Label>
+                    <Select value={scheduleTeacherId} onValueChange={setScheduleTeacherId}>
+                      <SelectTrigger id="schedule-teacher">
+                        <SelectValue placeholder="Все учителя" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Все учителя</SelectItem>
+                        {teachers.map((teacher) => (
+                          <SelectItem key={teacher.id} value={teacher.id}>
+                            {teacher.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="schedule-room">Аудитория</Label>
-                <Select value={scheduleRoomId} onValueChange={setScheduleRoomId}>
-                  <SelectTrigger id="schedule-room">
-                    <SelectValue placeholder="Все аудитории" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Все аудитории</SelectItem>
-                    {rooms.map((room) => (
-                      <SelectItem key={room.id} value={room.id}>
-                        {room.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="schedule-group">Группа</Label>
+                    <Select value={scheduleGroupId} onValueChange={setScheduleGroupId}>
+                      <SelectTrigger id="schedule-group">
+                        <SelectValue placeholder="Все группы" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Все группы</SelectItem>
+                        {groups.map((group) => (
+                          <SelectItem key={group.id} value={group.id}>
+                            {group.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="schedule-status">Статус урока</Label>
-                <Select value={scheduleStatus} onValueChange={setScheduleStatus}>
-                  <SelectTrigger id="schedule-status">
-                    <SelectValue placeholder="Все статусы" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Все статусы</SelectItem>
-                    <SelectItem value="scheduled">Запланирован</SelectItem>
-                    <SelectItem value="cancelled">Отменен</SelectItem>
-                    <SelectItem value="completed">Завершен</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="schedule-room">Аудитория</Label>
+                    <Select value={scheduleRoomId} onValueChange={setScheduleRoomId}>
+                      <SelectTrigger id="schedule-room">
+                        <SelectValue placeholder="Все аудитории" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Все аудитории</SelectItem>
+                        {rooms.map((room) => (
+                          <SelectItem key={room.id} value={room.id}>
+                            {room.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="schedule-status">Статус урока</Label>
+                    <Select value={scheduleStatus} onValueChange={setScheduleStatus}>
+                      <SelectTrigger id="schedule-status">
+                        <SelectValue placeholder="Все статусы" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Все статусы</SelectItem>
+                        <SelectItem value="scheduled">Запланирован</SelectItem>
+                        <SelectItem value="cancelled">Отменен</SelectItem>
+                        <SelectItem value="completed">Завершен</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
             </>
           )}
 
@@ -369,70 +394,85 @@ export function ExportDialog({
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="transaction-type">Тип операции</Label>
-                <Select value={transactionType} onValueChange={setTransactionType}>
-                  <SelectTrigger id="transaction-type">
-                    <SelectValue placeholder="Все типы" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Все типы</SelectItem>
-                    <SelectItem value="payment">Платеж</SelectItem>
-                    <SelectItem value="writeoff">Списание</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {singleStudentMode && singleStudentName && (
+                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-sm text-blue-900">
+                    <span className="font-medium">Студент:</span> {singleStudentName}
+                  </p>
+                  <p className="text-xs text-blue-700 mt-1">
+                    Будут включены все платежи и списания студента за выбранный период
+                  </p>
+                </div>
+              )}
 
-              <div className="space-y-2">
-                <Label htmlFor="transaction-student">Ученик</Label>
-                <Select value={transactionStudentId} onValueChange={setTransactionStudentId}>
-                  <SelectTrigger id="transaction-student">
-                    <SelectValue placeholder="Все ученики" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Все ученики</SelectItem>
-                    {students.map((student) => (
-                      <SelectItem key={student.id} value={student.id}>
-                        {student.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {!singleStudentMode && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="transaction-type">Тип операции</Label>
+                    <Select value={transactionType} onValueChange={setTransactionType}>
+                      <SelectTrigger id="transaction-type">
+                        <SelectValue placeholder="Все типы" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Все типы</SelectItem>
+                        <SelectItem value="payment">Платеж</SelectItem>
+                        <SelectItem value="writeoff">Списание</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="transaction-teacher">Учитель</Label>
-                <Select value={transactionTeacherId} onValueChange={setTransactionTeacherId}>
-                  <SelectTrigger id="transaction-teacher">
-                    <SelectValue placeholder="Все учителя" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Все учителя</SelectItem>
-                    {teachers.map((teacher) => (
-                      <SelectItem key={teacher.id} value={teacher.id}>
-                        {teacher.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="transaction-student">Ученик</Label>
+                    <Select value={transactionStudentId} onValueChange={setTransactionStudentId}>
+                      <SelectTrigger id="transaction-student">
+                        <SelectValue placeholder="Все ученики" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Все ученики</SelectItem>
+                        {students.map((student) => (
+                          <SelectItem key={student.id} value={student.id}>
+                            {student.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="transaction-group">Группа</Label>
-                <Select value={transactionGroupId} onValueChange={setTransactionGroupId}>
-                  <SelectTrigger id="transaction-group">
-                    <SelectValue placeholder="Все группы" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Все группы</SelectItem>
-                    {groups.map((group) => (
-                      <SelectItem key={group.id} value={group.id}>
-                        {group.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="transaction-teacher">Учитель</Label>
+                    <Select value={transactionTeacherId} onValueChange={setTransactionTeacherId}>
+                      <SelectTrigger id="transaction-teacher">
+                        <SelectValue placeholder="Все учителя" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Все учителя</SelectItem>
+                        {teachers.map((teacher) => (
+                          <SelectItem key={teacher.id} value={teacher.id}>
+                            {teacher.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="transaction-group">Группа</Label>
+                    <Select value={transactionGroupId} onValueChange={setTransactionGroupId}>
+                      <SelectTrigger id="transaction-group">
+                        <SelectValue placeholder="Все группы" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Все группы</SelectItem>
+                        {groups.map((group) => (
+                          <SelectItem key={group.id} value={group.id}>
+                            {group.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
             </>
           )}
         </div>

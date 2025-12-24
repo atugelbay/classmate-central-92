@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { useThemeContext } from "@/context/ThemeContext";
 import { ColorThemeName, InterfaceSize, DataDensity } from "@/types";
+import { PageHeader } from "@/components/PageHeader";
 
 const COLOR_THEMES = [
   { name: "blue" as ColorThemeName, label: "Синий", color: "#6366F1" },
@@ -67,12 +68,10 @@ export default function Settings() {
 
   return (
     <div className="space-y-6 animate-fade-in-up">
-      <div>
-        <h1 className="text-3xl font-bold">Настройки</h1>
-        <p className="text-muted-foreground">
-          Конфигурация учебного центра и интерфейса
-        </p>
-      </div>
+      <PageHeader
+        title="Настройки"
+        description="Конфигурация учебного центра и интерфейса"
+      />
 
       <Tabs defaultValue="general" className="w-full">
         <TabsList>

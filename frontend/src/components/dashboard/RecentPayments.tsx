@@ -21,23 +21,39 @@ export function RecentPayments() {
     queryFn: financeApi.getAllTransactions,
   });
 
-  // Sort by date (newest first) and take last 5
+  // Sort by date (newest first) and take last 4
   const recentTransactions = Array.isArray(transactions)
     ? [...transactions]
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        .slice(0, 5)
+        .slice(0, 4)
     : [];
 
   const getTypeColor = (type: string) => {
+    return "border";
+  };
+
+  const getTypeStyle = (type: string) => {
     switch (type) {
       case "payment":
-        return "bg-green-500/10 text-green-600 border-green-200";
+        return { 
+          backgroundColor: 'hsl(var(--dashboard-stat-positive-bg))',
+          color: 'hsl(var(--dashboard-stat-positive))'
+        };
       case "refund":
-        return "bg-red-500/10 text-red-600 border-red-200";
+        return { 
+          backgroundColor: 'hsl(var(--dashboard-stat-negative-bg))',
+          color: 'hsl(var(--dashboard-stat-negative))'
+        };
       case "fee":
-        return "bg-yellow-500/10 text-yellow-600 border-yellow-200";
+        return { 
+          backgroundColor: 'hsl(var(--dashboard-stat-neutral-bg))',
+          color: 'hsl(var(--dashboard-stat-neutral))'
+        };
       default:
-        return "bg-blue-500/10 text-blue-600 border-blue-200";
+        return { 
+          backgroundColor: 'hsl(var(--dashboard-stat-neutral-bg))',
+          color: 'hsl(var(--dashboard-stat-neutral))'
+        };
     }
   };
 
@@ -58,7 +74,7 @@ export function RecentPayments() {
     <Card className="h-full flex flex-col overflow-hidden">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <div className="flex items-center gap-2">
-          <DollarSign className="h-5 w-5 text-green-600" />
+          <DollarSign className="h-5 w-5" style={{ color: 'hsl(var(--dashboard-icon-muted))' }} />
           <CardTitle>Последние платежи</CardTitle>
         </div>
         <Button
@@ -82,7 +98,7 @@ export function RecentPayments() {
             <p className="text-sm">Нет платежей</p>
           </div>
         ) : (
-          <div className="flex-1 overflow-y-auto min-h-0 space-y-3">
+          <div className="flex-1 overflow-hidden min-h-0 space-y-2.5">
             {recentTransactions.map((transaction: PaymentTransaction) => {
               const isPositive = transaction.type === "payment";
               const date = moment(transaction.createdAt);
@@ -92,24 +108,25 @@ export function RecentPayments() {
               return (
                 <div
                   key={transaction.id}
-                  className="rounded-lg border p-3 transition-all hover:shadow-md cursor-pointer"
+                  className="rounded-lg border p-2.5 transition-all hover:shadow-md cursor-pointer"
                   onClick={() => navigate("/finance")}
                 >
-                  <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-2 mb-0.5">
                         <h4 className="font-semibold text-sm truncate">
                           {studentName}
                         </h4>
                         <Badge
                           variant="outline"
                           className={`text-xs shrink-0 ${getTypeColor(transaction.type)}`}
+                          style={getTypeStyle(transaction.type)}
                         >
                           {getTypeLabel(transaction.type)}
                         </Badge>
                       </div>
                       {transaction.description && (
-                        <p className="text-xs text-muted-foreground truncate mb-1">
+                        <p className="text-xs text-muted-foreground truncate mb-0.5">
                           {transaction.description}
                         </p>
                       )}
@@ -119,9 +136,8 @@ export function RecentPayments() {
                     </div>
                     <div className="flex flex-col items-end shrink-0 ml-3">
                       <div
-                        className={`text-lg font-bold ${
-                          isPositive ? "text-green-600" : "text-red-600"
-                        }`}
+                        className="text-base font-bold"
+                        style={{ color: isPositive ? 'hsl(var(--dashboard-stat-positive))' : 'hsl(var(--dashboard-stat-negative))' }}
                       >
                         {isPositive ? "+" : "-"}
                         {Math.abs(transaction.amount).toLocaleString()} ₸

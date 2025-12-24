@@ -26,13 +26,38 @@ export function TodaySchedule() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "completed":
-        return "bg-green-500/10 text-green-600 border-green-200";
+        return "border";
       case "scheduled":
-        return "bg-blue-500/10 text-blue-600 border-blue-200";
+        return "border";
       case "cancelled":
-        return "bg-red-500/10 text-red-600 border-red-200";
+        return "border";
       default:
-        return "bg-gray-500/10 text-gray-600 border-gray-200";
+        return "border";
+    }
+  };
+
+  const getStatusStyle = (status: string) => {
+    switch (status) {
+      case "completed":
+        return { 
+          backgroundColor: 'hsl(var(--dashboard-stat-positive-bg))',
+          color: 'hsl(var(--dashboard-stat-positive))'
+        };
+      case "scheduled":
+        return { 
+          backgroundColor: 'hsl(var(--dashboard-stat-neutral-bg))',
+          color: 'hsl(var(--dashboard-stat-neutral))'
+        };
+      case "cancelled":
+        return { 
+          backgroundColor: 'hsl(var(--dashboard-stat-negative-bg))',
+          color: 'hsl(var(--dashboard-stat-negative))'
+        };
+      default:
+        return { 
+          backgroundColor: 'hsl(var(--dashboard-stat-neutral-bg))',
+          color: 'hsl(var(--dashboard-stat-neutral))'
+        };
     }
   };
 
@@ -53,7 +78,7 @@ export function TodaySchedule() {
     <Card className="h-full flex flex-col overflow-hidden">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
         <div className="flex items-center gap-2">
-          <Calendar className="h-5 w-5 text-primary" />
+          <Calendar className="h-5 w-5" style={{ color: 'hsl(var(--dashboard-icon-muted))' }} />
           <CardTitle>Уроки на сегодня</CardTitle>
         </div>
         <Button
@@ -101,7 +126,7 @@ export function TodaySchedule() {
               return (
                 <div
                   key={lesson.id}
-                  className={`rounded-lg border p-3 transition-all hover:shadow-md cursor-pointer ${
+                  className={`rounded-lg border p-2.5 transition-all hover:shadow-md cursor-pointer ${
                     isNow ? "border-primary bg-primary/5 shadow-sm" : ""
                   } ${isPast ? "opacity-60" : ""}`}
                   onClick={() => navigate("/schedule")}
@@ -111,7 +136,11 @@ export function TodaySchedule() {
                       <div className="flex items-center gap-2 mb-1.5">
                         <h4 className="font-semibold text-sm truncate">{lessonName}</h4>
                         {isNow && (
-                          <Badge className="bg-green-500 text-white text-xs px-1.5 py-0 shrink-0">
+                          <Badge className="text-xs px-1.5 py-0 shrink-0" style={{ 
+                            backgroundColor: 'hsl(var(--dashboard-stat-positive-bg))',
+                            color: 'hsl(var(--dashboard-stat-positive))',
+                            border: '1px solid hsl(var(--dashboard-stat-positive) / 0.3)'
+                          }}>
                             Сейчас
                           </Badge>
                         )}
@@ -146,6 +175,7 @@ export function TodaySchedule() {
                     <Badge
                       variant="outline"
                       className={`text-xs shrink-0 ${getStatusColor(lesson.status)}`}
+                      style={getStatusStyle(lesson.status)}
                     >
                       {getStatusLabel(lesson.status)}
                     </Badge>

@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { PageHeader } from "@/components/PageHeader";
 import { Teacher } from "@/types";
 import { formatKzPhone, normalizeKzPhone } from "@/lib/phone";
 
@@ -123,26 +124,24 @@ export default function Teachers() {
 
   return (
     <div className="space-y-6 animate-fade-in-up">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Учителя</h1>
-          <p className="text-muted-foreground">
-            Управление преподавательским составом
-          </p>
-        </div>
-        <Dialog
-          open={isDialogOpen}
-          onOpenChange={(open) => {
-            setIsDialogOpen(open);
-            if (!open) setEditingTeacher(null);
-          }}
-        >
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Добавить учителя
-            </Button>
-          </DialogTrigger>
+      <PageHeader
+        title="Учителя"
+        description="Управление преподавательским составом"
+        actions={
+          <Dialog
+            open={isDialogOpen}
+            onOpenChange={(open) => {
+              setIsDialogOpen(open);
+              if (!open) setEditingTeacher(null);
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button size="sm" className="sm:size-default">
+                <Plus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Добавить учителя</span>
+                <span className="sm:hidden">Добавить</span>
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
@@ -220,8 +219,9 @@ export default function Teachers() {
               </Button>
             </form>
           </DialogContent>
-        </Dialog>
-      </div>
+          </Dialog>
+        }
+      />
 
       <div className="flex gap-4">
         <div className="relative flex-1">

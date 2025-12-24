@@ -1,15 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import moment from "moment";
-import "moment/locale/ru";
+import "moment/dist/locale/ru";
 import { Room, Lesson, Teacher, Group, Student, StudentSubscription } from "@/types";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Edit2, X, Clock, User, Users } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
-
-moment.locale("ru");
 
 interface RoomScheduleViewProps {
   rooms: Room[];
@@ -57,6 +55,12 @@ export default function RoomScheduleView({
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [tempLessonPosition, setTempLessonPosition] = useState<{ start: Date; end: Date; roomId?: string } | null>(null);
   const [hoveredRoomId, setHoveredRoomId] = useState<string | null>(null);
+  
+  // Track mouse position to distinguish click from drag
+  const [mouseDownPosition, setMouseDownPosition] = useState<{ x: number; y: number } | null>(null);
+  const [hasActuallyMoved, setHasActuallyMoved] = useState(false);
+  const [pendingDragLesson, setPendingDragLesson] = useState<Lesson | null>(null);
+  const DRAG_THRESHOLD = 5; // pixels
   
   // Track container width for responsive column sizing
   const [containerWidth, setContainerWidth] = useState(0);
@@ -244,6 +248,19 @@ export default function RoomScheduleView({
 
   const handleLessonClick = (lesson: Lesson, e: React.MouseEvent) => {
     e.stopPropagation();
+    
+    // Don't open popover if the lesson was actually dragged
+    if (hasActuallyMoved) {
+      setHasActuallyMoved(false);
+      setPendingDragLesson(null);
+      setMouseDownPosition(null);
+      return;
+    }
+    
+    // Clean up drag states
+    setPendingDragLesson(null);
+    setMouseDownPosition(null);
+    
     setSelectedLesson(lesson);
     setPopoverOpen(true);
   };
@@ -265,9 +282,11 @@ export default function RoomScheduleView({
   const handleLessonDragStart = (lesson: Lesson, e: React.MouseEvent, cardElement: HTMLElement) => {
     e.stopPropagation();
     e.preventDefault();
-    setDraggingLesson(lesson);
-    setTempLessonPosition({ start: lesson.start, end: lesson.end, roomId: lesson.roomId });
-    setHoveredRoomId(lesson.roomId);
+    
+    // Store initial mouse position
+    setMouseDownPosition({ x: e.clientX, y: e.clientY });
+    setHasActuallyMoved(false);
+    setPendingDragLesson(lesson);
     
     // Calculate offset from the top of the card where user clicked
     const cardRect = cardElement.getBoundingClientRect();
@@ -310,6 +329,8 @@ export default function RoomScheduleView({
       setDraggingLesson(null);
       setTempLessonPosition(null);
       setHoveredRoomId(null);
+      setPendingDragLesson(null);
+      setMouseDownPosition(null);
       return;
     }
     
@@ -330,6 +351,8 @@ export default function RoomScheduleView({
     setDraggingLesson(null);
     setTempLessonPosition(null);
     setHoveredRoomId(null);
+    setPendingDragLesson(null);
+    setMouseDownPosition(null);
   };
 
   // Lesson resize handlers
@@ -409,6 +432,54 @@ export default function RoomScheduleView({
       };
     }
   }, [draggingLesson, tempLessonPosition]);
+
+  // Check mouse movement distance to start dragging
+  useEffect(() => {
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (pendingDragLesson && mouseDownPosition && !draggingLesson) {
+        const dx = e.clientX - mouseDownPosition.x;
+        const dy = e.clientY - mouseDownPosition.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        // Start actual drag if moved beyond threshold
+        if (distance > DRAG_THRESHOLD) {
+          setHasActuallyMoved(true);
+          setDraggingLesson(pendingDragLesson);
+          setTempLessonPosition({ 
+            start: pendingDragLesson.start, 
+            end: pendingDragLesson.end, 
+            roomId: pendingDragLesson.roomId 
+          });
+          setHoveredRoomId(pendingDragLesson.roomId);
+        }
+      }
+    };
+
+    if (pendingDragLesson && !draggingLesson) {
+      document.addEventListener('mousemove', handleGlobalMouseMove);
+      return () => {
+        document.removeEventListener('mousemove', handleGlobalMouseMove);
+      };
+    }
+  }, [pendingDragLesson, draggingLesson, mouseDownPosition, DRAG_THRESHOLD]);
+
+  // Clean up pending drag on mouseup if no actual drag happened
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      if (pendingDragLesson && !draggingLesson) {
+        setPendingDragLesson(null);
+        setMouseDownPosition(null);
+        setHasActuallyMoved(false);
+      }
+    };
+
+    if (pendingDragLesson && !draggingLesson) {
+      document.addEventListener('mouseup', handleGlobalMouseUp);
+      return () => {
+        document.removeEventListener('mouseup', handleGlobalMouseUp);
+      };
+    }
+  }, [pendingDragLesson, draggingLesson]);
 
   useEffect(() => {
     if (resizingLesson) {
@@ -606,10 +677,14 @@ export default function RoomScheduleView({
                               ? 'opacity-60 grayscale' 
                               : unmarkedLessonIds.has(lesson.id)
                               ? 'border-red-500 border-2 animate-pulse bg-red-50'
+                              : moment(lesson.start).isBefore(moment()) && lesson.status !== 'cancelled'
+                              ? 'opacity-50 grayscale'
                               : ''
                           }`}
                           style={{ 
-                            borderLeftColor: unmarkedLessonIds.has(lesson.id) ? undefined : room.color,
+                            borderLeftColor: unmarkedLessonIds.has(lesson.id) 
+                              ? undefined 
+                              : room.color,
                             padding: showMinimalInfo ? "4px 6px" : "8px"
                           }}
                         >

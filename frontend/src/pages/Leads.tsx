@@ -13,6 +13,7 @@ import {
 } from "@/hooks/useData";
 import { Lead, LeadStatus, LeadSource } from "@/types";
 import { formatKzPhone, normalizeKzPhone } from "@/lib/phone";
+import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -241,21 +242,18 @@ export default function Leads() {
 
   return (
     <div className="space-y-6 animate-fade-in-up">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Лиды</h1>
-          <p className="text-muted-foreground">
-            Управление потенциальными клиентами
-          </p>
-        </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Добавить лид
-            </Button>
-          </DialogTrigger>
+      <PageHeader
+        title="Лиды"
+        description="Управление потенциальными клиентами"
+        actions={
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="sm:size-default">
+                <Plus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Добавить лид</span>
+                <span className="sm:hidden">Добавить</span>
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Новый лид</DialogTitle>
@@ -297,8 +295,9 @@ export default function Leads() {
               </Button>
             </form>
           </DialogContent>
-        </Dialog>
-      </div>
+          </Dialog>
+        }
+      />
 
       {/* Stats */}
       {stats && (

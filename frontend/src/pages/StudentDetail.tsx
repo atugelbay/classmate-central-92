@@ -31,10 +31,15 @@ import {
 import AssignSubscriptionModal from "@/components/AssignSubscriptionModal";
 import FreezeSubscriptionModal from "@/components/FreezeSubscriptionModal";
 import { StudentLessonCalendar } from "@/components/StudentLessonCalendar";
+import { BalanceChart } from "@/components/BalanceChart";
+import { SubscriptionProgress } from "@/components/SubscriptionProgress";
+import { StudentStats, AttendanceStat, BalanceStat, LessonsStat, NextLessonStat } from "@/components/StudentStats";
+import { ActivityTimeline } from "@/components/ActivityTimeline";
+import { EditStudentDialog } from "@/components/EditStudentDialog";
+import { StudentReportsDialog } from "@/components/StudentReportsDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -45,7 +50,6 @@ import {
   User, 
   DollarSign, 
   Calendar, 
-  FileText, 
   Bell, 
   Loader2,
   Mail,
@@ -53,17 +57,14 @@ import {
   BookOpen,
   Users,
   StickyNote,
-  Activity,
-  CheckCircle2,
-  XCircle,
   Clock,
   X,
   Plus,
   Edit,
   Archive,
   Download,
-  Paperclip,
-  GripVertical,
+  TrendingUp,
+  GraduationCap,
 } from "lucide-react";
 import { Discount, PaymentTransaction } from "@/types";
 import moment from "moment";
@@ -90,7 +91,6 @@ export default function StudentDetail() {
   const discounts: Discount[] = Array.isArray(discountsData) ? discountsData : [];
   const { data: studentDiscounts = [] } = useStudentDiscounts(id || "");
   
-  // Get freezes for all subscriptions using useQueries
   const freezeQueries = useMemo(() => 
     subscriptions.map((sub) => ({
       queryKey: ["subscriptions", sub.id, "freezes"],
@@ -102,7 +102,6 @@ export default function StudentDetail() {
   
   const freezeResults = useQueries({ queries: freezeQueries });
   const allFreezes = useMemo(() => {
-    // 1) Try from subscription_freezes endpoint(s)
     const apiFreezes = freezeResults
       .map((result) => result.data || [])
       .flat()
@@ -113,8 +112,6 @@ export default function StudentDetail() {
 
     if (apiFreezes.length > 0) return apiFreezes;
 
-    // 2) Fallback: derive from student activity log entries of type "freeze"
-    // activities already loaded above as `activities`
     try {
       const parsed = (activities || [])
         .filter((a: any) => a.activityType === "freeze" && a.metadata)
@@ -150,13 +147,12 @@ export default function StudentDetail() {
   const [editingTransaction, setEditingTransaction] = useState<PaymentTransaction | null>(null);
   const [selectedSubscriptionForFreeze, setSelectedSubscriptionForFreeze] = useState<any>(null);
   const [isFreezeModalOpen, setIsFreezeModalOpen] = useState(false);
+  const [isEditStudentDialogOpen, setIsEditStudentDialogOpen] = useState(false);
+  const [isReportsDialogOpen, setIsReportsDialogOpen] = useState(false);
 
   const student = students.find((s) => s.id === id);
-
-  // Derive data safely even if student is not yet loaded; this keeps hook order stable
   const studentGroups = student ? groups.filter((g) => student.groupIds?.includes(g.id)) : [];
   
-  // Get student's lessons
   const studentLessons = student ? lessons.filter((l) => 
     l.studentIds?.includes(student.id) || 
     (l.groupId && student.groupIds?.includes(l.groupId))
@@ -165,45 +161,31 @@ export default function StudentDetail() {
     .filter((l) => moment(l.start).isAfter(moment()))
     .sort((a, b) => moment(a.start).diff(moment(b.start)));
   const nextLesson = upcomingLessons[0];
-  const nextLessonGroup = nextLesson?.groupId ? groups.find((g) => g.id === nextLesson.groupId) : null;
 
-  // Calculate active status using the same logic as Students page
-  // This ensures consistency between StudentDetail and Students pages
   const getIsActive = useMemo(() => {
     if (!student) return false;
-    // If status is manually set to "inactive", student is inactive
     if (student.status === "inactive") {
       return false;
     }
-    // Check if student has upcoming lessons
     const bySchedule = studentLessons.some((l) => moment(l.start).isAfter(moment()));
-    // Check if student has positive balance
     const byBalance = (balance?.balance ?? 0) > 0;
-    // Check if student has active subscription
     const now = new Date();
     const bySubscription = subscriptions.some((s: any) => {
       const notExpired = s.paidTill ? (new Date(s.paidTill) >= now) : false;
       const hasLessons = (s.lessonsRemaining ?? 0) > 0;
       return s.status === "active" && (hasLessons || notExpired);
     });
-    // Active only if ALL three conditions are met
     return bySchedule && byBalance && bySubscription;
   }, [student, studentLessons, balance, subscriptions]);
 
-  // Display status logic: match Students page behavior
-  // If status is manually set to inactive/frozen/graduated, use it
-  // Otherwise use computed status (getIsActive) for consistency with Students page filtering
   const displayStatus = useMemo(() => {
     if (!student) return "active";
-    // If status is manually set to inactive/frozen/graduated, use it
     if (student.status === "inactive" || student.status === "frozen" || student.status === "graduated") {
       return student.status;
     }
-    // Otherwise use computed status to match Students page logic
     return getIsActive ? "active" : "inactive";
   }, [student, getIsActive]);
 
-  // If student still not loaded, show loader (after hooks to keep order stable)
   if (!student) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -212,36 +194,12 @@ export default function StudentDetail() {
     );
   }
 
-  // Calculate attendance stats (use actual attendance records; fallback to journal)
   const attendanceStats = {
     total: (studentAttendances?.length || 0) || journal.length,
     attended: (studentAttendances?.filter((a) => a.status === "attended").length || 0) || journal.filter((j) => j.status === "attended").length,
     missed: (studentAttendances?.filter((a) => a.status === "missed").length || 0) || journal.filter((j) => j.status === "missed").length,
     cancelled: (studentAttendances?.filter((a) => a.status === "cancelled").length || 0) || journal.filter((j) => j.status === "cancelled").length,
   };
-  const attendanceRate = attendanceStats.total > 0 
-    ? ((attendanceStats.attended / attendanceStats.total) * 100).toFixed(1)
-    : "0";
-
-  // Get regular lessons schedule
-  const regularLessons = studentLessons
-    .filter((l) => l.status !== "cancelled")
-    .reduce((acc, lesson) => {
-      const dayOfWeek = moment(lesson.start).day();
-      const timeKey = `${moment(lesson.start).format("HH:mm")}-${moment(lesson.end).format("HH:mm")}`;
-      const key = `${dayOfWeek}-${timeKey}`;
-      
-      if (!acc[key]) {
-        acc[key] = {
-          dayOfWeek,
-          time: timeKey,
-          lesson,
-          count: 0,
-        };
-      }
-      acc[key].count++;
-      return acc;
-    }, {} as Record<string, any>);
 
   const statusColors: Record<string, string> = {
     active: "bg-green-500",
@@ -291,17 +249,27 @@ export default function StudentDetail() {
     setIsEditPaymentDialogOpen(true);
   };
 
-  // Combine lessons and transactions for timeline
-  const allOperations = [
+  // Prepare data for stats widgets
+  const totalLessonsRemaining = subscriptions.reduce((sum, s) => sum + (s.lessonsRemaining || 0), 0);
+  const totalLessonsInSubscriptions = subscriptions.reduce((sum, s) => sum + (s.totalLessons || 0), 0);
+  
+  const statsData = [
+    AttendanceStat({ attended: attendanceStats.attended, total: attendanceStats.total }),
+    BalanceStat({ balance: balance?.balance || 0 }),
+    LessonsStat({ remaining: totalLessonsRemaining, total: totalLessonsInSubscriptions }),
+    NextLessonStat({ date: nextLesson ? moment(nextLesson.start).format("DD MMM, HH:mm") : undefined }),
+  ];
+
+  // Prepare timeline data
+  const timelineItems = [
     ...transactions.map((tx) => ({
-      key: `transaction-${tx.id}`,
+      id: `transaction-${tx.id}`,
       date: tx.createdAt,
-      type: "transaction" as const,
-      transaction: tx,
-      operation: tx.type === "payment" ? "Оплата" : tx.type === "refund" ? "Возврат" : "Долг",
+      type: tx.type === "payment" ? ("payment" as const) : tx.type === "refund" ? ("refund" as const) : ("debt" as const),
+      title: tx.type === "payment" ? "Оплата" : tx.type === "refund" ? "Возврат" : "Долг",
       description: tx.description || tx.paymentMethod,
       amount: tx.type === "payment" ? tx.amount : -tx.amount,
-      badge: tx.type === "payment" ? "default" : "destructive",
+      status: tx.type === "payment" ? ("success" as const) : ("error" as const),
     })),
     ...journal
       .filter((j) => j.status === "attended")
@@ -309,541 +277,468 @@ export default function StudentDetail() {
         const sub = subscriptions.find((s) => s.id === j.subscriptionId);
         const lessonCost = sub?.pricePerLesson || 0;
         return {
-          key: `lesson-${j.lessonId || j.startTime}`,
+          id: `lesson-${j.lessonId || j.startTime}`,
           date: j.startTime,
           type: "lesson" as const,
-          operation: "Списание",
-          description: `${j.lessonTitle} (${moment(j.startTime).format("HH:mm")})`,
+          title: j.lessonTitle || "Занятие",
+          description: moment(j.startTime).format("HH:mm"),
           amount: -lessonCost,
-          badge: "secondary",
+          status: "info" as const,
         };
       }),
-  ]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 15);
+  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   return (
-    <div className="space-y-6 animate-fade-in-up">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" onClick={() => navigate("/students")}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-              <User className="h-6 w-6 text-primary" />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
+      {/* Hero Header */}
+      <div className="relative bg-white border-b shadow-sm">
+        <div className="relative px-6 py-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-start justify-between mb-6">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => navigate("/students")}
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="h-9"
+                  onClick={() => setIsEditStudentDialogOpen(true)}
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Править
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="h-9"
+                  onClick={() => setIsReportsDialogOpen(true)}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Отчеты
+                </Button>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold">{student.name}</h1>
-              <div className="flex items-center gap-2 mt-1">
-                <Badge className={statusColors[displayStatus]}>
-                  {statusNames[displayStatus]}
-                </Badge>
+            
+            <div className="flex items-start gap-6">
+              <div className="relative group">
+                <div className="h-24 w-24 rounded-full bg-primary/10 flex items-center justify-center border-4 border-primary/20 group-hover:scale-105 transition-transform duration-300">
+                  <User className="h-12 w-12 text-primary" />
+                </div>
+                <div className={`absolute -bottom-1 -right-1 h-6 w-6 rounded-full border-4 border-white ${statusColors[displayStatus]}`}></div>
+              </div>
+              
+              <div className="flex-1 min-w-0">
+                <h1 className="text-2xl sm:text-3xl font-bold mb-2 break-words">{student.name}</h1>
+                <div className="flex items-center gap-3 mb-4 flex-wrap">
+                  <Badge className={`${statusColors[displayStatus]} text-white border-0`}>
+                    {statusNames[displayStatus]}
+                  </Badge>
+                  <Select value={selectedStatus} onValueChange={handleStatusChange}>
+                    <SelectTrigger className="w-[180px] h-8">
+                      <SelectValue placeholder="Изменить статус" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Активный</SelectItem>
+                      <SelectItem value="inactive">Неактивный</SelectItem>
+                      <SelectItem value="frozen">Заморожен</SelectItem>
+                      <SelectItem value="graduated">Закончил</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-muted-foreground">
+                  {student.phone && (
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4" />
+                      <span>{student.phone}</span>
+                    </div>
+                  )}
+                  {student.email && (
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4" />
+                      <span>{student.email}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <GraduationCap className="h-4 w-4" />
+                    <span>{studentGroups.length} {studentGroups.length === 1 ? "группа" : "групп"}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Select value={selectedStatus} onValueChange={handleStatusChange}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Изменить статус" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="active">Активный</SelectItem>
-              <SelectItem value="inactive">Неактивный</SelectItem>
-              <SelectItem value="frozen">Заморожен</SelectItem>
-              <SelectItem value="graduated">Закончил</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline" size="sm">
-            <Edit className="h-4 w-4 mr-2" />
-            Править
-          </Button>
-          <Button variant="outline" size="sm">
-            <Archive className="h-4 w-4 mr-2" />
-            В архив
-          </Button>
-          <Button variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Отчеты
-          </Button>
         </div>
       </div>
 
       {/* Notifications */}
       {notifications.filter((n) => !n.isRead).length > 0 && (
-        <Card className="border-yellow-500 bg-yellow-50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-yellow-700">
-              <Bell className="h-5 w-5" />
-              Уведомления ({notifications.filter((n) => !n.isRead).length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {notifications
-              .filter((n) => !n.isRead)
-              .map((notification) => (
-                <div
-                  key={notification.id}
-                  className="flex items-start justify-between gap-4 cursor-pointer hover:bg-yellow-100 p-2 rounded"
-                  onClick={() => handleNotificationClick(notification.id)}
-                >
-                  <p className="text-sm text-yellow-800">{notification.message}</p>
-                  <Badge variant="outline" className="text-xs shrink-0">
-                    {moment(notification.createdAt).fromNow()}
-                  </Badge>
-                </div>
-              ))}
-          </CardContent>
-        </Card>
+        <div className="max-w-7xl mx-auto px-6 -mt-4">
+          <Card className="border-2 border-yellow-400 bg-gradient-to-r from-yellow-50 to-orange-50 shadow-lg">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-yellow-800">
+                <Bell className="h-5 w-5" />
+                Важные уведомления ({notifications.filter((n) => !n.isRead).length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {notifications
+                .filter((n) => !n.isRead)
+                .map((notification) => (
+                  <div
+                    key={notification.id}
+                    className="flex items-start justify-between gap-4 cursor-pointer hover:bg-yellow-100/50 p-3 rounded-lg transition-colors"
+                    onClick={() => handleNotificationClick(notification.id)}
+                  >
+                    <p className="text-sm text-yellow-900">{notification.message}</p>
+                    <Badge variant="outline" className="text-xs shrink-0 border-yellow-600 text-yellow-700">
+                      {moment(notification.createdAt).fromNow()}
+                    </Badge>
+                  </div>
+                ))}
+            </CardContent>
+          </Card>
+        </div>
       )}
 
-      {/* Two Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column - Main Content */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Groups with Schedule */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Группы и расписание
-                </CardTitle>
-                <Select
-                  onValueChange={async (groupId) => {
-                    if (!id || !groupId) return;
-                    const group = groups.find((g) => g.id === groupId);
-                    if (!group) return;
-                    
-                    if (!group.studentIds.includes(id)) {
-                      await updateGroup.mutateAsync({
-                        id: groupId,
-                        data: {
-                          ...group,
-                          studentIds: [...group.studentIds, id],
-                        },
-                      });
-                    }
-                  }}
-                >
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Добавить в группу" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {groups
-                      .filter((g) => !studentGroups.find((sg) => sg.id === g.id))
-                      .map((group) => (
-                        <SelectItem key={group.id} value={group.id}>
-                          {group.name} - {group.subject}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {studentGroups.length === 0 ? (
-                <p className="text-center text-muted-foreground py-4">Студент не состоит в группах</p>
-              ) : (
-                <div className="space-y-4">
-                  {studentGroups.map((group) => {
-                    // Get schedule for this group
-                    const groupLessons = studentLessons.filter(
-                      (l) => l.groupId === group.id && l.status !== "cancelled"
-                    );
-                    
-                    // Group lessons by weekday and time
-                    const scheduleMap = new Map<number, string>();
-                    groupLessons.forEach((lesson) => {
-                      const dayOfWeek = moment(lesson.start).day();
-                      const timeKey = `${moment(lesson.start).format("HH:mm")} - ${moment(lesson.end).format("HH:mm")}`;
-                      if (!scheduleMap.has(dayOfWeek)) {
-                        scheduleMap.set(dayOfWeek, timeKey);
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6 py-6 space-y-6">
+        {/* Quick Stats */}
+        <StudentStats stats={statsData} />
+
+        {/* Grid Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column - 2 cols */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Calendar */}
+            {id && subscriptions.length > 0 && (
+              <Card className="shadow-lg border-2 hover:shadow-xl transition-shadow duration-300">
+                <StudentLessonCalendar
+                  studentId={id}
+                  subscriptions={subscriptions}
+                  lessons={studentLessons}
+                  attendances={studentAttendances}
+                  freezes={allFreezes}
+                />
+              </Card>
+            )}
+
+            {/* Groups */}
+            <Card className="shadow-lg border-2 hover:shadow-xl transition-shadow duration-300">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5 text-primary" />
+                    Группы
+                  </CardTitle>
+                  <Select
+                    onValueChange={async (groupId) => {
+                      if (!id || !groupId) return;
+                      const group = groups.find((g) => g.id === groupId);
+                      if (!group) return;
+                      
+                      if (!group.studentIds.includes(id)) {
+                        await updateGroup.mutateAsync({
+                          id: groupId,
+                          data: {
+                            ...group,
+                            studentIds: [...group.studentIds, id],
+                          },
+                        });
                       }
-                    });
+                    }}
+                  >
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="Добавить в группу" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {groups
+                        .filter((g) => !studentGroups.find((sg) => sg.id === g.id))
+                        .map((group) => (
+                          <SelectItem key={group.id} value={group.id}>
+                            {group.name} - {group.subject}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {studentGroups.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">Студент не состоит в группах</p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {studentGroups.map((group) => {
+                      const groupLessons = studentLessons.filter(
+                        (l) => l.groupId === group.id && l.status !== "cancelled"
+                      );
+                      
+                      const scheduleMap = new Map<number, string>();
+                      groupLessons.forEach((lesson) => {
+                        const dayOfWeek = moment(lesson.start).day();
+                        const timeKey = `${moment(lesson.start).format("HH:mm")} - ${moment(lesson.end).format("HH:mm")}`;
+                        if (!scheduleMap.has(dayOfWeek)) {
+                          scheduleMap.set(dayOfWeek, timeKey);
+                        }
+                      });
 
-                    const weekdayNames = ["ВС", "ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ"];
-                    const sortedDays = Array.from(scheduleMap.keys()).sort((a, b) => {
-                      // Convert Sunday (0) to 7 for proper sorting
-                      const aAdj = a === 0 ? 7 : a;
-                      const bAdj = b === 0 ? 7 : b;
-                      return aAdj - bAdj;
-                    });
-                    const scheduleText = sortedDays.map(day => weekdayNames[day]).join(" ");
-                    const scheduleTime = scheduleMap.get(sortedDays[0]) || "";
+                      const weekdayNames = ["ВС", "ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ"];
+                      const sortedDays = Array.from(scheduleMap.keys()).sort((a, b) => {
+                        const aAdj = a === 0 ? 7 : a;
+                        const bAdj = b === 0 ? 7 : b;
+                        return aAdj - bAdj;
+                      });
+                      const scheduleText = sortedDays.map(day => weekdayNames[day]).join(" ");
+                      const scheduleTime = scheduleMap.get(sortedDays[0]) || "";
 
-                    return (
-                      <div key={group.id} className="p-4 border rounded-lg">
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <h4 className="font-semibold">{group.name}</h4>
-                              <Badge variant="outline">{group.subject}</Badge>
-                            </div>
-                            {scheduleText && scheduleTime && (
-                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <Clock className="h-4 w-4" />
-                                <span className="font-medium">{scheduleText}</span>
-                                <span>{scheduleTime}</span>
+                      return (
+                        <div key={group.id} className="p-4 border-2 rounded-lg hover:shadow-md transition-shadow bg-gradient-to-br from-white to-slate-50">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <h4 className="font-semibold">{group.name}</h4>
+                                <Badge variant="outline">{group.subject}</Badge>
                               </div>
-                            )}
+                              {scheduleText && scheduleTime && (
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                  <Clock className="h-4 w-4" />
+                                  <span className="font-medium">{scheduleText}</span>
+                                  <span>{scheduleTime}</span>
+                                </div>
+                              )}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={async () => {
+                                if (!id) return;
+                                await updateGroup.mutateAsync({
+                                  id: group.id,
+                                  data: {
+                                    ...group,
+                                    studentIds: group.studentIds.filter((sid) => sid !== id),
+                                  },
+                                });
+                              }}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Balance Chart */}
+            <Card className="shadow-lg border-2 hover:shadow-xl transition-shadow duration-300">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-primary" />
+                    История баланса
+                  </CardTitle>
+                  <Button 
+                    size="sm" 
+                    onClick={() => setIsPaymentDialogOpen(true)}
+                    className="h-9"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Добавить платеж
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <BalanceChart transactions={transactions} currentBalance={balance?.balance || 0} />
+              </CardContent>
+            </Card>
+
+            {/* Activity Timeline */}
+            <Card className="shadow-lg border-2 hover:shadow-xl transition-shadow duration-300">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-primary" />
+                  История активности
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ActivityTimeline items={timelineItems} maxItems={15} />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Right Column - 1 col */}
+          <div className="space-y-6">
+            {/* Subscriptions with Progress */}
+            <Card className="shadow-lg border-2 hover:shadow-xl transition-shadow duration-300">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <BookOpen className="h-4 w-4" />
+                    Абонементы
+                  </CardTitle>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-8 px-3 text-xs" 
+                    onClick={() => setIsAssignSubModalOpen(true)}
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Добавить
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {subscriptions.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-8">Нет абонементов</p>
+                ) : (
+                  subscriptions.map((sub) => (
+                    <div key={sub.id} className="space-y-4">
+                      <SubscriptionProgress
+                        lessonsUsed={sub.totalLessons - (sub.lessonsRemaining || 0)}
+                        totalLessons={sub.totalLessons}
+                        subscriptionName={sub.subscriptionTypeName || "Индивидуальный"}
+                        size="sm"
+                      />
+                      <div className="space-y-2 pt-2 border-t">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">Стоимость</span>
+                          <span className="font-semibold">{sub.totalPrice.toLocaleString()} ₸</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">За урок</span>
+                          <span className="font-semibold">{sub.pricePerLesson.toFixed(0)} ₸</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">Период</span>
+                          <span className="font-semibold">
+                            {moment(sub.startDate).format("DD.MM")} - {sub.endDate ? moment(sub.endDate).format("DD.MM") : "∞"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 pt-2">
+                          <Badge variant={sub.status === "active" ? "default" : "secondary"} className="text-xs">
+                            {sub.status === "active" ? "Активен" : "Неактивен"}
+                          </Badge>
+                          {sub.status === "active" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-xs"
+                              onClick={() => {
+                                setSelectedSubscriptionForFreeze(sub);
+                                setIsFreezeModalOpen(true);
+                              }}
+                            >
+                              <Clock className="h-3 w-3 mr-1" />
+                              Заморозить
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Discounts */}
+            <Card className="shadow-lg border-2 hover:shadow-xl transition-shadow duration-300">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm">Скидки</CardTitle>
+                  <StudentDiscountCreateDialog studentId={id || ""} onApplied={() => { }} />
+                </div>
+              </CardHeader>
+              <CardContent>
+                {studentDiscounts.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-4">(не задано)</p>
+                ) : (
+                  <div className="space-y-2">
+                    {studentDiscounts.map((sd) => {
+                      const discount = discounts.find((d) => d.id === sd.discountId);
+                      return discount ? (
+                        <div key={sd.id} className="flex items-center justify-between p-3 border-2 rounded-lg text-sm bg-gradient-to-r from-green-50 to-emerald-50 hover:shadow-md transition-shadow">
+                          <div>
+                            <div className="font-medium">{discount.name}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {discount.type === "percentage" ? `${discount.value}%` : `${discount.value} ₸`}
+                            </div>
                           </div>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-8 w-8 p-0"
-                            onClick={async () => {
-                              if (!id) return;
-                              await updateGroup.mutateAsync({
-                                id: group.id,
-                                data: {
-                                  ...group,
-                                  studentIds: group.studentIds.filter((sid) => sid !== id),
-                                },
-                              });
+                            className="h-7 w-7 p-0"
+                            onClick={() => {
+                              if (id) {
+                                removeDiscount.mutate({ studentId: id, discountId: discount.id });
+                              }
                             }}
                           >
-                            <X className="h-4 w-4" />
+                            <X className="h-3 w-3" />
                           </Button>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Attendance Calendar */}
-          {id && subscriptions.length > 0 && (
-            <StudentLessonCalendar
-              studentId={id}
-              subscriptions={subscriptions}
-              lessons={studentLessons}
-              attendances={studentAttendances}
-              freezes={allFreezes}
-            />
-          )}
-
-          {/* Lessons and Transactions Timeline */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="h-5 w-5" />
-                  История занятий и платежей
-                </CardTitle>
-                <div className="flex items-center gap-4 text-sm">
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-4 w-4" />
-                    <span>{attendanceStats.total}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
-                    <span>{attendanceStats.attended}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <XCircle className="h-4 w-4 text-red-600" />
-                    <span>{attendanceStats.missed}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <DollarSign className="h-4 w-4" />
-                    <span>{transactions.filter(t => t.type === "payment").reduce((sum, t) => sum + t.amount, 0).toLocaleString()} ₸</span>
-                  </div>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="text-sm text-muted-foreground">
-                  Уроки (факт) — {studentAttendances?.length || journal.length} шт
-                </div>
-                <div className="space-y-3 max-h-[400px] overflow-y-auto">
-                  {allOperations.map((op, idx) => (
-                    <div key={op.key || `${op.type}-${idx}`} className="flex items-start gap-3 p-3 border rounded-lg hover:bg-accent/50">
-                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                        {op.type === 'transaction' ? (
-                          <DollarSign className="h-4 w-4 text-primary" />
-                        ) : (
-                          <User className="h-4 w-4 text-primary" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-sm font-medium">{op.description}</span>
-                          <Badge variant={op.badge as any} className="text-xs">
-                            {op.operation}
-                          </Badge>
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {moment(op.date).format("DD.MM.YYYY HH:mm")}
-                          {op.type === 'lesson' && (
-                            <span className="ml-2">| {Math.abs(op.amount).toLocaleString()} ₸</span>
-                          )}
-                        </div>
-                      </div>
-                      {op.type === "transaction" && (
-                        <div className="flex items-center gap-2">
-                          <div className={`text-sm font-semibold ${op.amount > 0 ? "text-green-600" : "text-red-600"}`}>
-                            {op.amount > 0 ? "+" : ""}
-                            {op.amount.toLocaleString()} ₸
-                          </div>
-                          {op.transaction?.type === "payment" && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={() => op.transaction && handleEditTransactionClick(op.transaction)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  {allOperations.length === 0 && (
-                    <div className="text-center text-muted-foreground py-8">
-                      Нет операций
-                    </div>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right Column - Sidebar */}
-        <div className="space-y-6">
-          {/* Balance Summary */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5" />
-                Финансовый баланс
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <div className="text-2xl font-bold">
-                  {subscriptions.reduce((sum, s) => sum + (s.lessonsRemaining || 0), 0)} уроков
-                </div>
-                <div className="text-lg font-semibold text-muted-foreground">
-                  {balance ? balance.balance.toLocaleString() : 0} ₸
-                </div>
-                {subscriptions[0]?.endDate && (
-                  <div className="text-xs text-muted-foreground mt-1">
-                    ~{moment(subscriptions[0].endDate).format("DD.MM.YYYY")}
+                      ) : null;
+                    })}
                   </div>
                 )}
-              </div>
-              <div className="text-xs text-muted-foreground">
-                Обновлено: {moment().format("DD.MM.YYYY HH:mm")}
-              </div>
-              <div className="text-xs text-muted-foreground">
-                ID: #{student.id.slice(0, 4)}
-              </div>
-              <div className="space-y-2 pt-2 border-t">
-                <div className="flex items-center justify-between text-sm">
-                  <span>Платежи</span>
-                  <div className="flex items-center gap-2">
-                    <span>{transactions.filter(t => t.type === "payment").length} шт</span>
-                    <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => setIsPaymentDialogOpen(true)}>
-                      добавить
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          {/* Contact Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Контакты</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {nextLesson?.teacherName && (
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Педагог</div>
-                  <div className="text-sm font-medium">{nextLesson.teacherName}</div>
-                </div>
-              )}
-              <div>
-                <div className="text-xs text-muted-foreground mb-1">Заказчик</div>
-                <div className="text-sm font-medium">{student.name}</div>
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground mb-1">Мобильный</div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm">{student.phone}</span>
-                  <Button variant="ghost" size="icon" className="h-6 w-6">
-                    <Phone className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
-              {student.email && (
-                <div>
-                  <div className="text-xs text-muted-foreground mb-1">Email</div>
-                  <div className="text-sm">{student.email}</div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Subscriptions */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
+            {/* Notes */}
+            <Card className="shadow-lg border-2 hover:shadow-xl transition-shadow duration-300">
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-sm flex items-center gap-2">
-                  <BookOpen className="h-4 w-4" />
-                  Абонементы
+                  <StickyNote className="h-4 w-4" />
+                  Заметки
                 </CardTitle>
-                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={() => setIsAssignSubModalOpen(true)}>
-                  добавить
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {subscriptions.length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-2">Нет абонементов</p>
-              ) : (
-                subscriptions.map((sub) => (
-                  <div key={sub.id} className="p-3 border rounded-lg">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <div className="text-sm font-medium">
-                          {sub.subscriptionTypeName || "Индивидуальный"}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {sub.totalPrice.toLocaleString()} ₸ / {sub.totalLessons} / {sub.pricePerLesson.toFixed(0)} ₸
-                        </div>
-                      </div>
-                      <Button variant="ghost" size="icon" className="h-6 w-6">
-                        <Edit className="h-3 w-3" />
+                <Dialog open={isNoteDialogOpen} onOpenChange={setIsNoteDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 px-3 text-xs">
+                      <Plus className="h-3 w-3 mr-1" />
+                      Добавить
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Новая заметка</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <Textarea
+                        placeholder="Введите текст заметки..."
+                        value={newNote}
+                        onChange={(e) => setNewNote(e.target.value)}
+                        rows={4}
+                      />
+                      <Button onClick={handleAddNote} disabled={!newNote.trim()}>
+                        Сохранить
                       </Button>
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      {moment(sub.startDate).format("DD.MM.YYYY")} - {sub.endDate ? moment(sub.endDate).format("DD.MM.YYYY") : "∞"}
+                  </DialogContent>
+                </Dialog>
+              </CardHeader>
+              <CardContent className="space-y-3 max-h-[300px] overflow-y-auto">
+                {notes.length === 0 ? (
+                  <p className="text-xs text-center text-muted-foreground py-4">Нет заметок</p>
+                ) : (
+                  notes.map((note) => (
+                    <div key={note.id} className="border-l-4 border-primary pl-3 py-2 bg-slate-50 rounded-r">
+                      <p className="text-sm">{note.note}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {moment(note.createdAt).format("DD.MM.YYYY HH:mm")}
+                      </p>
                     </div>
-                    <div className="flex items-center gap-2 mt-2">
-                      <Badge variant={sub.status === "active" ? "default" : "secondary"} className="text-xs">
-                        {sub.status === "active" ? "Активен" : "Неактивен"}
-                      </Badge>
-                      {sub.status === "active" && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 px-2 text-xs"
-                          onClick={() => {
-                            setSelectedSubscriptionForFreeze(sub);
-                            setIsFreezeModalOpen(true);
-                          }}
-                        >
-                          <Clock className="h-3 w-3 mr-1" />
-                          Заморозить
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Discounts */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm">Скидки</CardTitle>
-                <StudentDiscountCreateDialog studentId={id || ""} onApplied={() => { /* refetch is automatic via hooks invalidation */ }} />
-              </div>
-            </CardHeader>
-            <CardContent>
-              {studentDiscounts.length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-2">(не задано)</p>
-              ) : (
-                <div className="space-y-2">
-                  {studentDiscounts.map((sd) => {
-                    const discount = discounts.find((d) => d.id === sd.discountId);
-                    return discount ? (
-                      <div key={sd.id} className="flex items-center justify-between p-2 border rounded text-sm">
-                        <div>
-                          <div className="font-medium">{discount.name}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {discount.type === "percentage" ? `${discount.value}%` : `${discount.value} ₸`}
-                          </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0"
-                          onClick={() => {
-                            if (id) {
-                              removeDiscount.mutate({ studentId: id, discountId: discount.id });
-                            }
-                          }}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ) : null;
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-
-
-          {/* Notes */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <StickyNote className="h-4 w-4" />
-                Заметки
-              </CardTitle>
-              <Dialog open={isNoteDialogOpen} onOpenChange={setIsNoteDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
-                    добавить
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Новая заметка</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <Textarea
-                      placeholder="Введите текст заметки..."
-                      value={newNote}
-                      onChange={(e) => setNewNote(e.target.value)}
-                      rows={4}
-                    />
-                    <Button onClick={handleAddNote} disabled={!newNote.trim()}>
-                      Сохранить
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </CardHeader>
-            <CardContent className="space-y-2 max-h-[200px] overflow-y-auto">
-              {notes.length === 0 ? (
-                <p className="text-xs text-center text-muted-foreground py-2">Нет заметок</p>
-              ) : (
-                notes.map((note) => (
-                  <div key={note.id} className="border-l-2 border-primary pl-3 py-2">
-                    <p className="text-sm">{note.note}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {moment(note.createdAt).format("DD.MM.YYYY HH:mm")}
-                    </p>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
       
@@ -1053,6 +948,22 @@ export default function StudentDetail() {
           isLoading={freezeSubscription.isPending}
         />
       )}
+
+      {/* Edit Student Dialog */}
+      <EditStudentDialog
+        open={isEditStudentDialogOpen}
+        onOpenChange={setIsEditStudentDialogOpen}
+        student={student}
+      />
+
+      {/* Reports Dialog */}
+      <StudentReportsDialog
+        open={isReportsDialogOpen}
+        onOpenChange={setIsReportsDialogOpen}
+        student={student}
+        groups={groups}
+        teachers={teachers}
+      />
     </div>
   );
 }
@@ -1068,8 +979,9 @@ function StudentDiscountCreateDialog({ studentId, onApplied }: { studentId: stri
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
-          добавить
+        <Button variant="ghost" size="sm" className="h-8 px-3 text-xs">
+          <Plus className="h-3 w-3 mr-1" />
+          Добавить
         </Button>
       </DialogTrigger>
       <DialogContent>
