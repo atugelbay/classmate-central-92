@@ -20,7 +20,7 @@ func NewDatabase() (*Database, error) {
 	// If DATABASE_URL is not set, build connection string from individual env vars
 	if connStr == "" {
 		connStr = fmt.Sprintf(
-			"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+			"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s connect_timeout=5",
 			os.Getenv("DB_HOST"),
 			os.Getenv("DB_PORT"),
 			os.Getenv("DB_USER"),

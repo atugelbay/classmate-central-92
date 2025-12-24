@@ -4,7 +4,7 @@ FROM golang:1.23-alpine AS builder
 WORKDIR /app
 
 # Install build dependencies
-RUN apk add --no-cache git
+RUN apk add --no-cache ca-certificates && update-ca-certificates
 
 # Copy go mod files
 COPY go.mod go.sum ./
