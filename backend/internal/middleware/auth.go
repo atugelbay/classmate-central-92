@@ -12,20 +12,24 @@ import (
 )
 
 type Claims struct {
-	UserID      int      `json:"user_id"`
-	Email       string   `json:"email"`
-	RoleID      *string  `json:"role_id,omitempty"`
-	Permissions []string `json:"permissions,omitempty"`
+	UserID         int      `json:"user_id"`
+	Email          string   `json:"email"`
+	RoleID         *string  `json:"role_id,omitempty"`
+	Permissions    []string `json:"permissions,omitempty"`
+	CurrentBranchID *string  `json:"current_branch_id,omitempty"`
+	Branches       []string `json:"branches,omitempty"` // List of accessible branch IDs
 	jwt.RegisteredClaims
 }
 
-func GenerateToken(userID int, email string, roleID *string, permissions []string) (string, error) {
+func GenerateToken(userID int, email string, roleID *string, permissions []string, currentBranchID *string, branches []string) (string, error) {
 	expirationTime := time.Now().Add(24 * time.Hour)
 	claims := &Claims{
-		UserID:      userID,
-		Email:       email,
-		RoleID:      roleID,
-		Permissions: permissions,
+		UserID:         userID,
+		Email:          email,
+		RoleID:         roleID,
+		Permissions:    permissions,
+		CurrentBranchID: currentBranchID,
+		Branches:       branches,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -37,13 +41,15 @@ func GenerateToken(userID int, email string, roleID *string, permissions []strin
 	return token.SignedString([]byte(jwtSecret))
 }
 
-func GenerateRefreshToken(userID int, email string, roleID *string, permissions []string) (string, error) {
+func GenerateRefreshToken(userID int, email string, roleID *string, permissions []string, currentBranchID *string, branches []string) (string, error) {
 	expirationTime := time.Now().Add(7 * 24 * time.Hour)
 	claims := &Claims{
-		UserID:      userID,
-		Email:       email,
-		RoleID:      roleID,
-		Permissions: permissions,
+		UserID:         userID,
+		Email:          email,
+		RoleID:         roleID,
+		Permissions:    permissions,
+		CurrentBranchID: currentBranchID,
+		Branches:       branches,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -99,12 +105,16 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		c.Set("user_id", claims.UserID)
-		c.Set("user_email", claims.Email)
-		if claims.RoleID != nil {
-			c.Set("role_id", *claims.RoleID)
-		}
-		c.Set("permissions", claims.Permissions)
-		c.Next()
+	c.Set("user_id", claims.UserID)
+	c.Set("user_email", claims.Email)
+	if claims.RoleID != nil {
+		c.Set("role_id", *claims.RoleID)
+	}
+	c.Set("permissions", claims.Permissions)
+	if claims.CurrentBranchID != nil {
+		c.Set("current_branch_id", *claims.CurrentBranchID)
+	}
+	c.Set("branches", claims.Branches)
+	c.Next()
 	}
 }

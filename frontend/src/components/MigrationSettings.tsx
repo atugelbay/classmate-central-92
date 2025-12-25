@@ -23,36 +23,87 @@ export function MigrationSettings() {
   const [migrationStatus, setMigrationStatus] = useState<MigrationStatus | null>(null);
 
   useEffect(() => {
-    if (isMigrating) {
-      const interval = setInterval(async () => {
-        try {
-          const status = await migrationAPI.getStatus();
-          setMigrationStatus(status);
-          
-          if (status.status === 'completed' || status.status === 'failed') {
-            setIsMigrating(false);
-            clearInterval(interval);
-            
-            if (status.status === 'completed') {
-              toast({
-                title: 'Миграция завершена!',
-                description: `Импортировано: ${status.teachersCount} учителей, ${status.studentsCount} студентов, ${status.groupsCount} групп`,
-              });
-            } else {
-              toast({
-                title: 'Ошибка миграции',
-                description: status.error || 'Произошла ошибка при миграции',
-                variant: 'destructive',
-              });
-            }
-          }
-        } catch (error) {
-          console.error('Error checking migration status:', error);
-        }
-      }, 2000);
-
-      return () => clearInterval(interval);
+    if (!isMigrating) {
+      return;
     }
+
+    let intervalId: NodeJS.Timeout | null = null;
+    let isMounted = true;
+
+    const checkStatus = async () => {
+      if (!isMounted || !isMigrating) {
+        return;
+      }
+
+      try {
+        const status = await migrationAPI.getStatus();
+        
+        if (!isMounted) return;
+        
+        setMigrationStatus(status);
+        
+        if (status.status === 'completed' || status.status === 'failed') {
+          setIsMigrating(false);
+          
+          if (intervalId) {
+            clearInterval(intervalId);
+            intervalId = null;
+          }
+          
+          if (status.status === 'completed') {
+            toast({
+              title: 'Миграция завершена!',
+              description: `Импортировано: ${status.teachersCount} учителей, ${status.studentsCount} студентов, ${status.groupsCount} групп`,
+            });
+          } else {
+            toast({
+              title: 'Ошибка миграции',
+              description: status.error || 'Произошла ошибка при миграции',
+              variant: 'destructive',
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error checking migration status:', error);
+        // При ошибке тоже останавливаем polling чтобы не спамить запросами
+        // Но только если это не временная ошибка сети
+        if (isMounted) {
+          // Проверяем, что это не просто ошибка сети (4xx/5xx)
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          if (errorMessage.includes('Network Error') || errorMessage.includes('timeout')) {
+            // Для сетевых ошибок продолжаем polling
+            return;
+          }
+          
+          setIsMigrating(false);
+          if (intervalId) {
+            clearInterval(intervalId);
+            intervalId = null;
+          }
+        }
+      }
+    };
+
+    // Первая проверка сразу
+    checkStatus();
+    
+    // Затем каждые 1 секунду для более частых обновлений, но только если isMigrating еще true
+    intervalId = setInterval(() => {
+      if (isMounted && isMigrating) {
+        checkStatus();
+      } else if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    }, 1000); // Уменьшено с 2000 до 1000 мс для более частых обновлений
+
+    return () => {
+      isMounted = false;
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    };
   }, [isMigrating, toast]);
 
   const handleTestConnection = async () => {
@@ -107,6 +158,7 @@ export function MigrationSettings() {
     }
 
     setIsMigrating(true);
+    setMigrationStatus(null); // Сбрасываем предыдущий статус
 
     try {
       const result = await migrationAPI.startMigration({
@@ -119,12 +171,63 @@ export function MigrationSettings() {
       
       setMigrationStatus(result.status);
       
+      // Если миграция уже завершена (не должна, но на всякий случай)
+      if (result.status.status === 'completed' || result.status.status === 'failed') {
+        setIsMigrating(false);
+      }
+      
       toast({
         title: 'Миграция запущена',
         description: 'Процесс миграции начался. Это может занять несколько минут.',
       });
     } catch (error: any) {
       setIsMigrating(false);
+      setMigrationStatus(null);
+      toast({
+        title: 'Ошибка запуска миграции',
+        description: error.response?.data?.error || 'Не удалось запустить миграцию',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleStartOldMigration = async () => {
+    if (!connectionTested) {
+      toast({
+        title: 'Проверьте соединение',
+        description: 'Сначала проверьте подключение к AlfaCRM',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsMigrating(true);
+    setMigrationStatus(null); // Сбрасываем предыдущий статус
+
+    try {
+      const result = await migrationAPI.startMigration({
+        alfacrmUrl: formData.alfacrmUrl,
+        email: formData.email,
+        apiKey: formData.apiKey,
+        migrateRooms: true,
+        migrateLessons: true,
+        useOldScript: true, // Флаг для использования старого скрипта
+      });
+      
+      setMigrationStatus(result.status);
+      
+      // Если миграция уже завершена (не должна, но на всякий случай)
+      if (result.status.status === 'completed' || result.status.status === 'failed') {
+        setIsMigrating(false);
+      }
+      
+      toast({
+        title: 'Старая миграция запущена',
+        description: 'Процесс миграции начался. Это может занять несколько минут.',
+      });
+    } catch (error: any) {
+      setIsMigrating(false);
+      setMigrationStatus(null);
       toast({
         title: 'Ошибка запуска миграции',
         description: error.response?.data?.error || 'Не удалось запустить миграцию',
@@ -159,8 +262,9 @@ export function MigrationSettings() {
         description: 'Все данные компании успешно удалены. Теперь можно запустить миграцию заново.',
       });
       
-      // Reset migration status
+      // Reset migration status and stop polling
       setMigrationStatus(null);
+      setIsMigrating(false);
     } catch (error: any) {
       toast({
         title: 'Ошибка очистки данных',
@@ -282,6 +386,30 @@ export function MigrationSettings() {
                 </>
               )}
             </Button>
+          </div>
+
+          <div className="pt-4 border-t">
+            <Button
+              onClick={handleStartOldMigration}
+              disabled={!connectionTested || isMigrating || isClearing}
+              variant="outline"
+              className="w-full"
+            >
+              {isMigrating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Миграция...
+                </>
+              ) : (
+                <>
+                  <Database className="mr-2 h-4 w-4" />
+                  Запустить старую миграцию (с филиалами)
+                </>
+              )}
+            </Button>
+            <p className="mt-2 text-sm text-muted-foreground text-center">
+              Использует проверенный старый скрипт миграции с поддержкой филиалов
+            </p>
           </div>
 
           <div className="pt-4 border-t">

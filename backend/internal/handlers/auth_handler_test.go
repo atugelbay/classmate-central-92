@@ -32,7 +32,7 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *AuthHandler, *sql.DB) {
 	emailService := services.NewEmailService()
 
 	// Create handler
-	authHandler := NewAuthHandler(userRepo, companyRepo, roleRepo, settingsRepo, emailService)
+	authHandler := NewAuthHandler(userRepo, companyRepo, roleRepo, settingsRepo, emailService, db)
 
 	// Setup router
 	router := gin.New()

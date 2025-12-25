@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import { Layout } from "@/components/Layout";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
+import { BranchProvider } from "@/context/BranchContext";
 import Dashboard from "./pages/Dashboard";
 import Leads from "./pages/Leads";
 import Teachers from "./pages/Teachers";
@@ -92,11 +93,12 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <ThemeProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
+      <BranchProvider>
+        <ThemeProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
             <Routes>
               <Route
                 path="/login"
@@ -243,6 +245,7 @@ const App = () => (
           </BrowserRouter>
         </TooltipProvider>
       </ThemeProvider>
+      </BranchProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

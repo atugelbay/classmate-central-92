@@ -185,7 +185,8 @@ func (h *DashboardHandler) GetStats(c *gin.Context) {
 	}
 
 	// Student statistics
-	allStudents, _ := h.studentRepo.GetAll(companyID)
+	branchID := c.GetString("branch_id")
+	allStudents, _ := h.studentRepo.GetAll(companyID, branchID)
 	for _, student := range allStudents {
 		switch student.Status {
 		case "active":
@@ -204,7 +205,7 @@ func (h *DashboardHandler) GetStats(c *gin.Context) {
 	}
 
 	// Lesson statistics
-	allLessons, _ := h.lessonRepo.GetAll(companyID)
+	allLessons, _ := h.lessonRepo.GetAll(companyID, branchID)
 	for _, lesson := range allLessons {
 		if lesson.Start.After(todayStart) && lesson.Start.Before(todayEnd) {
 			stats.Lessons.Today++
@@ -274,8 +275,9 @@ func (h *DashboardHandler) GetStats(c *gin.Context) {
 // GetTodayLessons returns lessons for today only
 func (h *DashboardHandler) GetTodayLessons(c *gin.Context) {
 	companyID := c.GetString("company_id")
+	branchID := c.GetString("branch_id")
 
-	allLessons, err := h.lessonRepo.GetAll(companyID)
+	allLessons, err := h.lessonRepo.GetAll(companyID, branchID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

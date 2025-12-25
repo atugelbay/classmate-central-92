@@ -35,6 +35,14 @@ func NewStudentHandler(
 
 func (h *StudentHandler) GetAll(c *gin.Context) {
 	companyID := c.GetString("company_id")
+	branchID := c.GetString("branch_id")
+	
+	// Используем выбранный филиал для изоляции данных
+	// Если branchID не установлен, используем company_id как fallback
+	if branchID == "" {
+		branchID = companyID
+	}
+	
     // Optional server-side search and pagination
     query := c.Query("query")
     page := 1
@@ -51,14 +59,14 @@ func (h *StudentHandler) GetAll(c *gin.Context) {
     }
 
     // Always compute global counts (not filtered by search)
-    activeCnt, inactiveCnt, totalCnt, cntErr := h.repo.GetCounts(companyID)
+    activeCnt, inactiveCnt, totalCnt, cntErr := h.repo.GetCounts(companyID, branchID)
     if cntErr != nil {
         // Not fatal for listing; log-like response inline
         activeCnt, inactiveCnt, totalCnt = 0, 0, 0
     }
 
     if query != "" || c.Query("page") != "" || c.Query("pageSize") != "" {
-        items, total, err := h.repo.GetPaged(companyID, query, page, pageSize)
+        items, total, err := h.repo.GetPaged(companyID, branchID, query, page, pageSize)
         if err != nil {
             c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
             return
@@ -77,7 +85,7 @@ func (h *StudentHandler) GetAll(c *gin.Context) {
         return
     }
 
-    students, err := h.repo.GetAll(companyID)
+    students, err := h.repo.GetAll(companyID, branchID)
     if err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
         return
@@ -143,7 +151,8 @@ func (h *StudentHandler) Create(c *gin.Context) {
 	}
 
 	companyID := c.GetString("company_id")
-	if err := h.repo.Create(&student, companyID); err != nil {
+	branchID := c.GetString("branch_id")
+	if err := h.repo.Create(&student, companyID, branchID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

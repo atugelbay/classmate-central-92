@@ -24,7 +24,13 @@ func (h *SettingsHandler) Get(c *gin.Context) {
 		return
 	}
 
-	settings, err := h.repo.Get(companyID)
+	branchID := c.GetString("branch_id")
+	if branchID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "branch_id not found"})
+		return
+	}
+
+	settings, err := h.repo.Get(companyID, branchID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -45,6 +51,12 @@ func (h *SettingsHandler) Update(c *gin.Context) {
 		return
 	}
 
+	branchID := c.GetString("branch_id")
+	if branchID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "branch_id not found"})
+		return
+	}
+
 	var settings models.Settings
 	if err := c.ShouldBindJSON(&settings); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -52,14 +64,15 @@ func (h *SettingsHandler) Update(c *gin.Context) {
 	}
 
 	// ID will be set by the repository during update
+	settings.BranchID = branchID
 
-	if err := h.repo.Update(&settings, companyID); err != nil {
+	if err := h.repo.Update(&settings, companyID, branchID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	// Get the updated settings from database to return actual saved values
-	updatedSettings, err := h.repo.Get(companyID)
+	updatedSettings, err := h.repo.Get(companyID, branchID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

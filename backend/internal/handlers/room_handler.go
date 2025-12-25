@@ -19,7 +19,15 @@ func NewRoomHandler(repo *repository.RoomRepository) *RoomHandler {
 
 func (h *RoomHandler) GetAll(c *gin.Context) {
 	companyID := c.GetString("company_id")
-	rooms, err := h.repo.GetAll(companyID)
+	branchID := c.GetString("branch_id")
+	
+	// Используем выбранный филиал для изоляции данных
+	// Если branchID не установлен, используем company_id как fallback
+	if branchID == "" {
+		branchID = companyID
+	}
+	
+	rooms, err := h.repo.GetAll(companyID, branchID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -54,7 +62,9 @@ func (h *RoomHandler) Create(c *gin.Context) {
 	}
 
 	companyID := c.GetString("company_id")
-	if err := h.repo.Create(&room, companyID); err != nil {
+	branchID := c.GetString("branch_id")
+	room.BranchID = branchID
+	if err := h.repo.Create(&room, companyID, branchID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

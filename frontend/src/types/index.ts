@@ -1,3 +1,23 @@
+export interface Branch {
+  id: string;
+  name: string;
+  companyId: string;
+  address?: string;
+  phone?: string;
+  status: "active" | "inactive";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UserBranch {
+  userId: number;
+  branchId: string;
+  roleId?: string;
+  companyId: string;
+  assignedAt: string;
+  assignedBy?: number;
+}
+
 export interface Teacher {
   id: string;
   name: string;
@@ -427,6 +447,8 @@ export interface User {
   roleId?: string;
   roles?: Role[];
   permissions?: string[];
+  branches?: Branch[];
+  currentBranchId?: string;
   createdAt: string;
   updatedAt: string;
 }

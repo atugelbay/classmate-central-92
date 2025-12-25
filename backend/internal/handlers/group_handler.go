@@ -24,7 +24,14 @@ func NewGroupHandler(repo *repository.GroupRepository, lessonRepo *repository.Le
 
 func (h *GroupHandler) GetAll(c *gin.Context) {
 	companyID := c.GetString("company_id")
-	groups, err := h.repo.GetAll(companyID)
+	branchID := c.GetString("branch_id")
+	// Используем выбранный филиал для изоляции данных
+	// Если branchID не установлен, используем company_id как fallback
+	if branchID == "" {
+		branchID = companyID
+	}
+	
+	groups, err := h.repo.GetAll(companyID, branchID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -58,7 +65,8 @@ func (h *GroupHandler) Create(c *gin.Context) {
 	}
 
 	companyID := c.GetString("company_id")
-	if err := h.repo.Create(&group, companyID); err != nil {
+	branchID := c.GetString("branch_id")
+	if err := h.repo.Create(&group, companyID, branchID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

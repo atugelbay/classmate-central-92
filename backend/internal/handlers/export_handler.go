@@ -42,6 +42,12 @@ func (h *ExportHandler) ExportTransactionsPDF(c *gin.Context) {
 		return
 	}
 
+	branchID := c.GetString("branch_id")
+	if branchID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "branch_id not found"})
+		return
+	}
+
 	transactions, err := h.paymentRepo.GetAllTransactions(companyID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch transactions"})
@@ -52,7 +58,7 @@ func (h *ExportHandler) ExportTransactionsPDF(c *gin.Context) {
 	filteredTransactions := h.filterTransactions(transactions, c)
 
 	// Get all students for mapping
-	students, err := h.studentRepo.GetAll(companyID)
+	students, err := h.studentRepo.GetAll(companyID, branchID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch students"})
 		return
@@ -82,6 +88,12 @@ func (h *ExportHandler) ExportTransactionsExcel(c *gin.Context) {
 		return
 	}
 
+	branchID := c.GetString("branch_id")
+	if branchID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "branch_id not found"})
+		return
+	}
+
 	transactions, err := h.paymentRepo.GetAllTransactions(companyID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch transactions"})
@@ -92,7 +104,7 @@ func (h *ExportHandler) ExportTransactionsExcel(c *gin.Context) {
 	filteredTransactions := h.filterTransactions(transactions, c)
 
 	// Get all students for mapping
-	students, err := h.studentRepo.GetAll(companyID)
+	students, err := h.studentRepo.GetAll(companyID, branchID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch students"})
 		return
@@ -122,7 +134,13 @@ func (h *ExportHandler) ExportStudentsPDF(c *gin.Context) {
 		return
 	}
 
-	students, err := h.studentRepo.GetAll(companyID)
+	branchID := c.GetString("branch_id")
+	if branchID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "branch_id not found"})
+		return
+	}
+
+	students, err := h.studentRepo.GetAll(companyID, branchID)
 	if err != nil {
 		logger.Error("Failed to fetch students for PDF export", zap.Error(err), zap.String("company_id", companyID))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch students"})
@@ -152,7 +170,13 @@ func (h *ExportHandler) ExportStudentsExcel(c *gin.Context) {
 		return
 	}
 
-	students, err := h.studentRepo.GetAll(companyID)
+	branchID := c.GetString("branch_id")
+	if branchID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "branch_id not found"})
+		return
+	}
+
+	students, err := h.studentRepo.GetAll(companyID, branchID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch students"})
 		return
@@ -177,6 +201,12 @@ func (h *ExportHandler) ExportSchedulePDF(c *gin.Context) {
 	companyID := c.GetString("company_id")
 	if companyID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "company_id not found"})
+		return
+	}
+
+	branchID := c.GetString("branch_id")
+	if branchID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "branch_id not found"})
 		return
 	}
 
@@ -207,7 +237,7 @@ func (h *ExportHandler) ExportSchedulePDF(c *gin.Context) {
 		endDate = time.Now().AddDate(0, 0, 30) // Default: next 30 days
 	}
 
-	lessons, err := h.lessonRepo.GetAll(companyID)
+	lessons, err := h.lessonRepo.GetAll(companyID, branchID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch lessons"})
 		return
@@ -243,6 +273,12 @@ func (h *ExportHandler) ExportScheduleExcel(c *gin.Context) {
 		return
 	}
 
+	branchID := c.GetString("branch_id")
+	if branchID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "branch_id not found"})
+		return
+	}
+
 	// Get date range from query params
 	startDateStr := c.Query("startDate")
 	endDateStr := c.Query("endDate")
@@ -270,7 +306,7 @@ func (h *ExportHandler) ExportScheduleExcel(c *gin.Context) {
 		endDate = time.Now().AddDate(0, 0, 30) // Default: next 30 days
 	}
 
-	lessons, err := h.lessonRepo.GetAll(companyID)
+	lessons, err := h.lessonRepo.GetAll(companyID, branchID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch lessons"})
 		return
@@ -393,7 +429,8 @@ func (h *ExportHandler) filterStudents(students []*models.Student, c *gin.Contex
 	var teacherLessons map[string]bool
 	if teacherID != "" {
 		companyID := c.GetString("company_id")
-		if companyID != "" {
+		branchID := c.GetString("branch_id")
+		if companyID != "" && branchID != "" {
 			// Create student-to-groups map for fast lookup
 			studentGroupsMap := make(map[string]map[string]bool)
 			for _, s := range students {
@@ -403,7 +440,7 @@ func (h *ExportHandler) filterStudents(students []*models.Student, c *gin.Contex
 				}
 			}
 
-			lessons, err := h.lessonRepo.GetAll(companyID)
+			lessons, err := h.lessonRepo.GetAll(companyID, branchID)
 			if err == nil {
 				teacherLessons = make(map[string]bool)
 				for _, lesson := range lessons {

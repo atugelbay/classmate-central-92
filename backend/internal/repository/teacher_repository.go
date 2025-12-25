@@ -20,14 +20,14 @@ func (r *TeacherRepository) GetDB() *sql.DB {
 	return r.db
 }
 
-func (r *TeacherRepository) Create(teacher *models.Teacher, companyID string) error {
+func (r *TeacherRepository) Create(teacher *models.Teacher, companyID string, branchID string) error {
 	query := `
-		INSERT INTO teachers (id, name, subject, email, phone, status, avatar, workload, company_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO teachers (id, name, subject, email, phone, status, avatar, workload, company_id, branch_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	`
 
 	_, err := r.db.Exec(query, teacher.ID, teacher.Name, teacher.Subject,
-		teacher.Email, teacher.Phone, teacher.Status, teacher.Avatar, teacher.Workload, companyID)
+		teacher.Email, teacher.Phone, teacher.Status, teacher.Avatar, teacher.Workload, companyID, branchID)
 	if err != nil {
 		return fmt.Errorf("error creating teacher: %w", err)
 	}
@@ -35,10 +35,24 @@ func (r *TeacherRepository) Create(teacher *models.Teacher, companyID string) er
 	return nil
 }
 
-func (r *TeacherRepository) GetAll(companyID string) ([]*models.Teacher, error) {
-	query := `SELECT id, name, subject, email, phone, status, avatar, workload, company_id FROM teachers WHERE company_id = $1 ORDER BY name`
+func (r *TeacherRepository) GetAll(companyID string, branchID string) ([]*models.Teacher, error) {
+	// If branchID is empty string, get data from all branches (for multi-branch view)
+	// If branchID equals companyID (fallback mode), filter only by company_id
+	var query string
+	var args []interface{}
+	if branchID == "" {
+		// Get data from all branches for the company
+		query = `SELECT id, name, subject, email, phone, status, avatar, workload, company_id FROM teachers WHERE company_id = $1 ORDER BY name`
+		args = []interface{}{companyID}
+	} else if branchID == companyID {
+		query = `SELECT id, name, subject, email, phone, status, avatar, workload, company_id FROM teachers WHERE company_id = $1 ORDER BY name`
+		args = []interface{}{companyID}
+	} else {
+		query = `SELECT id, name, subject, email, phone, status, avatar, workload, company_id FROM teachers WHERE company_id = $1 AND branch_id = $2 ORDER BY name`
+		args = []interface{}{companyID, branchID}
+	}
 
-	rows, err := r.db.Query(query, companyID)
+	rows, err := r.db.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("error getting teachers: %w", err)
 	}

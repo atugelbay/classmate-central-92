@@ -13,9 +13,22 @@ func NewRoomRepository(db *sql.DB) *RoomRepository {
 	return &RoomRepository{db: db}
 }
 
-func (r *RoomRepository) GetAll(companyID string) ([]models.Room, error) {
-	query := `SELECT id, name, capacity, color, status FROM rooms WHERE company_id = $1 ORDER BY name`
-	rows, err := r.db.Query(query, companyID)
+func (r *RoomRepository) GetAll(companyID, branchID string) ([]models.Room, error) {
+	// If branchID is empty string, get data from all branches (for multi-branch view)
+	// If branchID equals companyID (fallback mode), filter only by company_id
+	var query string
+	var args []interface{}
+	if branchID == "" {
+		query = `SELECT id, name, capacity, color, status, branch_id FROM rooms WHERE company_id = $1 ORDER BY name`
+		args = []interface{}{companyID}
+	} else if branchID == companyID {
+		query = `SELECT id, name, capacity, color, status, branch_id FROM rooms WHERE company_id = $1 ORDER BY name`
+		args = []interface{}{companyID}
+	} else {
+		query = `SELECT id, name, capacity, color, status, branch_id FROM rooms WHERE company_id = $1 AND branch_id = $2 ORDER BY name`
+		args = []interface{}{companyID, branchID}
+	}
+	rows, err := r.db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -24,7 +37,7 @@ func (r *RoomRepository) GetAll(companyID string) ([]models.Room, error) {
 	rooms := []models.Room{} // Initialize as empty slice instead of nil
 	for rows.Next() {
 		var room models.Room
-		if err := rows.Scan(&room.ID, &room.Name, &room.Capacity, &room.Color, &room.Status); err != nil {
+		if err := rows.Scan(&room.ID, &room.Name, &room.Capacity, &room.Color, &room.Status, &room.BranchID); err != nil {
 			return nil, err
 		}
 		rooms = append(rooms, room)
@@ -43,9 +56,9 @@ func (r *RoomRepository) GetByID(id string, companyID string) (*models.Room, err
 	return &room, nil
 }
 
-func (r *RoomRepository) Create(room *models.Room, companyID string) error {
-	query := `INSERT INTO rooms (id, name, capacity, color, status, company_id) VALUES ($1, $2, $3, $4, $5, $6)`
-	_, err := r.db.Exec(query, room.ID, room.Name, room.Capacity, room.Color, room.Status, companyID)
+func (r *RoomRepository) Create(room *models.Room, companyID, branchID string) error {
+	query := `INSERT INTO rooms (id, name, capacity, color, status, company_id, branch_id) VALUES ($1, $2, $3, $4, $5, $6, $7)`
+	_, err := r.db.Exec(query, room.ID, room.Name, room.Capacity, room.Color, room.Status, companyID, branchID)
 	return err
 }
 

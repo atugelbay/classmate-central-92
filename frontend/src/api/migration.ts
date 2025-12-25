@@ -6,6 +6,7 @@ export interface MigrationRequest {
   apiKey: string;
   migrateRooms?: boolean;
   migrateLessons?: boolean;
+  useOldScript?: boolean; // Флаг для использования старого скрипта
 }
 
 export interface MigrationStatus {

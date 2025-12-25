@@ -26,7 +26,15 @@ func NewLessonHandler(repo *repository.LessonRepository, roomRepo *repository.Ro
 
 func (h *LessonHandler) GetAll(c *gin.Context) {
 	companyID := c.GetString("company_id")
-	lessons, err := h.repo.GetAll(companyID)
+	branchID := c.GetString("branch_id")
+	
+	// Используем выбранный филиал для изоляции данных
+	// Если branchID не установлен, используем company_id как fallback
+	if branchID == "" {
+		branchID = companyID
+	}
+	
+	lessons, err := h.repo.GetAll(companyID, branchID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -111,7 +119,9 @@ func (h *LessonHandler) Create(c *gin.Context) {
 		return
 	}
 
-	if err := h.repo.Create(&lesson, companyID); err != nil {
+	branchID := c.GetString("branch_id")
+	lesson.BranchID = branchID
+	if err := h.repo.Create(&lesson, companyID, branchID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -239,7 +249,8 @@ func (h *LessonHandler) CheckConflicts(c *gin.Context) {
 	// For now, suggest nearest free time slots for the same teacher/room combo
 	if len(conflicts) > 0 {
 		// Get all available rooms for suggestions
-		roomsSlice, err := h.roomRepo.GetAll(companyID)
+		branchID := c.GetString("branch_id")
+		roomsSlice, err := h.roomRepo.GetAll(companyID, branchID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch rooms"})
 			return
@@ -489,6 +500,7 @@ func (h *LessonHandler) CreateBulk(c *gin.Context) {
 	}
 
 	companyID := c.GetString("company_id")
+	branchID := c.GetString("branch_id")
 
 	// Check conflicts for each lesson
 	validLessons := []*models.Lesson{}
@@ -496,6 +508,7 @@ func (h *LessonHandler) CreateBulk(c *gin.Context) {
 	messages := []string{}
 
 	for i, lesson := range req.Lessons {
+		lesson.BranchID = branchID
 		conflicts, err := h.repo.CheckConflicts(lesson.TeacherID, lesson.RoomID, lesson.Start, lesson.End, "", companyID)
 		if err != nil {
 			messages = append(messages, fmt.Sprintf("Lesson %d: Error checking conflicts - %s", i+1, err.Error()))
@@ -514,7 +527,7 @@ func (h *LessonHandler) CreateBulk(c *gin.Context) {
 
 	// Create valid lessons
 	if len(validLessons) > 0 {
-		if err := h.repo.CreateBulk(validLessons, companyID); err != nil {
+		if err := h.repo.CreateBulk(validLessons, companyID, branchID); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}

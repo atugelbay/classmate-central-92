@@ -213,7 +213,15 @@ func (h *SubscriptionHandler) DeleteSubscription(c *gin.Context) {
 
 func (h *SubscriptionHandler) GetAllSubscriptions(c *gin.Context) {
 	companyID := c.GetString("company_id")
-	subs, err := h.repo.GetAllSubscriptions(companyID)
+	branchID := c.GetString("branch_id")
+	
+	// Используем выбранный филиал для изоляции данных
+	// Если branchID не установлен, используем company_id как fallback
+	if branchID == "" {
+		branchID = companyID
+	}
+	
+	subs, err := h.repo.GetAllSubscriptions(companyID, branchID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

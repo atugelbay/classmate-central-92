@@ -82,7 +82,7 @@ func main() {
 	exportService := services.NewExportService()
 
 	// Initialize handlers
-	authHandler := handlers.NewAuthHandler(userRepo, companyRepo, roleRepo, settingsRepo, emailService)
+	authHandler := handlers.NewAuthHandler(userRepo, companyRepo, roleRepo, settingsRepo, emailService, db.DB)
 	teacherHandler := handlers.NewTeacherHandler(teacherRepo)
 	studentHandler := handlers.NewStudentHandler(studentRepo, activityRepo, notificationRepo, activityService)
 	groupHandler := handlers.NewGroupHandler(groupRepo, lessonRepo)
@@ -95,11 +95,13 @@ func main() {
 	discountHandler := handlers.NewDiscountHandler(discountRepo)
 	debtHandler := handlers.NewDebtHandler(debtRepo)
 	subscriptionHandler := handlers.NewSubscriptionHandler(subscriptionRepo, attendanceService, activityService, subscriptionService)
-	migrationHandler := handlers.NewMigrationHandler(teacherRepo, studentRepo, groupRepo, roomRepo, lessonRepo, subscriptionRepo)
+	branchRepo := repository.NewBranchRepository(db.DB)
+	migrationHandler := handlers.NewMigrationHandler(teacherRepo, studentRepo, groupRepo, roomRepo, lessonRepo, subscriptionRepo, branchRepo)
 	dashboardHandler := handlers.NewDashboardHandler(lessonRepo, paymentRepo, subscriptionRepo, studentRepo, leadRepo, debtRepo)
 	roleHandler := handlers.NewRoleHandler(roleRepo, permRepo)
 	userRoleHandler := handlers.NewUserRoleHandler(userRepo, roleRepo)
 	exportHandler := handlers.NewExportHandler(exportService, paymentRepo, studentRepo, lessonRepo)
+	branchHandler := handlers.NewBranchHandler(db.DB)
 
 	// Initialize Gin
 	router := gin.Default()
@@ -150,6 +152,21 @@ func main() {
 		api.GET("/users/:userId/roles", userRoleHandler.GetUserRoles)
 		api.POST("/users/roles/assign", middleware.RequirePermission("users", "manage"), userRoleHandler.AssignRole)
 		api.POST("/users/roles/remove", middleware.RequirePermission("users", "manage"), userRoleHandler.RemoveRole)
+
+		// ============= BRANCH MODULE =============
+
+		// Branches
+		api.GET("/branches", branchHandler.GetBranches)
+		api.GET("/branches/:id", branchHandler.GetBranch)
+		api.POST("/branches", middleware.RequirePermission("settings", "update"), branchHandler.CreateBranch)
+		api.PUT("/branches/:id", middleware.RequirePermission("settings", "update"), branchHandler.UpdateBranch)
+		api.DELETE("/branches/:id", middleware.RequirePermission("settings", "update"), branchHandler.DeleteBranch)
+		api.POST("/branches/switch", branchHandler.SwitchBranch)
+
+		// Branch Users
+		api.GET("/branches/:id/users", middleware.RequirePermission("users", "manage"), branchHandler.GetBranchUsers)
+		api.POST("/branches/:id/users", middleware.RequirePermission("users", "manage"), branchHandler.AssignUserToBranch)
+		api.DELETE("/branches/:id/users/:userId", middleware.RequirePermission("users", "manage"), branchHandler.RemoveUserFromBranch)
 
 		// Teachers
 		api.GET("/teachers", middleware.RequirePermission("teachers", "view"), teacherHandler.GetAll)

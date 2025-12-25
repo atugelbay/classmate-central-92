@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"crypto/rand"
+	"database/sql"
 	"math/big"
 	"net/http"
 
@@ -23,11 +24,13 @@ type AuthHandler struct {
 	roleRepo     *repository.RoleRepository
 	settingsRepo *repository.SettingsRepository
 	emailService *services.EmailService
+	db           *sql.DB
 }
 
-func NewAuthHandler(userRepo *repository.UserRepository, companyRepo *repository.CompanyRepository, roleRepo *repository.RoleRepository, settingsRepo *repository.SettingsRepository, emailService *services.EmailService) *AuthHandler {
+func NewAuthHandler(userRepo *repository.UserRepository, companyRepo *repository.CompanyRepository, roleRepo *repository.RoleRepository, settingsRepo *repository.SettingsRepository, emailService *services.EmailService, db *sql.DB) *AuthHandler {
 	return &AuthHandler{
 		userRepo:     userRepo,
+		db:           db,
 		companyRepo:  companyRepo,
 		roleRepo:     roleRepo,
 		settingsRepo: settingsRepo,
@@ -109,14 +112,31 @@ func (h *AuthHandler) Register(c *gin.Context) {
 
 	logger.Info("Company created", zap.String("companyId", company.ID), zap.String("companyName", company.Name))
 
-	// Create default settings for the new company
+	// Create default branch for the new company
+	branchRepo := repository.NewBranchRepository(h.db)
+	defaultBranchID := company.ID + "_default_branch"
+	defaultBranch := &models.Branch{
+		ID:        defaultBranchID,
+		Name:      "Основной филиал",
+		CompanyID: company.ID,
+		Status:    "active",
+	}
+	if err := branchRepo.CreateBranch(defaultBranch); err != nil {
+		logger.Warn("Failed to create default branch", logger.ErrorField(err), zap.String("companyId", company.ID))
+		// Continue registration even if branch creation fails
+	} else {
+		logger.Info("Default branch created", zap.String("branchId", defaultBranchID), zap.String("companyId", company.ID))
+	}
+
+	// Create default settings for the new company and branch
 	defaultSettings := &models.Settings{
 		CenterName: req.CompanyName,
 		ThemeColor: "#8B5CF6",
 		Logo:       "",
 		CompanyID:  company.ID,
+		BranchID:   defaultBranchID,
 	}
-	if err := h.settingsRepo.Update(defaultSettings, company.ID); err != nil {
+	if err := h.settingsRepo.Update(defaultSettings, company.ID, defaultBranchID); err != nil {
 		// Log error but don't fail registration - settings can be created later
 		logger.Warn("Failed to create default settings", logger.ErrorField(err), zap.String("companyId", company.ID))
 	}
@@ -166,6 +186,12 @@ func (h *AuthHandler) Register(c *gin.Context) {
 
 	logger.Info("User created", zap.Int("userId", user.ID), zap.String("email", user.Email), zap.String("companyId", company.ID))
 
+	// Assign user to default branch
+	if err := branchRepo.AssignUserToBranch(user.ID, defaultBranchID, user.RoleID, company.ID, nil); err != nil {
+		logger.Warn("Failed to assign user to default branch", logger.ErrorField(err), zap.Int("userId", user.ID), zap.String("branchId", defaultBranchID))
+		// Continue registration even if branch assignment fails
+	}
+
 	// Assign admin role to the first user
 	if adminRole != nil {
 		err = h.userRepo.AssignRoleToUser(user.ID, adminRoleID, company.ID, nil)
@@ -187,14 +213,32 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		permissions = userWithRoles.Permissions
 	}
 
-	// Generate tokens with role and permissions
-	token, err := middleware.GenerateToken(user.ID, user.Email, user.RoleID, permissions)
+	// Get user's branches (already assigned to default branch)
+	branchRepo = repository.NewBranchRepository(h.db)
+	branches, err := branchRepo.GetUserBranches(user.ID, company.ID)
+	if err != nil {
+		logger.Error("Failed to get user branches", logger.ErrorField(err))
+		branches = []*models.Branch{}
+	}
+
+	// Get default branch
+	var currentBranchID *string
+	branchIDs := make([]string, len(branches))
+	for i, branch := range branches {
+		branchIDs[i] = branch.ID
+	}
+	if len(branches) > 0 {
+		currentBranchID = &branches[0].ID
+	}
+
+	// Generate tokens with role, permissions, and branch info
+	token, err := middleware.GenerateToken(user.ID, user.Email, user.RoleID, permissions, currentBranchID, branchIDs)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating token"})
 		return
 	}
 
-	refreshToken, err := middleware.GenerateRefreshToken(user.ID, user.Email, user.RoleID, permissions)
+	refreshToken, err := middleware.GenerateRefreshToken(user.ID, user.Email, user.RoleID, permissions, currentBranchID, branchIDs)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating refresh token"})
 		return
@@ -203,6 +247,10 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	if userWithRoles != nil {
 		user = userWithRoles
 	}
+
+	// Add branches to user object
+	user.Branches = branches
+	user.CurrentBranchID = currentBranchID
 
 	c.JSON(http.StatusCreated, models.AuthResponse{
 		Token:        token,
@@ -257,14 +305,32 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		permissions = userWithRoles.Permissions
 	}
 
-	// Generate tokens with role and permissions
-	token, err := middleware.GenerateToken(user.ID, user.Email, user.RoleID, permissions)
+	// Get user's branches
+	branchRepo := repository.NewBranchRepository(h.db)
+	branches, err := branchRepo.GetUserBranches(user.ID, user.CompanyID)
+	if err != nil {
+		logger.Error("Failed to get user branches", logger.ErrorField(err))
+		branches = []*models.Branch{}
+	}
+
+	// Get default branch
+	var currentBranchID *string
+	branchIDs := make([]string, len(branches))
+	for i, branch := range branches {
+		branchIDs[i] = branch.ID
+	}
+	if len(branches) > 0 {
+		currentBranchID = &branches[0].ID
+	}
+
+	// Generate tokens with role, permissions, and branch info
+	token, err := middleware.GenerateToken(user.ID, user.Email, user.RoleID, permissions, currentBranchID, branchIDs)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating token"})
 		return
 	}
 
-	refreshToken, err := middleware.GenerateRefreshToken(user.ID, user.Email, user.RoleID, permissions)
+	refreshToken, err := middleware.GenerateRefreshToken(user.ID, user.Email, user.RoleID, permissions, currentBranchID, branchIDs)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating refresh token"})
 		return
@@ -273,6 +339,10 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	if userWithRoles != nil {
 		user = userWithRoles
 	}
+
+	// Add branches to user object
+	user.Branches = branches
+	user.CurrentBranchID = currentBranchID
 
 	c.JSON(http.StatusOK, models.AuthResponse{
 		Token:        token,
@@ -321,14 +391,36 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 		permissions = userWithRoles.Permissions
 	}
 
-	// Generate new tokens with role and permissions
-	token, err := middleware.GenerateToken(claims.UserID, claims.Email, user.RoleID, permissions)
+	// Get user's branches
+	branchRepo := repository.NewBranchRepository(h.db)
+	branches, err := branchRepo.GetUserBranches(user.ID, user.CompanyID)
+	if err != nil {
+		logger.Error("Failed to get user branches", logger.ErrorField(err))
+		branches = []*models.Branch{}
+	}
+
+	// Get current or default branch
+	var currentBranchID *string
+	branchIDs := make([]string, len(branches))
+	for i, branch := range branches {
+		branchIDs[i] = branch.ID
+	}
+	
+	// Try to preserve current branch from token, otherwise use first available
+	if claims.CurrentBranchID != nil {
+		currentBranchID = claims.CurrentBranchID
+	} else if len(branches) > 0 {
+		currentBranchID = &branches[0].ID
+	}
+
+	// Generate new tokens with role, permissions, and branch info
+	token, err := middleware.GenerateToken(claims.UserID, claims.Email, user.RoleID, permissions, currentBranchID, branchIDs)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating token"})
 		return
 	}
 
-	refreshToken, err := middleware.GenerateRefreshToken(claims.UserID, claims.Email, user.RoleID, permissions)
+	refreshToken, err := middleware.GenerateRefreshToken(claims.UserID, claims.Email, user.RoleID, permissions, currentBranchID, branchIDs)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating refresh token"})
 		return
@@ -337,6 +429,10 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	if userWithRoles != nil {
 		user = userWithRoles
 	}
+
+	// Add branches to user object
+	user.Branches = branches
+	user.CurrentBranchID = currentBranchID
 
 	c.JSON(http.StatusOK, models.AuthResponse{
 		Token:        token,
@@ -504,17 +600,39 @@ func (h *AuthHandler) AcceptInvite(c *gin.Context) {
 		perms = user.Permissions
 	}
 
-	// Generate tokens
-	token, err := middleware.GenerateToken(user.ID, user.Email, user.RoleID, perms)
+	// Get user's branches
+	branchRepo := repository.NewBranchRepository(h.db)
+	branches, err := branchRepo.GetUserBranches(user.ID, user.CompanyID)
+	if err != nil {
+		logger.Error("Failed to get user branches", logger.ErrorField(err))
+		branches = []*models.Branch{}
+	}
+
+	// Get default branch
+	var currentBranchID *string
+	branchIDs := make([]string, len(branches))
+	for i, branch := range branches {
+		branchIDs[i] = branch.ID
+	}
+	if len(branches) > 0 {
+		currentBranchID = &branches[0].ID
+	}
+
+	// Generate tokens with branch info
+	token, err := middleware.GenerateToken(user.ID, user.Email, user.RoleID, perms, currentBranchID, branchIDs)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating token"})
 		return
 	}
-	refreshToken, err := middleware.GenerateRefreshToken(user.ID, user.Email, user.RoleID, perms)
+	refreshToken, err := middleware.GenerateRefreshToken(user.ID, user.Email, user.RoleID, perms, currentBranchID, branchIDs)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating refresh token"})
 		return
 	}
+
+	// Add branches to user object
+	user.Branches = branches
+	user.CurrentBranchID = currentBranchID
 
 	c.JSON(http.StatusOK, models.AuthResponse{
 		Token:        token,

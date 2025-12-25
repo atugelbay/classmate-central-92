@@ -103,10 +103,10 @@ func (r *SubscriptionRepository) GetStudentSubscriptions(studentID string, compa
 	subs := []models.StudentSubscription{}
 	for rows.Next() {
 		var sub models.StudentSubscription
-		var typeName, billingType sql.NullString
+		var typeName, billingType, groupID, teacherID sql.NullString
 		if err := rows.Scan(
 			&sub.ID, &sub.StudentID, &sub.SubscriptionTypeID, &typeName, &billingType,
-			&sub.GroupID, &sub.TeacherID,
+			&groupID, &teacherID,
 			&sub.TotalLessons, &sub.UsedLessons, &sub.LessonsRemaining, &sub.TotalPrice, &sub.PricePerLesson,
 			&sub.StartDate, &sub.EndDate, &sub.PaidTill, &sub.Status, &sub.FreezeDaysRemaining,
 			&sub.CreatedAt, &sub.UpdatedAt, &sub.CompanyID, &sub.Version,
@@ -118,6 +118,14 @@ func (r *SubscriptionRepository) GetStudentSubscriptions(studentID string, compa
 		}
 		if billingType.Valid {
 			sub.BillingType = billingType.String
+		}
+		if groupID.Valid {
+			groupIDStr := groupID.String
+			sub.GroupID = &groupIDStr
+		}
+		if teacherID.Valid {
+			teacherIDStr := teacherID.String
+			sub.TeacherID = &teacherIDStr
 		}
 		subs = append(subs, sub)
 	}
@@ -173,18 +181,41 @@ func (r *SubscriptionRepository) DeleteSubscription(id string, companyID string)
 	return err
 }
 
-func (r *SubscriptionRepository) GetAllSubscriptions(companyID string) ([]models.StudentSubscription, error) {
-	query := `SELECT 
-		ss.id, ss.student_id, ss.subscription_type_id, st.name as subscription_type_name, st.billing_type,
-		ss.group_id, ss.teacher_id,
-		ss.total_lessons, ss.used_lessons, ss.remaining_lessons, ss.total_price, ss.price_per_lesson,
-		ss.start_date, ss.end_date, ss.paid_till, ss.status, ss.freeze_days_remaining,
-		ss.created_at, ss.updated_at, ss.company_id, ss.version
-	FROM student_subscriptions ss
-	LEFT JOIN subscription_types st ON ss.subscription_type_id = st.id
-	WHERE ss.company_id = $1
-	ORDER BY ss.created_at DESC`
-	rows, err := r.db.Query(query, companyID)
+func (r *SubscriptionRepository) GetAllSubscriptions(companyID string, branchID string) ([]models.StudentSubscription, error) {
+	// If branchID is empty string or equals companyID (fallback mode), filter only by company_id
+	// Otherwise, filter by company_id and branch_id (use branch_id from student_subscriptions if available, otherwise from students table)
+	var query string
+	var args []interface{}
+	
+	if branchID == "" || branchID == companyID {
+		query = `SELECT 
+			ss.id, ss.student_id, ss.subscription_type_id, st.name as subscription_type_name, st.billing_type,
+			ss.group_id, ss.teacher_id,
+			ss.total_lessons, ss.used_lessons, ss.remaining_lessons, ss.total_price, ss.price_per_lesson,
+			ss.start_date, ss.end_date, ss.paid_till, ss.status, ss.freeze_days_remaining,
+			ss.created_at, ss.updated_at, ss.company_id, ss.version
+		FROM student_subscriptions ss
+		LEFT JOIN subscription_types st ON ss.subscription_type_id = st.id
+		WHERE ss.company_id = $1
+		ORDER BY ss.created_at DESC`
+		args = []interface{}{companyID}
+	} else {
+		// Filter by branch_id - use branch_id from student_subscriptions if available, otherwise from students table
+		query = `SELECT 
+			ss.id, ss.student_id, ss.subscription_type_id, st.name as subscription_type_name, st.billing_type,
+			ss.group_id, ss.teacher_id,
+			ss.total_lessons, ss.used_lessons, ss.remaining_lessons, ss.total_price, ss.price_per_lesson,
+			ss.start_date, ss.end_date, ss.paid_till, ss.status, ss.freeze_days_remaining,
+			ss.created_at, ss.updated_at, ss.company_id, ss.version
+		FROM student_subscriptions ss
+		LEFT JOIN subscription_types st ON ss.subscription_type_id = st.id
+		LEFT JOIN students s ON ss.student_id = s.id
+		WHERE ss.company_id = $1 AND COALESCE(ss.branch_id, s.branch_id) = $2
+		ORDER BY ss.created_at DESC`
+		args = []interface{}{companyID, branchID}
+	}
+	
+	rows, err := r.db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -193,10 +224,10 @@ func (r *SubscriptionRepository) GetAllSubscriptions(companyID string) ([]models
 	subs := []models.StudentSubscription{}
 	for rows.Next() {
 		var sub models.StudentSubscription
-		var typeName, billingType sql.NullString
+		var typeName, billingType, groupID, teacherID sql.NullString
 		if err := rows.Scan(
 			&sub.ID, &sub.StudentID, &sub.SubscriptionTypeID, &typeName, &billingType,
-			&sub.GroupID, &sub.TeacherID,
+			&groupID, &teacherID,
 			&sub.TotalLessons, &sub.UsedLessons, &sub.LessonsRemaining, &sub.TotalPrice, &sub.PricePerLesson,
 			&sub.StartDate, &sub.EndDate, &sub.PaidTill, &sub.Status, &sub.FreezeDaysRemaining,
 			&sub.CreatedAt, &sub.UpdatedAt, &sub.CompanyID, &sub.Version,
@@ -210,6 +241,14 @@ func (r *SubscriptionRepository) GetAllSubscriptions(companyID string) ([]models
 		}
 		if billingType.Valid {
 			sub.BillingType = billingType.String
+		}
+		if groupID.Valid {
+			groupIDStr := groupID.String
+			sub.GroupID = &groupIDStr
+		}
+		if teacherID.Valid {
+			teacherIDStr := teacherID.String
+			sub.TeacherID = &teacherIDStr
 		}
 		subs = append(subs, sub)
 	}

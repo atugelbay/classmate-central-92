@@ -20,7 +20,15 @@ func NewTeacherHandler(repo *repository.TeacherRepository) *TeacherHandler {
 
 func (h *TeacherHandler) GetAll(c *gin.Context) {
 	companyID := c.GetString("company_id")
-	teachers, err := h.repo.GetAll(companyID)
+	branchID := c.GetString("branch_id")
+	
+	// Используем выбранный филиал для изоляции данных
+	// Если branchID не установлен, используем company_id как fallback
+	if branchID == "" {
+		branchID = companyID
+	}
+	
+	teachers, err := h.repo.GetAll(companyID, branchID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -74,7 +82,8 @@ func (h *TeacherHandler) Create(c *gin.Context) {
 	}
 
 	companyID := c.GetString("company_id")
-	if err := h.repo.Create(&teacher, companyID); err != nil {
+	branchID := c.GetString("branch_id")
+	if err := h.repo.Create(&teacher, companyID, branchID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

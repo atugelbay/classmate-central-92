@@ -16,23 +16,35 @@ func NewStudentRepository(db *sql.DB) *StudentRepository {
 	return &StudentRepository{db: db}
 }
 
-func (r *StudentRepository) Create(student *models.Student, companyID string) error {
+func (r *StudentRepository) Create(student *models.Student, companyID string, branchID string) error {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return fmt.Errorf("error starting transaction: %w", err)
 	}
 	defer tx.Rollback()
 
-	// Insert student
-	query := `
-		INSERT INTO students (id, name, age, email, phone, status, avatar, company_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-	`
+	// Insert student - use branch_id only if it's different from company_id (not in fallback mode)
 	status := student.Status
 	if status == "" {
 		status = "active"
 	}
-	_, err = tx.Exec(query, student.ID, student.Name, student.Age, student.Email, student.Phone, status, student.Avatar, companyID)
+	var query string
+	var args []interface{}
+	if branchID == companyID {
+		// Fallback mode: don't use branch_id column
+		query = `
+			INSERT INTO students (id, name, age, email, phone, status, avatar, company_id)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		`
+		args = []interface{}{student.ID, student.Name, student.Age, student.Email, student.Phone, status, student.Avatar, companyID}
+	} else {
+		query = `
+			INSERT INTO students (id, name, age, email, phone, status, avatar, company_id, branch_id)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		`
+		args = []interface{}{student.ID, student.Name, student.Age, student.Email, student.Phone, status, student.Avatar, companyID, branchID}
+	}
+	_, err = tx.Exec(query, args...)
 	if err != nil {
 		return fmt.Errorf("error creating student: %w", err)
 	}
@@ -47,11 +59,25 @@ func (r *StudentRepository) Create(student *models.Student, companyID string) er
 
 	// Insert groups using enrollment table
 	for _, groupID := range student.GroupIds {
-		_, err = tx.Exec(`
-			INSERT INTO enrollment (student_id, group_id, joined_at, company_id)
-			VALUES ($1, $2, CURRENT_TIMESTAMP, $3)
-			ON CONFLICT (student_id, group_id) WHERE left_at IS NULL DO NOTHING
-		`, student.ID, groupID, companyID)
+		var enrollQuery string
+		var enrollArgs []interface{}
+		if branchID == companyID {
+			// Fallback mode: don't use branch_id column
+			enrollQuery = `
+				INSERT INTO enrollment (student_id, group_id, joined_at, company_id)
+				VALUES ($1, $2, CURRENT_TIMESTAMP, $3)
+				ON CONFLICT (student_id, group_id) WHERE left_at IS NULL DO NOTHING
+			`
+			enrollArgs = []interface{}{student.ID, groupID, companyID}
+		} else {
+			enrollQuery = `
+				INSERT INTO enrollment (student_id, group_id, joined_at, company_id, branch_id)
+				VALUES ($1, $2, CURRENT_TIMESTAMP, $3, $4)
+				ON CONFLICT (student_id, group_id) WHERE left_at IS NULL DO NOTHING
+			`
+			enrollArgs = []interface{}{student.ID, groupID, companyID, branchID}
+		}
+		_, err = tx.Exec(enrollQuery, enrollArgs...)
 		if err != nil {
 			return fmt.Errorf("error inserting enrollment: %w", err)
 		}
@@ -60,10 +86,24 @@ func (r *StudentRepository) Create(student *models.Student, companyID string) er
 	return tx.Commit()
 }
 
-func (r *StudentRepository) GetAll(companyID string) ([]*models.Student, error) {
-	query := `SELECT id, name, age, email, phone, status, avatar, created_at FROM students WHERE company_id = $1 ORDER BY name`
+func (r *StudentRepository) GetAll(companyID string, branchID string) ([]*models.Student, error) {
+	// If branchID is empty string, get data from all branches (for multi-branch view)
+	// If branchID equals companyID (fallback mode), filter only by company_id
+	var query string
+	var args []interface{}
+	if branchID == "" {
+		// Get data from all branches for the company
+		query = `SELECT id, name, age, email, phone, status, avatar, created_at FROM students WHERE company_id = $1 ORDER BY name`
+		args = []interface{}{companyID}
+	} else if branchID == companyID {
+		query = `SELECT id, name, age, email, phone, status, avatar, created_at FROM students WHERE company_id = $1 ORDER BY name`
+		args = []interface{}{companyID}
+	} else {
+		query = `SELECT id, name, age, email, phone, status, avatar, created_at FROM students WHERE company_id = $1 AND branch_id = $2 ORDER BY name`
+		args = []interface{}{companyID, branchID}
+	}
 
-	rows, err := r.db.Query(query, companyID)
+	rows, err := r.db.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("error getting students: %w", err)
 	}
@@ -135,16 +175,27 @@ func (r *StudentRepository) GetAll(companyID string) ([]*models.Student, error) 
 }
 
 // GetPaged returns students with optional search and pagination
-func (r *StudentRepository) GetPaged(companyID, search string, page, pageSize int) ([]*models.Student, int, error) {
+func (r *StudentRepository) GetPaged(companyID, branchID, search string, page, pageSize int) ([]*models.Student, int, error) {
     offset := (page - 1) * pageSize
-    // Base where
-    where := "WHERE company_id = $1"
-    args := []interface{}{companyID}
+    // Base where - use branch_id only if it's different from company_id
+    // If branchID is empty string, get data from all branches
+    var where string
+    var args []interface{}
+    if branchID == "" {
+        where = "WHERE company_id = $1"
+        args = []interface{}{companyID}
+    } else if branchID == companyID {
+        where = "WHERE company_id = $1"
+        args = []interface{}{companyID}
+    } else {
+        where = "WHERE company_id = $1 AND branch_id = $2"
+        args = []interface{}{companyID, branchID}
+    }
     if search != "" {
         // Prepare LIKE for name/email and normalized digits-only for phone
         like := "%" + strings.ToLower(search) + "%"
         normalized := strings.NewReplacer(" ", "", "-", "", "(", "", ")", "").Replace(search)
-        where += " AND (LOWER(name) LIKE $2 OR LOWER(email) LIKE $2 OR REPLACE(REPLACE(REPLACE(REPLACE(phone,' ',''),'-',''),'(', ''),')','') LIKE $3)"
+        where += " AND (LOWER(name) LIKE $3 OR LOWER(email) LIKE $3 OR REPLACE(REPLACE(REPLACE(REPLACE(phone,' ',''),'-',''),'(', ''),')','') LIKE $4)"
         args = append(args, like, "%"+normalized+"%")
     }
 
@@ -199,16 +250,31 @@ func (r *StudentRepository) GetPaged(companyID, search string, page, pageSize in
 }
 
 // GetCounts returns global counts of students by status (not affected by search)
-func (r *StudentRepository) GetCounts(companyID string) (active int, inactive int, total int, err error) {
+func (r *StudentRepository) GetCounts(companyID, branchID string) (active int, inactive int, total int, err error) {
+    // If branchID is empty string, get data from all branches
+    // If branchID equals companyID (fallback mode), filter only by company_id
+    var whereClause string
+    var args []interface{}
+    if branchID == "" {
+        whereClause = "WHERE company_id = $1"
+        args = []interface{}{companyID}
+    } else if branchID == companyID {
+        whereClause = "WHERE company_id = $1"
+        args = []interface{}{companyID}
+    } else {
+        whereClause = "WHERE company_id = $1 AND branch_id = $2"
+        args = []interface{}{companyID, branchID}
+    }
+    
     // Total
-    if err = r.db.QueryRow(`SELECT COUNT(*) FROM students WHERE company_id = $1`, companyID).Scan(&total); err != nil {
+    if err = r.db.QueryRow(`SELECT COUNT(*) FROM students `+whereClause, args...).Scan(&total); err != nil {
         return
     }
     // Active (has upcoming lessons OR status active?) — per request, use status column
-    if err = r.db.QueryRow(`SELECT COUNT(*) FROM students WHERE company_id = $1 AND status = 'active'`, companyID).Scan(&active); err != nil {
+    if err = r.db.QueryRow(`SELECT COUNT(*) FROM students `+whereClause+` AND status = 'active'`, args...).Scan(&active); err != nil {
         return
     }
-    if err = r.db.QueryRow(`SELECT COUNT(*) FROM students WHERE company_id = $1 AND status != 'active'`, companyID).Scan(&inactive); err != nil {
+    if err = r.db.QueryRow(`SELECT COUNT(*) FROM students `+whereClause+` AND status != 'active'`, args...).Scan(&inactive); err != nil {
         return
     }
     return

@@ -1,11 +1,13 @@
 package services
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 )
 
 type MigrationService struct {
@@ -34,6 +36,7 @@ type MigrationConfig struct {
 	DBName     string
 	DBUser     string
 	DBPassword string
+	ScriptPath string // Путь к скрипту миграции
 }
 
 type MigrationResult struct {
@@ -42,8 +45,27 @@ type MigrationResult struct {
 	Error  error
 }
 
+// ProgressCallback is called for each line of stdout from the migration script
+type ProgressCallback func(line string)
+
 // RunMigration executes the Node.js migration script
-func (s *MigrationService) RunMigration(config MigrationConfig) (*MigrationResult, error) {
+func (s *MigrationService) RunMigration(config MigrationConfig, progressCallback ProgressCallback) (*MigrationResult, error) {
+	// Determine script path
+	scriptPath := config.ScriptPath
+	if scriptPath == "" {
+		// Default to the service's script path
+		scriptPath = s.scriptPath
+	}
+
+	// Check if script exists, try relative path if not
+	if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
+		// Try relative path for local development
+		relativePath := filepath.Join("../", scriptPath)
+		if _, err := os.Stat(relativePath); err == nil {
+			scriptPath = relativePath
+		}
+	}
+
 	// Create environment variables for the script
 	envVars := []string{
 		fmt.Sprintf("ALFACRM_API_URL=%s", config.AlfaCRMURL),
@@ -62,7 +84,7 @@ func (s *MigrationService) RunMigration(config MigrationConfig) (*MigrationResul
 	if databaseURL := os.Getenv("DATABASE_URL"); databaseURL != "" {
 		envVars = append(envVars, fmt.Sprintf("DATABASE_URL=%s", databaseURL))
 	}
-	
+
 	// Also pass Railway PG* variables as fallback
 	if pgHost := os.Getenv("PGHOST"); pgHost != "" {
 		envVars = append(envVars, fmt.Sprintf("PGHOST=%s", pgHost))
@@ -81,20 +103,77 @@ func (s *MigrationService) RunMigration(config MigrationConfig) (*MigrationResul
 	}
 
 	// Execute Node.js script
-	cmd := exec.Command("node", s.scriptPath)
+	cmd := exec.Command("node", scriptPath)
 
 	// Append our environment variables to the existing ones
 	cmd.Env = append(os.Environ(), envVars...)
 
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	// Get stdout pipe for streaming
+	stdoutPipe, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create stdout pipe: %v", err)
+	}
 
-	err := cmd.Run()
+	// Get stderr pipe
+	stderrPipe, err := cmd.StderrPipe()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create stderr pipe: %v", err)
+	}
+
+	// Start the command
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("failed to start migration script: %v", err)
+	}
+
+	// Buffers to store all output
+	var stdoutBuf, stderrBuf bytes.Buffer
+
+	// Use WaitGroup to wait for both goroutines to finish
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	// Read stdout in a goroutine
+	go func() {
+		defer wg.Done()
+		scanner := bufio.NewScanner(stdoutPipe)
+		for scanner.Scan() {
+			line := scanner.Text()
+			// Write to buffer
+			stdoutBuf.WriteString(line + "\n")
+			// Call callback if provided
+			if progressCallback != nil {
+				progressCallback(line)
+			}
+		}
+		if err := scanner.Err(); err != nil {
+			// Log error but don't fail migration
+			fmt.Printf("Error reading stdout: %v\n", err)
+		}
+	}()
+
+	// Read stderr in a goroutine
+	go func() {
+		defer wg.Done()
+		scanner := bufio.NewScanner(stderrPipe)
+		for scanner.Scan() {
+			line := scanner.Text()
+			stderrBuf.WriteString(line + "\n")
+		}
+		if err := scanner.Err(); err != nil {
+			// Log error but don't fail migration
+			fmt.Printf("Error reading stderr: %v\n", err)
+		}
+	}()
+
+	// Wait for both output streams to finish
+	wg.Wait()
+
+	// Wait for command to finish
+	err = cmd.Wait()
 
 	result := &MigrationResult{
-		Stdout: stdout.String(),
-		Stderr: stderr.String(),
+		Stdout: stdoutBuf.String(),
+		Stderr: stderrBuf.String(),
 		Error:  err,
 	}
 

@@ -17,7 +17,7 @@ func NewGroupRepository(db *sql.DB) *GroupRepository {
 	return &GroupRepository{db: db}
 }
 
-func (r *GroupRepository) Create(group *models.Group, companyID string) error {
+func (r *GroupRepository) Create(group *models.Group, companyID string, branchID string) error {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return fmt.Errorf("error starting transaction: %w", err)
@@ -26,8 +26,8 @@ func (r *GroupRepository) Create(group *models.Group, companyID string) error {
 
 	// Insert group
 	query := `
-		INSERT INTO groups (id, name, subject, teacher_id, room_id, schedule, description, status, color, company_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		INSERT INTO groups (id, name, subject, teacher_id, room_id, schedule, description, status, color, company_id, branch_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 	`
 
 	// Set defaults if not provided
@@ -38,7 +38,7 @@ func (r *GroupRepository) Create(group *models.Group, companyID string) error {
 		group.Color = "#3b82f6"
 	}
 
-	_, err = tx.Exec(query, group.ID, group.Name, group.Subject, group.TeacherID, group.RoomID, group.Schedule, group.Description, group.Status, group.Color, companyID)
+	_, err = tx.Exec(query, group.ID, group.Name, group.Subject, group.TeacherID, group.RoomID, group.Schedule, group.Description, group.Status, group.Color, companyID, branchID)
 	if err != nil {
 		return fmt.Errorf("error creating group: %w", err)
 	}
@@ -58,21 +58,57 @@ func (r *GroupRepository) Create(group *models.Group, companyID string) error {
 	return tx.Commit()
 }
 
-func (r *GroupRepository) GetAll(companyID string) ([]*models.Group, error) {
-	query := `
-		SELECT 
-			g.id, g.name, g.subject, g.teacher_id, g.room_id, g.schedule, 
-			g.description, g.status, g.color, g.company_id,
-			t.name as teacher_name,
-			rm.name as room_name
-		FROM groups g
-		LEFT JOIN teachers t ON g.teacher_id = t.id
-		LEFT JOIN rooms rm ON g.room_id = rm.id
-		WHERE g.company_id = $1 
-		ORDER BY g.name
-	`
+func (r *GroupRepository) GetAll(companyID string, branchID string) ([]*models.Group, error) {
+	// If branchID is empty string, get data from all branches (for multi-branch view)
+	// If branchID equals companyID (fallback mode), filter only by company_id
+	var query string
+	var args []interface{}
+	if branchID == "" {
+		// Get data from all branches for the company
+		query = `
+			SELECT 
+				g.id, g.name, g.subject, g.teacher_id, g.room_id, g.schedule, 
+				g.description, g.status, g.color, g.company_id,
+				t.name as teacher_name,
+				rm.name as room_name
+			FROM groups g
+			LEFT JOIN teachers t ON g.teacher_id = t.id
+			LEFT JOIN rooms rm ON g.room_id = rm.id
+			WHERE g.company_id = $1
+			ORDER BY g.name
+		`
+		args = []interface{}{companyID}
+	} else if branchID == companyID {
+		query = `
+			SELECT 
+				g.id, g.name, g.subject, g.teacher_id, g.room_id, g.schedule, 
+				g.description, g.status, g.color, g.company_id,
+				t.name as teacher_name,
+				rm.name as room_name
+			FROM groups g
+			LEFT JOIN teachers t ON g.teacher_id = t.id
+			LEFT JOIN rooms rm ON g.room_id = rm.id
+			WHERE g.company_id = $1
+			ORDER BY g.name
+		`
+		args = []interface{}{companyID}
+	} else {
+		query = `
+			SELECT 
+				g.id, g.name, g.subject, g.teacher_id, g.room_id, g.schedule, 
+				g.description, g.status, g.color, g.company_id,
+				t.name as teacher_name,
+				rm.name as room_name
+			FROM groups g
+			LEFT JOIN teachers t ON g.teacher_id = t.id
+			LEFT JOIN rooms rm ON g.room_id = rm.id
+			WHERE g.company_id = $1 AND g.branch_id = $2
+			ORDER BY g.name
+		`
+		args = []interface{}{companyID, branchID}
+	}
 
-	rows, err := r.db.Query(query, companyID)
+	rows, err := r.db.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("error getting groups: %w", err)
 	}

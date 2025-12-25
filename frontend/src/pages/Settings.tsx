@@ -8,8 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Sun, Moon, Monitor, Palette, Check } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MigrationSettings } from "@/components/MigrationSettings";
+import { BranchManagement } from "@/components/BranchManagement";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
+import { useAuth } from "@/context/AuthContext";
 import {
   Select,
   SelectContent,
@@ -77,6 +79,7 @@ export default function Settings() {
         <TabsList>
           <TabsTrigger value="general">Общие</TabsTrigger>
           <TabsTrigger value="interface">Интерфейс</TabsTrigger>
+          <TabsTrigger value="branches">Филиалы</TabsTrigger>
           <TabsTrigger value="migration">Миграция</TabsTrigger>
         </TabsList>
 
@@ -377,6 +380,10 @@ export default function Settings() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="branches" className="space-y-6">
+          <BranchManagement />
         </TabsContent>
 
         <TabsContent value="migration" className="space-y-6">

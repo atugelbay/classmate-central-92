@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"classmate-central/internal/repository"
@@ -22,6 +23,7 @@ type MigrationHandler struct {
 	roomRepo         *repository.RoomRepository
 	lessonRepo       *repository.LessonRepository
 	subscriptionRepo *repository.SubscriptionRepository
+	branchRepo       *repository.BranchRepository
 }
 
 func NewMigrationHandler(
@@ -31,6 +33,7 @@ func NewMigrationHandler(
 	roomRepo *repository.RoomRepository,
 	lessonRepo *repository.LessonRepository,
 	subscriptionRepo *repository.SubscriptionRepository,
+	branchRepo *repository.BranchRepository,
 ) *MigrationHandler {
 	return &MigrationHandler{
 		teacherRepo:      teacherRepo,
@@ -39,6 +42,7 @@ func NewMigrationHandler(
 		roomRepo:         roomRepo,
 		lessonRepo:       lessonRepo,
 		subscriptionRepo: subscriptionRepo,
+		branchRepo:       branchRepo,
 	}
 }
 
@@ -50,6 +54,7 @@ type MigrationRequest struct {
 	CompanyID      string `json:"companyId"`
 	MigrateRooms   bool   `json:"migrateRooms"`
 	MigrateLessons bool   `json:"migrateLessons"`
+	UseOldScript   bool   `json:"useOldScript"` // Флаг для использования старого скрипта
 }
 
 // MigrationStatus represents the current status of migration
@@ -69,7 +74,10 @@ type MigrationStatus struct {
 }
 
 // In-memory storage for migration status (in production, use Redis or similar)
-var migrationStatuses = make(map[string]*MigrationStatus)
+var (
+	migrationStatuses = make(map[string]*MigrationStatus)
+	statusMutex       sync.RWMutex
+)
 
 // StartMigration starts the migration process from AlfaCRM
 func (h *MigrationHandler) StartMigration(c *gin.Context) {
@@ -86,7 +94,11 @@ func (h *MigrationHandler) StartMigration(c *gin.Context) {
 	}
 
 	// Check if migration is already running
-	if status, exists := migrationStatuses[companyID]; exists && status.Status == "running" {
+	statusMutex.RLock()
+	existingStatus, exists := migrationStatuses[companyID]
+	statusMutex.RUnlock()
+
+	if exists && existingStatus.Status == "running" {
 		c.JSON(http.StatusConflict, gin.H{"error": "Migration is already running"})
 		return
 	}
@@ -98,7 +110,10 @@ func (h *MigrationHandler) StartMigration(c *gin.Context) {
 		Progress:    0,
 		StartedAt:   time.Now(),
 	}
+
+	statusMutex.Lock()
 	migrationStatuses[companyID] = status
+	statusMutex.Unlock()
 
 	// Start migration in background
 	go h.runMigration(companyID, req, status)
@@ -117,13 +132,41 @@ func (h *MigrationHandler) GetMigrationStatus(c *gin.Context) {
 		return
 	}
 
+	statusMutex.RLock()
 	status, exists := migrationStatuses[companyID]
-	if !exists {
-		c.JSON(http.StatusNotFound, gin.H{"error": "No migration found"})
-		return
+	// Create a copy to avoid race conditions
+	var statusCopy *MigrationStatus
+	if exists {
+		statusCopy = &MigrationStatus{
+			Status:        status.Status,
+			CurrentStep:   status.CurrentStep,
+			Progress:      status.Progress,
+			TeachersCount: status.TeachersCount,
+			StudentsCount: status.StudentsCount,
+			GroupsCount:   status.GroupsCount,
+			RoomsCount:    status.RoomsCount,
+			LessonsCount:  status.LessonsCount,
+			Error:         status.Error,
+			Logs:          status.Logs,
+			StartedAt:     status.StartedAt,
+			CompletedAt:   status.CompletedAt,
+		}
+	} else {
+		// Return empty status instead of 404 - this allows frontend to poll even when migration hasn't started
+		statusCopy = &MigrationStatus{
+			Status:        "idle",
+			CurrentStep:   "Миграция не запущена",
+			Progress:      0,
+			TeachersCount: 0,
+			StudentsCount: 0,
+			GroupsCount:   0,
+			RoomsCount:    0,
+			LessonsCount:  0,
+		}
 	}
+	statusMutex.RUnlock()
 
-	c.JSON(http.StatusOK, status)
+	c.JSON(http.StatusOK, statusCopy)
 }
 
 // runMigration executes the migration process
@@ -138,13 +181,17 @@ func (h *MigrationHandler) runMigration(companyID string, req MigrationRequest, 
 	}()
 
 	// Call Node.js migration script
+	statusMutex.Lock()
 	status.CurrentStep = "Подготовка миграции"
-	status.Progress = 5
+	status.Progress = 0
+	statusMutex.Unlock()
 
 	migrationService := services.NewMigrationService()
 
+	statusMutex.Lock()
 	status.CurrentStep = "Запуск скрипта миграции"
-	status.Progress = 10
+	status.Progress = 5
+	statusMutex.Unlock()
 
 	// Get database credentials
 	// Priority: DB_* env vars > Parse from DATABASE_URL
@@ -212,6 +259,36 @@ func (h *MigrationHandler) runMigration(companyID string, req MigrationRequest, 
 		}
 	}
 
+	// Create a channel to collect all stdout lines for logging
+	var stdoutLines []string
+	var stdoutMu sync.Mutex
+
+	// Progress callback for streaming updates
+	progressCallback := func(line string) {
+		// Store line for logging
+		stdoutMu.Lock()
+		stdoutLines = append(stdoutLines, line)
+		stdoutMu.Unlock()
+
+		// Update progress in real-time based on this line
+		// This is called for every line of output, so status updates happen frequently
+		h.updateProgressFromLine(status, line)
+
+		// Also update logs in real-time for better visibility
+		statusMutex.Lock()
+		if len(status.Logs) < 10000 { // Limit log size to prevent memory issues
+			status.Logs += line + "\n"
+		}
+		statusMutex.Unlock()
+	}
+
+	// Determine which script to use
+	scriptPath := "migration/migrate-from-alfacrm.js"
+	if req.UseOldScript {
+		scriptPath = "migration/migration_old.js"
+	}
+
+	// Run migration with streaming progress updates
 	result, err := migrationService.RunMigration(services.MigrationConfig{
 		AlfaCRMURL: req.AlfaCRMURL,
 		Email:      req.Email,
@@ -222,46 +299,126 @@ func (h *MigrationHandler) runMigration(companyID string, req MigrationRequest, 
 		DBName:     dbName,
 		DBUser:     dbUser,
 		DBPassword: dbPassword,
-	})
+		ScriptPath: scriptPath,
+	}, progressCallback)
 
-	// Always save logs, even on success
+	// Always save logs, even on success or failure
 	if result != nil {
-		status.Logs = fmt.Sprintf("=== STDOUT ===\n%s\n\n=== STDERR ===\n%s", result.Stdout, result.Stderr)
+		// Use collected stdout lines if available, otherwise fallback to result.Stdout
+		stdoutMu.Lock()
+		stdoutText := result.Stdout
+		if len(stdoutLines) > 0 {
+			stdoutText = strings.Join(stdoutLines, "\n")
+		}
+		stdoutMu.Unlock()
+
+		statusMutex.Lock()
+		status.Logs = fmt.Sprintf("=== STDOUT ===\n%s\n\n=== STDERR ===\n%s", stdoutText, result.Stderr)
+		statusMutex.Unlock()
 	}
 
 	if err != nil {
+		statusMutex.Lock()
 		status.Status = "failed"
 		status.Error = fmt.Sprintf("Migration failed: %v", err)
 		now := time.Now()
 		status.CompletedAt = &now
+		statusMutex.Unlock()
 		return
 	}
 
 	// Count migrated data
+	statusMutex.Lock()
 	status.CurrentStep = "Подсчет результатов"
-	status.Progress = 95
+	// Don't override progress if it was already updated from parsing (should be 90+)
+	if status.Progress < 90 {
+		status.Progress = 90
+	}
+	statusMutex.Unlock()
 
-	// Get counts from database
-	teachers, _ := h.teacherRepo.GetAll(companyID)
-	status.TeachersCount = len(teachers)
+	// Get all branches for the company to count data across all branches
+	branches, err := h.branchRepo.GetBranchesByCompany(companyID)
+	if err != nil || len(branches) == 0 {
+		// Fallback: if no branches found, try to count by company_id directly
+		// This handles the case where branch table doesn't exist yet (backward compatibility)
+		var totalTeachers, totalStudents, totalGroups, totalRooms, totalLessons int
 
-	students, _ := h.studentRepo.GetAll(companyID)
-	status.StudentsCount = len(students)
+		// Try to get data using company_id as branch_id (fallback mode)
+		teachers, _ := h.teacherRepo.GetAll(companyID, companyID)
+		totalTeachers = len(teachers)
 
-	groups, _ := h.groupRepo.GetAll(companyID)
-	status.GroupsCount = len(groups)
+		students, _ := h.studentRepo.GetAll(companyID, companyID)
+		totalStudents = len(students)
 
-	rooms, _ := h.roomRepo.GetAll(companyID)
-	status.RoomsCount = len(rooms)
+		groups, _ := h.groupRepo.GetAll(companyID, companyID)
+		totalGroups = len(groups)
 
-	lessons, _ := h.lessonRepo.GetAll(companyID)
-	status.LessonsCount = len(lessons)
+		rooms, _ := h.roomRepo.GetAll(companyID, companyID)
+		totalRooms = len(rooms)
 
+		lessons, _ := h.lessonRepo.GetAll(companyID, companyID)
+		totalLessons = len(lessons)
+
+		statusMutex.Lock()
+		status.TeachersCount = totalTeachers
+		status.StudentsCount = totalStudents
+		status.GroupsCount = totalGroups
+		status.RoomsCount = totalRooms
+		status.LessonsCount = totalLessons
+		statusMutex.Unlock()
+	} else {
+		// Count data across all branches
+		// Use a map to track unique IDs to avoid counting duplicates
+		// when the same entity exists in multiple branches
+		teacherIds := make(map[string]bool)
+		studentIds := make(map[string]bool)
+		groupIds := make(map[string]bool)
+		roomIds := make(map[string]bool)
+		lessonIds := make(map[string]bool)
+
+		for _, branch := range branches {
+			teachers, _ := h.teacherRepo.GetAll(companyID, branch.ID)
+			for _, teacher := range teachers {
+				teacherIds[teacher.ID] = true
+			}
+
+			students, _ := h.studentRepo.GetAll(companyID, branch.ID)
+			for _, student := range students {
+				studentIds[student.ID] = true
+			}
+
+			groups, _ := h.groupRepo.GetAll(companyID, branch.ID)
+			for _, group := range groups {
+				groupIds[group.ID] = true
+			}
+
+			rooms, _ := h.roomRepo.GetAll(companyID, branch.ID)
+			for _, room := range rooms {
+				roomIds[room.ID] = true
+			}
+
+			lessons, _ := h.lessonRepo.GetAll(companyID, branch.ID)
+			for _, lesson := range lessons {
+				lessonIds[lesson.ID] = true
+			}
+		}
+
+		statusMutex.Lock()
+		status.TeachersCount = len(teacherIds)
+		status.StudentsCount = len(studentIds)
+		status.GroupsCount = len(groupIds)
+		status.RoomsCount = len(roomIds)
+		status.LessonsCount = len(lessonIds)
+		statusMutex.Unlock()
+	}
+
+	statusMutex.Lock()
 	status.Progress = 100
 	status.Status = "completed"
 	status.CurrentStep = "Миграция завершена"
 	now := time.Now()
 	status.CompletedAt = &now
+	statusMutex.Unlock()
 }
 
 // ClearCompanyData clears all data for the current company
@@ -387,4 +544,62 @@ func (h *MigrationHandler) TestAlfaCRMConnection(c *gin.Context) {
 		"success": true,
 		"message": "Successfully connected to AlfaCRM",
 	})
+}
+
+// updateProgressFromLine updates progress based on a single line of output (for streaming)
+func (h *MigrationHandler) updateProgressFromLine(status *MigrationStatus, line string) {
+	// Map of migration step keywords to progress percentages and step names
+	stepProgress := []struct {
+		keyword  string
+		progress int
+		name     string
+	}{
+		{"СОЗДАНИЕ КОМПАНИИ И ФИЛИАЛОВ", 5, "Создание компании и филиалов"},
+		{"МИГРАЦИЯ ТАРИФОВ", 10, "Миграция тарифов"},
+		{"МИГРАЦИЯ КОМНАТ", 15, "Миграция комнат"},
+		{"МИГРАЦИЯ ПРЕПОДАВАТЕЛЕЙ", 20, "Миграция преподавателей"},
+		{"МИГРАЦИЯ ГРУПП", 30, "Миграция групп"},
+		{"МИГРАЦИЯ РАСПИСАНИЙ ГРУПП", 35, "Миграция расписаний групп"},
+		{"МИГРАЦИЯ СТУДЕНТОВ", 45, "Миграция студентов"},
+		{"МИГРАЦИЯ ИНДИВИДУАЛЬНЫХ ЗАНЯТИЙ", 50, "Миграция индивидуальных занятий"},
+		{"МИГРАЦИЯ СВЯЗЕЙ СТУДЕНТ-ГРУППА", 55, "Миграция связей студент-группа"},
+		{"ПРЕДЗАГРУЗКА ЦЕН УРОКОВ", 60, "Предзагрузка цен уроков"},
+		{"МИГРАЦИЯ АБОНЕМЕНТОВ СТУДЕНТОВ", 65, "Миграция абонементов студентов"},
+		{"МИГРАЦИЯ ИСТОРИИ ПОСЕЩЕНИЙ", 75, "Миграция истории посещений"},
+		{"СОЗДАНИЕ ТРАНЗАКЦИЙ", 80, "Создание транзакций"},
+		{"МИГРАЦИЯ ДОЛГОВ", 85, "Миграция долгов"},
+		{"ГЕНЕРАЦИЯ УРОКОВ", 90, "Генерация уроков"},
+		{"МИГРАЦИЯ ЗАВЕРШЕНА", 95, "Миграция завершена"},
+	}
+
+	// Check if this line contains a step keyword
+	for _, step := range stepProgress {
+		if strings.Contains(line, step.keyword) {
+			// Use mutex to protect status updates
+			statusMutex.Lock()
+			// Always update progress and step (not just if higher) to ensure real-time updates
+			status.Progress = step.progress
+			status.CurrentStep = step.name
+			statusMutex.Unlock()
+			return
+		}
+	}
+
+	// Also check for completion indicators
+	if strings.Contains(line, "✅ МИГРАЦИЯ ЗАВЕРШЕНА") || strings.Contains(line, "МИГРАЦИЯ ЗАВЕРШЕНА!") {
+		statusMutex.Lock()
+		status.Progress = 100
+		status.CurrentStep = "Миграция завершена"
+		statusMutex.Unlock()
+	}
+}
+
+// updateProgressFromOutput parses full stdout from migration script and updates progress
+// (kept for backward compatibility, but updateProgressFromLine is preferred for streaming)
+func (h *MigrationHandler) updateProgressFromOutput(status *MigrationStatus, stdout string) {
+	// Split stdout into lines and process each one
+	lines := strings.Split(stdout, "\n")
+	for _, line := range lines {
+		h.updateProgressFromLine(status, line)
+	}
 }

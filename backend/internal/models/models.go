@@ -12,6 +12,8 @@ type User struct {
 	RoleID                 *string   `json:"roleId,omitempty" db:"role_id"`
 	Roles                  []*Role   `json:"roles,omitempty"`       // Populated via JOIN
 	Permissions            []string  `json:"permissions,omitempty"` // Populated from roles
+	Branches               []*Branch `json:"branches,omitempty"`    // User's accessible branches
+	CurrentBranchID        *string   `json:"currentBranchId,omitempty"` // Currently active branch
 	IsEmailVerified        bool      `json:"isEmailVerified" db:"is_email_verified"`
 	EmailVerificationToken *string   `json:"-" db:"email_verification_token"`
 	CreatedAt              time.Time `json:"created_at" db:"created_at"`
@@ -27,6 +29,28 @@ type Company struct {
 	UpdatedAt time.Time `json:"updatedAt" db:"updated_at"`
 }
 
+// Branch represents a branch/location of a company
+type Branch struct {
+	ID        string    `json:"id" db:"id"`
+	Name      string    `json:"name" db:"name"`
+	CompanyID string    `json:"companyId" db:"company_id"`
+	Address   string    `json:"address,omitempty" db:"address"`
+	Phone     string    `json:"phone,omitempty" db:"phone"`
+	Status    string    `json:"status" db:"status"` // active, inactive
+	CreatedAt time.Time `json:"createdAt" db:"created_at"`
+	UpdatedAt time.Time `json:"updatedAt" db:"updated_at"`
+}
+
+// UserBranch represents the relationship between a user and a branch
+type UserBranch struct {
+	UserID     int       `json:"userId" db:"user_id"`
+	BranchID   string    `json:"branchId" db:"branch_id"`
+	RoleID     *string   `json:"roleId,omitempty" db:"role_id"`
+	CompanyID  string    `json:"companyId" db:"company_id"`
+	AssignedAt time.Time `json:"assignedAt" db:"assigned_at"`
+	AssignedBy *int      `json:"assignedBy,omitempty" db:"assigned_by"`
+}
+
 // Teacher represents a teacher in the system
 type Teacher struct {
 	ID        string `json:"id" db:"id"`
@@ -38,6 +62,7 @@ type Teacher struct {
 	Avatar    string `json:"avatar,omitempty" db:"avatar"`
 	Workload  int    `json:"workload" db:"workload"`
 	CompanyID string `json:"companyId" db:"company_id"`
+	BranchID  string `json:"branchId" db:"branch_id"`
 }
 
 // Student represents a student in the system
@@ -52,6 +77,7 @@ type Student struct {
 	GroupIds  []string `json:"groupIds"`
 	Avatar    string   `json:"avatar,omitempty" db:"avatar"`
 	CompanyID string   `json:"companyId" db:"company_id"`
+	BranchID  string   `json:"branchId" db:"branch_id"`
 	CreatedAt string   `json:"createdAt" db:"created_at"`
 }
 
@@ -72,6 +98,7 @@ type Lesson struct {
 	Status      string    `json:"status" db:"status"`                // scheduled, completed, cancelled
 	StudentIds  []string  `json:"studentIds"`
 	CompanyID   string    `json:"companyId" db:"company_id"`
+	BranchID    string    `json:"branchId" db:"branch_id"`
 }
 
 // Group represents a study group
@@ -89,6 +116,7 @@ type Group struct {
 	Status      string   `json:"status" db:"status"` // active, inactive
 	Color       string   `json:"color" db:"color"`
 	CompanyID   string   `json:"companyId" db:"company_id"`
+	BranchID    string   `json:"branchId" db:"branch_id"`
 }
 
 // Settings represents application settings
@@ -99,6 +127,7 @@ type Settings struct {
 	ThemeColor string `json:"themeColor" db:"theme_color"`
 	Timezone   string `json:"timezone" db:"timezone"`
 	CompanyID  string `json:"companyId" db:"company_id"`
+	BranchID   string `json:"branchId,omitempty" db:"branch_id"`
 }
 
 // LoginRequest represents login credentials
@@ -145,6 +174,7 @@ type Room struct {
 	Color     string `json:"color" db:"color"`
 	Status    string `json:"status" db:"status"` // active, inactive
 	CompanyID string `json:"companyId" db:"company_id"`
+	BranchID  string `json:"branchId" db:"branch_id"`
 }
 
 // Lead represents a potential student
@@ -157,6 +187,7 @@ type Lead struct {
 	Status     string    `json:"status" db:"status"` // new, in_progress, enrolled, rejected
 	Notes      string    `json:"notes" db:"notes"`
 	AssignedTo *int      `json:"assignedTo,omitempty" db:"assigned_to"`
+	BranchID   string    `json:"branchId,omitempty" db:"branch_id"`
 	CreatedAt  time.Time `json:"createdAt" db:"created_at"`
 	UpdatedAt  time.Time `json:"updatedAt" db:"updated_at"`
 }
@@ -207,6 +238,7 @@ type PaymentTransaction struct {
 	CreatedAt     time.Time `json:"createdAt" db:"created_at"`
 	CreatedBy     *int      `json:"createdBy,omitempty" db:"created_by"`
 	CompanyID     string    `json:"companyId" db:"company_id"`
+	BranchID      string    `json:"branchId" db:"branch_id"`
 }
 
 // PaymentTransactionUpdate represents fields that can be updated for a transaction
@@ -245,6 +277,7 @@ type DebtRecord struct {
 	Notes     string     `json:"notes" db:"notes"`
 	CreatedAt time.Time  `json:"createdAt" db:"created_at"`
 	CompanyID string     `json:"companyId" db:"company_id"`
+	BranchID  string     `json:"branchId" db:"branch_id"`
 }
 
 // Discount represents a discount that can be applied to students
@@ -257,6 +290,7 @@ type Discount struct {
 	IsActive    bool      `json:"isActive" db:"is_active"`
 	CreatedAt   time.Time `json:"createdAt" db:"created_at"`
 	CompanyID   string    `json:"companyId" db:"company_id"`
+	BranchID    string    `json:"branchId" db:"branch_id"`
 }
 
 // StudentDiscount represents a discount applied to a student
@@ -269,6 +303,7 @@ type StudentDiscount struct {
 	IsActive   bool       `json:"isActive" db:"is_active"`
 	CreatedAt  time.Time  `json:"createdAt" db:"created_at"`
 	CompanyID  string     `json:"companyId" db:"company_id"`
+	BranchID   string     `json:"branchId" db:"branch_id"`
 }
 
 // ============= SUBSCRIPTION MODULE =============
@@ -285,6 +320,7 @@ type SubscriptionType struct {
 	Description  string    `json:"description" db:"description"`
 	CreatedAt    time.Time `json:"createdAt" db:"created_at"`
 	CompanyID    string    `json:"companyId" db:"company_id"`
+	BranchID     string    `json:"branchId" db:"branch_id"`
 }
 
 // StudentSubscription represents a subscription assigned to a student
@@ -309,6 +345,7 @@ type StudentSubscription struct {
 	CreatedAt            time.Time  `json:"createdAt" db:"created_at"`
 	UpdatedAt            time.Time  `json:"updatedAt" db:"updated_at"`
 	CompanyID            string     `json:"companyId" db:"company_id"`
+	BranchID             string     `json:"branchId" db:"branch_id"`
 	Version              int        `json:"version" db:"version"` // For optimistic locking
 }
 
@@ -334,6 +371,7 @@ type LessonAttendance struct {
 	MarkedAt       time.Time `json:"markedAt" db:"marked_at"`
 	MarkedBy       *int      `json:"markedBy,omitempty" db:"marked_by"`
 	CompanyID      string    `json:"companyId" db:"company_id"`
+	BranchID       string    `json:"branchId" db:"branch_id"`
 }
 
 // ============= STUDENT MANAGEMENT MODULE =============
@@ -423,6 +461,7 @@ type Enrollment struct {
 	JoinedAt  time.Time  `json:"joinedAt" db:"joined_at"`
 	LeftAt    *time.Time `json:"leftAt,omitempty" db:"left_at"`
 	CompanyID string     `json:"companyId" db:"company_id"`
+	BranchID  string     `json:"branchId" db:"branch_id"`
 	CreatedAt time.Time  `json:"createdAt" db:"created_at"`
 }
 
@@ -434,6 +473,7 @@ type IndividualEnrollment struct {
 	StartedAt time.Time  `json:"startedAt" db:"started_at"`
 	EndedAt   *time.Time `json:"endedAt,omitempty" db:"ended_at"`
 	CompanyID string     `json:"companyId" db:"company_id"`
+	BranchID  string     `json:"branchId" db:"branch_id"`
 	CreatedAt time.Time  `json:"createdAt" db:"created_at"`
 }
 

@@ -50,6 +50,74 @@ func CompanyMiddleware(db *sql.DB) gin.HandlerFunc {
 		// Add company_id to context for use in handlers
 		c.Set("company_id", companyID.String)
 
+	// Handle branch context
+	// Priority: 1. X-Branch-ID header, 2. current_branch_id from token, 3. First available branch from DB
+	branchID := c.GetHeader("X-Branch-ID")
+	if branchID == "" {
+		// Try to get from token
+		if tokenBranchID, exists := c.Get("current_branch_id"); exists && tokenBranchID != nil {
+			branchID = tokenBranchID.(string)
+		}
+	}
+
+		// If still no branch_id, try to get first available branch from database
+		// If branches table doesn't exist or no branches available, fallback to company_id
+		var branchRepo *repository.BranchRepository
+		if branchID == "" {
+			branchRepo = repository.NewBranchRepository(db)
+			userBranches, err := branchRepo.GetUserBranches(userID.(int), companyID.String)
+			if err == nil && len(userBranches) > 0 {
+				// Use first available branch
+				branchID = userBranches[0].ID
+				logger.Info("Auto-selected first available branch", zap.Any("userId", userID), zap.String("branchId", branchID))
+			} else {
+				// If branches table doesn't exist or user has no branches, use company_id as fallback
+				// This provides backward compatibility before migrations are applied
+				branchID = companyID.String
+				logger.Info("Using company_id as branch_id (fallback mode)", zap.Any("userId", userID), zap.String("branchId", branchID))
+			}
+		}
+
+		// Verify user has access to this branch (skip if using company_id as fallback)
+		if branchID != companyID.String {
+			// Use branchRepo created earlier, or create if not exists
+			if branchRepo == nil {
+				branchRepo = repository.NewBranchRepository(db)
+			}
+			hasAccess, err := branchRepo.CheckUserBranchAccess(userID.(int), branchID, companyID.String)
+			if err != nil {
+				// If check fails (e.g., branches table doesn't exist), fallback to company_id
+				logger.Warn("Failed to check branch access, using company_id fallback", logger.ErrorField(err), zap.Any("userId", userID), zap.String("branchId", branchID))
+				branchID = companyID.String
+			} else if !hasAccess {
+				logger.Error("User does not have access to branch", zap.Any("userId", userID), zap.String("branchId", branchID))
+				c.JSON(http.StatusForbidden, gin.H{"error": "Access denied to this branch"})
+				c.Abort()
+				return
+			}
+		}
+
+		// Add branch_id to context
+		c.Set("branch_id", branchID)
+		
+		// Add list of accessible branch IDs to context for handlers that need to show data from all branches
+		if branchRepo != nil {
+			userBranches, err := branchRepo.GetUserBranches(userID.(int), companyID.String)
+			if err == nil && len(userBranches) > 0 {
+				branchIDs := make([]string, len(userBranches))
+				for i, b := range userBranches {
+					branchIDs[i] = b.ID
+				}
+				c.Set("accessible_branch_ids", branchIDs)
+			} else {
+				// Fallback: use company_id as single "branch"
+				c.Set("accessible_branch_ids", []string{companyID.String})
+			}
+		} else {
+			// Fallback: use company_id as single "branch"
+			c.Set("accessible_branch_ids", []string{companyID.String})
+		}
+
 		// Hydrate fresh roles/permissions for every request to avoid stale tokens
 		if roleRepo != nil {
 			roles, err := roleRepo.GetUserRoles(userID.(int), companyID.String)

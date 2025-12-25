@@ -3,6 +3,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { HeaderSearch } from "@/components/HeaderSearch";
 import { NotificationDropdown } from "@/components/NotificationDropdown";
+import { BranchSwitcher } from "@/components/BranchSwitcher";
 
 interface LayoutProps {
   children: ReactNode;
@@ -18,6 +19,7 @@ export function Layout({ children }: LayoutProps) {
             <SidebarTrigger />
             <HeaderSearch />
             <div className="flex-1" />
+            <BranchSwitcher />
             <NotificationDropdown />
           </header>
           <main className="flex-1 p-4 sm:p-6 min-w-0 overflow-x-hidden">{children}</main>

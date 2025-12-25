@@ -16,7 +16,7 @@ func NewLessonRepository(db *sql.DB) *LessonRepository {
 	return &LessonRepository{db: db}
 }
 
-func (r *LessonRepository) Create(lesson *models.Lesson, companyID string) error {
+func (r *LessonRepository) Create(lesson *models.Lesson, companyID, branchID string) error {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return fmt.Errorf("error starting transaction: %w", err)
@@ -40,11 +40,11 @@ func (r *LessonRepository) Create(lesson *models.Lesson, companyID string) error
 
 	// Insert lesson
 	query := `
-		INSERT INTO lessons (id, title, teacher_id, group_id, subject, start_time, end_time, room, room_id, status, company_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		INSERT INTO lessons (id, title, teacher_id, group_id, subject, start_time, end_time, room, room_id, status, company_id, branch_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 	`
 	_, err = tx.Exec(query, lesson.ID, lesson.Title, lesson.TeacherID, groupID,
-		lesson.Subject, lesson.Start, lesson.End, lesson.Room, roomID, lesson.Status, companyID)
+		lesson.Subject, lesson.Start, lesson.End, lesson.Room, roomID, lesson.Status, companyID, lesson.BranchID)
 	if err != nil {
 		return fmt.Errorf("error creating lesson: %w", err)
 	}
@@ -60,23 +60,62 @@ func (r *LessonRepository) Create(lesson *models.Lesson, companyID string) error
 	return tx.Commit()
 }
 
-func (r *LessonRepository) GetAll(companyID string) ([]*models.Lesson, error) {
-	query := `
-		SELECT 
-			l.id, l.title, l.teacher_id, l.group_id, l.subject, 
-			l.start_time, l.end_time, l.room, l.room_id, l.status, l.company_id,
-			t.name as teacher_name,
-			g.name as group_name,
-			rm.name as room_name
-		FROM lessons l
-		LEFT JOIN teachers t ON l.teacher_id = t.id
-		LEFT JOIN groups g ON l.group_id = g.id
-		LEFT JOIN rooms rm ON l.room_id = rm.id
-		WHERE l.company_id = $1 
-		ORDER BY l.start_time
-	`
+func (r *LessonRepository) GetAll(companyID, branchID string) ([]*models.Lesson, error) {
+	// If branchID is empty string, get data from all branches (for multi-branch view)
+	// If branchID equals companyID (fallback mode), filter only by company_id
+	var query string
+	var args []interface{}
+	if branchID == "" {
+		query = `
+			SELECT 
+				l.id, l.title, l.teacher_id, l.group_id, l.subject, 
+				l.start_time, l.end_time, l.room, l.room_id, l.status, l.company_id, l.branch_id,
+				t.name as teacher_name,
+				g.name as group_name,
+				rm.name as room_name
+			FROM lessons l
+			LEFT JOIN teachers t ON l.teacher_id = t.id
+			LEFT JOIN groups g ON l.group_id = g.id
+			LEFT JOIN rooms rm ON l.room_id = rm.id
+			WHERE l.company_id = $1
+			ORDER BY l.start_time
+		`
+		args = []interface{}{companyID}
+	} else if branchID == companyID {
+		query = `
+			SELECT 
+				l.id, l.title, l.teacher_id, l.group_id, l.subject, 
+				l.start_time, l.end_time, l.room, l.room_id, l.status, l.company_id, l.branch_id,
+				t.name as teacher_name,
+				g.name as group_name,
+				rm.name as room_name
+			FROM lessons l
+			LEFT JOIN teachers t ON l.teacher_id = t.id
+			LEFT JOIN groups g ON l.group_id = g.id
+			LEFT JOIN rooms rm ON l.room_id = rm.id
+			WHERE l.company_id = $1
+			ORDER BY l.start_time
+		`
+		args = []interface{}{companyID}
+	} else {
+		query = `
+			SELECT 
+				l.id, l.title, l.teacher_id, l.group_id, l.subject, 
+				l.start_time, l.end_time, l.room, l.room_id, l.status, l.company_id, l.branch_id,
+				t.name as teacher_name,
+				g.name as group_name,
+				rm.name as room_name
+			FROM lessons l
+			LEFT JOIN teachers t ON l.teacher_id = t.id
+			LEFT JOIN groups g ON l.group_id = g.id
+			LEFT JOIN rooms rm ON l.room_id = rm.id
+			WHERE l.company_id = $1 AND l.branch_id = $2
+			ORDER BY l.start_time
+		`
+		args = []interface{}{companyID, branchID}
+	}
 
-	rows, err := r.db.Query(query, companyID)
+	rows, err := r.db.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("error getting lessons: %w", err)
 	}
@@ -88,7 +127,7 @@ func (r *LessonRepository) GetAll(companyID string) ([]*models.Lesson, error) {
 		var teacherID, teacherName, groupID, groupName, room, roomID, roomName, status sql.NullString
 
 		err := rows.Scan(&lesson.ID, &lesson.Title, &teacherID, &groupID,
-			&lesson.Subject, &lesson.Start, &lesson.End, &room, &roomID, &status, &lesson.CompanyID,
+			&lesson.Subject, &lesson.Start, &lesson.End, &room, &roomID, &status, &lesson.CompanyID, &lesson.BranchID,
 			&teacherName, &groupName, &roomName)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning lesson: %w", err)
@@ -536,7 +575,7 @@ func (r *LessonRepository) GetByTeacherID(teacherID string, startDate, endDate t
 }
 
 // CreateBulk creates multiple lessons in a single transaction
-func (r *LessonRepository) CreateBulk(lessons []*models.Lesson, companyID string) error {
+func (r *LessonRepository) CreateBulk(lessons []*models.Lesson, companyID, branchID string) error {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return fmt.Errorf("error starting transaction: %w", err)
@@ -561,11 +600,11 @@ func (r *LessonRepository) CreateBulk(lessons []*models.Lesson, companyID string
 
 		// Insert lesson
 		query := `
-			INSERT INTO lessons (id, title, teacher_id, group_id, subject, start_time, end_time, room, room_id, status, company_id)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+			INSERT INTO lessons (id, title, teacher_id, group_id, subject, start_time, end_time, room, room_id, status, company_id, branch_id)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		`
 		_, err = tx.Exec(query, lesson.ID, lesson.Title, lesson.TeacherID, groupID,
-			lesson.Subject, lesson.Start, lesson.End, lesson.Room, roomID, lesson.Status, companyID)
+			lesson.Subject, lesson.Start, lesson.End, lesson.Room, roomID, lesson.Status, companyID, lesson.BranchID)
 		if err != nil {
 			return fmt.Errorf("error creating lesson: %w", err)
 		}
