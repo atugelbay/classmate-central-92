@@ -16,7 +16,11 @@ const BranchContext = createContext<BranchContextType | undefined>(undefined);
 
 export const BranchProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [currentBranchId, setCurrentBranchId] = useState<string | null>(null);
-  const { data: branches = [], isLoading } = useBranches();
+  const { data: branchesData, isLoading } = useBranches();
+  
+  // Ensure branches is always an array
+  const branches = Array.isArray(branchesData) ? branchesData : [];
+  
   const { mutateAsync: switchBranchMutation, isPending: isSwitching } = useSwitchBranch();
 
   // Initialize current branch ID from localStorage or use first available branch

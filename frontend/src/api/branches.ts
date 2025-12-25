@@ -72,8 +72,22 @@ export const branchesAPI = {
       throw new Error('No authentication token found');
     }
     
-    const response = await api.get('/api/branches');
-    return response.data;
+    try {
+      const response = await api.get('/api/branches');
+      // Ensure we return an array
+      if (Array.isArray(response.data)) {
+        return response.data;
+      }
+      // If response is not an array, return empty array
+      return [];
+    } catch (error: any) {
+      // If error is 401, throw it to trigger re-auth
+      if (error.response?.status === 401) {
+        throw error;
+      }
+      // For other errors, return empty array to prevent crashes
+      return [];
+    }
   },
 
   // Get a specific branch by ID
