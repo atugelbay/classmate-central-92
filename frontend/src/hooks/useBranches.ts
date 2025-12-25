@@ -9,6 +9,8 @@ export const useBranches = () => {
     queryKey: ['branches'],
     queryFn: branchesAPI.getBranches,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    refetchOnMount: true, // Always refetch when component mounts
+    refetchOnWindowFocus: false, // Don't refetch on window focus
   });
 };
 

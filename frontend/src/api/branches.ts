@@ -44,10 +44,17 @@ api.interceptors.request.use((config) => {
 export const branchesAPI = {
   // Get all branches accessible to the user
   getBranches: async (): Promise<Branch[]> => {
-    const response = await axios.get(`${API_BASE_URL}/api/branches`, {
-      headers: getAuthHeaders(),
-    });
-    return response.data;
+    console.log('[branchesAPI] Fetching branches from:', `${API_BASE_URL}/api/branches`);
+    try {
+      const response = await axios.get(`${API_BASE_URL}/api/branches`, {
+        headers: getAuthHeaders(),
+      });
+      console.log('[branchesAPI] Received branches:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('[branchesAPI] Error fetching branches:', error);
+      throw error;
+    }
   },
 
   // Get a specific branch by ID

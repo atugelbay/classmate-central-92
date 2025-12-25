@@ -32,8 +32,11 @@ func NewBranchHandler(db *sql.DB) *BranchHandler {
 // GetBranches returns branches accessible to the user
 // GET /api/branches
 func (h *BranchHandler) GetBranches(c *gin.Context) {
+	logger.Info("GetBranches handler called")
 	userID, _ := c.Get("user_id")
 	companyID, _ := c.Get("company_id")
+
+	logger.Info("Getting branches for user", zap.Any("userId", userID), zap.String("companyId", companyID.(string)))
 
 	branches, err := h.branchRepo.GetUserBranches(userID.(int), companyID.(string))
 	if err != nil {
