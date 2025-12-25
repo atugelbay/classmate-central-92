@@ -40,14 +40,9 @@ export default function Register() {
 
     try {
       await register(name, email, password, companyName);
-      console.log('[Register] Registration successful, token should be saved');
-      // Wait a bit to ensure token is saved
-      await new Promise(resolve => setTimeout(resolve, 100));
-      console.log('[Register] Token in localStorage:', !!localStorage.getItem('token'));
       toast.success("Регистрация успешна! Проверьте почту для подтверждения.");
       navigate(`/verify-email?email=${encodeURIComponent(email)}`);
     } catch (error: any) {
-      console.error('[Register] Registration error:', error);
       toast.error(error.response?.data?.error || "Ошибка регистрации");
     } finally {
       setIsLoading(false);

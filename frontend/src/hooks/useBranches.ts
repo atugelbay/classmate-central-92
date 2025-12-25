@@ -5,12 +5,16 @@ import { toast } from 'sonner';
 
 // Get all branches accessible to the user
 export const useBranches = () => {
+  const token = localStorage.getItem('token');
+  
   return useQuery<Branch[]>({
     queryKey: ['branches'],
     queryFn: branchesAPI.getBranches,
+    enabled: !!token, // Only fetch if user is authenticated
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     refetchOnMount: true, // Always refetch when component mounts
     refetchOnWindowFocus: false, // Don't refetch on window focus
+    retry: false, // Don't retry on error
   });
 };
 

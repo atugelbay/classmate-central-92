@@ -26,11 +26,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const token = localStorage.getItem('token');
     const savedUser = localStorage.getItem('user');
     
-    console.log('[AuthContext] Initializing:', {
-      hasToken: !!token,
-      hasSavedUser: !!savedUser,
-    });
-    
     if (token && savedUser) {
       try {
         const parsedUser = JSON.parse(savedUser);
@@ -39,32 +34,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         authAPI.me().then((freshUser) => {
           setUser(freshUser);
           localStorage.setItem('user', JSON.stringify(freshUser));
-        }).catch((error) => {
-          console.error('[AuthContext] Failed to refresh user data:', error);
+        }).catch(() => {
           // If refresh fails, keep cached user
         });
       } catch (error) {
-        console.error('[AuthContext] Error parsing saved user:', error);
+        console.error('Error parsing saved user:', error);
         localStorage.removeItem('user');
       }
-    } else {
-      console.warn('[AuthContext] No token or user found in localStorage');
     }
     
     setIsLoading(false);
   }, []);
 
   const handleAuthResponse = (response: AuthResponse) => {
-    console.log('[AuthContext] Saving auth response:', {
-      hasToken: !!response.token,
-      hasRefreshToken: !!response.refreshToken,
-      hasUser: !!response.user,
-    });
     localStorage.setItem('token', response.token);
     localStorage.setItem('refreshToken', response.refreshToken);
     localStorage.setItem('user', JSON.stringify(response.user));
     setUser(response.user);
-    console.log('[AuthContext] Token saved to localStorage:', !!localStorage.getItem('token'));
   };
 
   const login = async (email: string, password: string) => {

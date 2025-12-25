@@ -48,40 +48,12 @@ api.interceptors.request.use((config) => {
   return Promise.reject(error);
 });
 
-// Add response interceptor to handle 401 errors
+// Response interceptor - don't handle 401 here, let the app handle it
 api.interceptors.response.use(
   (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-
-      try {
-        const refreshToken = localStorage.getItem('refreshToken');
-        if (refreshToken) {
-          console.log('[branchesAPI] Attempting to refresh token...');
-          const response = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
-            refreshToken,
-          });
-
-          const { token, refreshToken: newRefreshToken } = response.data;
-          localStorage.setItem('token', token);
-          localStorage.setItem('refreshToken', newRefreshToken);
-
-          originalRequest.headers.Authorization = `Bearer ${token}`;
-          return api(originalRequest);
-        }
-      } catch (refreshError) {
-        console.error('[branchesAPI] Token refresh failed:', refreshError);
-        localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-        window.location.href = '/login';
-        return Promise.reject(refreshError);
-      }
-    }
-
+  (error) => {
+    // Just reject the error, don't try to refresh or redirect
+    // The app-level error handling will deal with 401 errors
     return Promise.reject(error);
   }
 );
@@ -89,26 +61,13 @@ api.interceptors.response.use(
 export const branchesAPI = {
   // Get all branches accessible to the user
   getBranches: async (): Promise<Branch[]> => {
-    console.log('[branchesAPI] Fetching branches from:', `${API_BASE_URL}/api/branches`);
     const token = localStorage.getItem('token');
-    console.log('[branchesAPI] Token exists:', !!token);
-    
     if (!token) {
-      console.error('[branchesAPI] No token found in localStorage');
       throw new Error('No authentication token found');
     }
     
-    try {
-      const response = await api.get('/api/branches');
-      console.log('[branchesAPI] Received branches:', response.data);
-      return response.data;
-    } catch (error: any) {
-      console.error('[branchesAPI] Error fetching branches:', error);
-      if (error.response?.status === 401) {
-        console.error('[branchesAPI] 401 Unauthorized - token may be invalid or expired');
-      }
-      throw error;
-    }
+    const response = await api.get('/api/branches');
+    return response.data;
   },
 
   // Get a specific branch by ID
