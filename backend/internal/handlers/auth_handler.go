@@ -125,11 +125,22 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		CompanyID: company.ID,
 		Status:    "active",
 	}
+	var branchCreated bool
 	if err := branchRepo.CreateBranch(defaultBranch); err != nil {
-		logger.Warn("Failed to create default branch", logger.ErrorField(err), zap.String("companyId", company.ID))
-		// Continue registration even if branch creation fails
+		logger.Error("Failed to create default branch", logger.ErrorField(err), zap.String("companyId", company.ID), zap.String("branchId", defaultBranchID))
+		// Try to check if branch already exists (in case of retry)
+		existingBranch, checkErr := branchRepo.GetBranchByID(defaultBranchID, company.ID)
+		if checkErr != nil || existingBranch == nil {
+			// Branch doesn't exist and creation failed - this is critical
+			logger.Error("Critical: Default branch creation failed and branch does not exist", logger.ErrorField(err), zap.String("companyId", company.ID))
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create default branch. Please try again."})
+			return
+		}
+		logger.Info("Default branch already exists", zap.String("branchId", defaultBranchID), zap.String("companyId", company.ID))
+		branchCreated = true
 	} else {
 		logger.Info("Default branch created", zap.String("branchId", defaultBranchID), zap.String("companyId", company.ID))
+		branchCreated = true
 	}
 
 	// Create default settings for the new company and branch
@@ -190,10 +201,19 @@ func (h *AuthHandler) Register(c *gin.Context) {
 
 	logger.Info("User created", zap.Int("userId", user.ID), zap.String("email", user.Email), zap.String("companyId", company.ID))
 
-	// Assign user to default branch
-	if err := branchRepo.AssignUserToBranch(user.ID, defaultBranchID, user.RoleID, company.ID, nil); err != nil {
-		logger.Warn("Failed to assign user to default branch", logger.ErrorField(err), zap.Int("userId", user.ID), zap.String("branchId", defaultBranchID))
-		// Continue registration even if branch assignment fails
+	// Assign user to default branch (only if branch was created successfully)
+	if branchCreated {
+		if err := branchRepo.AssignUserToBranch(user.ID, defaultBranchID, user.RoleID, company.ID, nil); err != nil {
+			logger.Error("Failed to assign user to default branch", logger.ErrorField(err), zap.Int("userId", user.ID), zap.String("branchId", defaultBranchID), zap.String("companyId", company.ID))
+			// This is critical - user won't have access to any branch
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to assign user to default branch. Please contact support."})
+			return
+		}
+		logger.Info("User assigned to default branch", zap.Int("userId", user.ID), zap.String("branchId", defaultBranchID), zap.String("companyId", company.ID))
+	} else {
+		logger.Error("Cannot assign user to branch - branch was not created", zap.Int("userId", user.ID), zap.String("branchId", defaultBranchID), zap.String("companyId", company.ID))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to set up branch access. Please contact support."})
+		return
 	}
 
 	// Assign admin role to the first user
@@ -218,11 +238,12 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	}
 
 	// Get user's branches (already assigned to default branch)
-	branchRepo = repository.NewBranchRepository(h.db)
 	branches, err := branchRepo.GetUserBranches(user.ID, company.ID)
 	if err != nil {
-		logger.Error("Failed to get user branches", logger.ErrorField(err))
+		logger.Error("Failed to get user branches", logger.ErrorField(err), zap.Int("userId", user.ID), zap.String("companyId", company.ID))
 		branches = []*models.Branch{}
+	} else {
+		logger.Info("Retrieved user branches", zap.Int("userId", user.ID), zap.Int("branchCount", len(branches)), zap.String("companyId", company.ID))
 	}
 
 	// Get default branch

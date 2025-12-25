@@ -179,6 +179,10 @@ func (r *BranchRepository) CreateBranch(branch *models.Branch) error {
 	query := `
 		INSERT INTO branches (id, name, company_id, address, phone, status, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+		ON CONFLICT (id) DO UPDATE SET
+			name = EXCLUDED.name,
+			status = EXCLUDED.status,
+			updated_at = NOW()
 	`
 
 	_, err := r.db.Exec(
