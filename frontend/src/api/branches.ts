@@ -2,8 +2,10 @@ import axios from 'axios';
 import { Branch } from '@/types';
 
 // Use same env variable as client.ts for consistency
+// VITE_API_URL should be like 'http://localhost:8080/api' or 'https://api.example.com/api'
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
-const API_BASE_URL = API_URL.endsWith('/api') ? API_URL.replace('/api', '') : API_URL;
+// Extract base URL - remove trailing /api if present
+const API_BASE_URL = API_URL.replace(/\/api\/?$/, '') || 'http://localhost:8080';
 
 // Create axios instance with auth token
 const getAuthHeaders = () => {
@@ -34,7 +36,9 @@ const api = axios.create({
 // Add interceptor to include branch ID in requests
 api.interceptors.request.use((config) => {
   // Always ensure headers object exists
-  config.headers = config.headers || {};
+  if (!config.headers) {
+    config.headers = {} as any;
+  }
   
   // Always get fresh token from localStorage
   const token = localStorage.getItem('token');

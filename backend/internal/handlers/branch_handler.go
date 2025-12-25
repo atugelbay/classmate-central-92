@@ -107,6 +107,24 @@ func (h *BranchHandler) CreateBranch(c *gin.Context) {
 		return
 	}
 
+	// Automatically assign the creator to the new branch if they don't have any branches yet
+	userID, _ := c.Get("user_id")
+	userBranches, err := h.branchRepo.GetUserBranches(userID.(int), companyID.(string))
+	if err == nil && len(userBranches) == 0 {
+		// User has no branches, assign them to this new branch
+		roleID, _ := c.Get("role_id")
+		var roleIDPtr *string
+		if roleIDStr, ok := roleID.(string); ok {
+			roleIDPtr = &roleIDStr
+		}
+		if assignErr := h.branchRepo.AssignUserToBranch(userID.(int), branch.ID, roleIDPtr, companyID.(string), nil); assignErr != nil {
+			logger.Warn("Failed to auto-assign user to new branch", logger.ErrorField(assignErr), zap.Int("userId", userID.(int)), zap.String("branchId", branch.ID))
+			// Don't fail branch creation if assignment fails
+		} else {
+			logger.Info("Auto-assigned user to new branch", zap.Int("userId", userID.(int)), zap.String("branchId", branch.ID))
+		}
+	}
+
 	c.JSON(http.StatusCreated, branch)
 }
 
