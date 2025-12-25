@@ -76,13 +76,22 @@ func (r *BranchRepository) GetUserBranches(userID int, companyID string) ([]*mod
 	var adminCount int
 	err := r.db.QueryRow(query, userID, companyID).Scan(&adminCount)
 	if err != nil && err != sql.ErrNoRows {
-		logger.Error("Failed to check admin role", logger.ErrorField(err))
+		logger.Error("Failed to check admin role", logger.ErrorField(err), zap.Int("userId", userID), zap.String("companyId", companyID))
 		return nil, err
 	}
 
+	logger.Info("Checking user branches", zap.Int("userId", userID), zap.String("companyId", companyID), zap.Int("adminCount", adminCount))
+
 	if adminCount > 0 {
 		// User is admin, return all branches
-		return r.GetBranchesByCompany(companyID)
+		logger.Info("User is admin, returning all company branches", zap.Int("userId", userID), zap.String("companyId", companyID))
+		branches, err := r.GetBranchesByCompany(companyID)
+		if err != nil {
+			logger.Error("Failed to get company branches", logger.ErrorField(err), zap.String("companyId", companyID))
+			return nil, err
+		}
+		logger.Info("Returned company branches for admin", zap.Int("userId", userID), zap.Int("branchCount", len(branches)))
+		return branches, nil
 	}
 
 	// Otherwise, return only branches the user is assigned to
@@ -94,9 +103,10 @@ func (r *BranchRepository) GetUserBranches(userID int, companyID string) ([]*mod
 		ORDER BY b.name
 	`
 
+	logger.Info("User is not admin, querying user_branches", zap.Int("userId", userID), zap.String("companyId", companyID))
 	rows, err := r.db.Query(query, userID, companyID)
 	if err != nil {
-		logger.Error("Failed to query user branches", logger.ErrorField(err))
+		logger.Error("Failed to query user branches", logger.ErrorField(err), zap.Int("userId", userID), zap.String("companyId", companyID))
 		return nil, err
 	}
 	defer rows.Close()
@@ -129,6 +139,20 @@ func (r *BranchRepository) GetUserBranches(userID int, companyID string) ([]*mod
 		branches = append(branches, &branch)
 	}
 
+	logger.Info("Returned user branches", zap.Int("userId", userID), zap.String("companyId", companyID), zap.Int("branchCount", len(branches)))
+	
+	// Fallback: if no branches found but user should have access, try to get default branch
+	if len(branches) == 0 {
+		logger.Warn("No branches found for user, checking for default branch", zap.Int("userId", userID), zap.String("companyId", companyID))
+		defaultBranchID := companyID + "_default_branch"
+		defaultBranch, err := r.GetBranchByID(defaultBranchID, companyID)
+		if err == nil && defaultBranch != nil {
+			logger.Info("Found default branch as fallback", zap.Int("userId", userID), zap.String("branchId", defaultBranchID))
+			return []*models.Branch{defaultBranch}, nil
+		}
+		logger.Warn("Default branch not found as fallback", zap.Int("userId", userID), zap.String("branchId", defaultBranchID))
+	}
+	
 	return branches, nil
 }
 

@@ -220,9 +220,13 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	if adminRole != nil {
 		err = h.userRepo.AssignRoleToUser(user.ID, adminRoleID, company.ID, nil)
 		if err != nil {
+			logger.Error("Failed to assign admin role to user", logger.ErrorField(err), zap.Int("userId", user.ID), zap.String("roleId", adminRoleID), zap.String("companyId", company.ID))
 			// Log error but don't fail registration
-			_ = err
+		} else {
+			logger.Info("Admin role assigned to user", zap.Int("userId", user.ID), zap.String("roleId", adminRoleID), zap.String("companyId", company.ID))
 		}
+	} else {
+		logger.Warn("Admin role not found, cannot assign to user", zap.Int("userId", user.ID), zap.String("companyId", company.ID))
 	}
 
 	// Load user with roles and permissions
