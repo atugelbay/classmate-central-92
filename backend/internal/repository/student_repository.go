@@ -103,6 +103,47 @@ func (r *StudentRepository) GetAll(companyID string, branchID string) ([]*models
 		args = []interface{}{companyID, branchID}
 	}
 
+	return r.getAllWithQuery(query, args)
+}
+
+// GetAllByBranches gets students from specified accessible branches (for branch isolation)
+func (r *StudentRepository) GetAllByBranches(companyID string, branchIDs []string) ([]*models.Student, error) {
+	var query string
+	var args []interface{}
+
+	// Check if branchIDs contains companyID (fallback mode)
+	hasFallback := false
+	for _, bid := range branchIDs {
+		if bid == companyID {
+			hasFallback = true
+			break
+		}
+	}
+
+	if hasFallback && len(branchIDs) == 1 {
+		// Fallback mode: don't filter by branch_id
+		query = `SELECT id, name, age, email, phone, status, avatar, created_at FROM students WHERE company_id = $1 ORDER BY name`
+		args = []interface{}{companyID}
+	} else {
+		// Filter by accessible branches only
+		placeholders := make([]string, len(branchIDs))
+		for i := range branchIDs {
+			placeholders[i] = fmt.Sprintf("$%d", i+2)
+		}
+		query = fmt.Sprintf(`SELECT id, name, age, email, phone, status, avatar, created_at FROM students WHERE company_id = $1 AND branch_id IN (%s) ORDER BY name`, strings.Join(placeholders, ","))
+		args = make([]interface{}, len(branchIDs)+1)
+		args[0] = companyID
+		for i, bid := range branchIDs {
+			args[i+1] = bid
+		}
+	}
+
+	return r.getAllWithQuery(query, args)
+}
+
+// getAllWithQuery is a helper to execute query and scan results
+func (r *StudentRepository) getAllWithQuery(query string, args []interface{}) ([]*models.Student, error) {
+
 	rows, err := r.db.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("error getting students: %w", err)
@@ -176,108 +217,150 @@ func (r *StudentRepository) GetAll(companyID string, branchID string) ([]*models
 
 // GetPaged returns students with optional search and pagination
 func (r *StudentRepository) GetPaged(companyID, branchID, search string, page, pageSize int) ([]*models.Student, int, error) {
-    offset := (page - 1) * pageSize
-    // Base where - use branch_id only if it's different from company_id
-    // If branchID is empty string, get data from all branches
-    var where string
-    var args []interface{}
-    if branchID == "" {
-        where = "WHERE company_id = $1"
-        args = []interface{}{companyID}
-    } else if branchID == companyID {
-        where = "WHERE company_id = $1"
-        args = []interface{}{companyID}
-    } else {
-        where = "WHERE company_id = $1 AND branch_id = $2"
-        args = []interface{}{companyID, branchID}
-    }
-    if search != "" {
-        // Prepare LIKE for name/email and normalized digits-only for phone
-        like := "%" + strings.ToLower(search) + "%"
-        normalized := strings.NewReplacer(" ", "", "-", "", "(", "", ")", "").Replace(search)
-        where += " AND (LOWER(name) LIKE $3 OR LOWER(email) LIKE $3 OR REPLACE(REPLACE(REPLACE(REPLACE(phone,' ',''),'-',''),'(', ''),')','') LIKE $4)"
-        args = append(args, like, "%"+normalized+"%")
-    }
+	return r.GetPagedByBranches(companyID, []string{branchID}, search, page, pageSize)
+}
 
-    // Total count
-    totalQuery := "SELECT COUNT(*) FROM students " + where
-    var total int
-    if err := r.db.QueryRow(totalQuery, args...).Scan(&total); err != nil {
-        return nil, 0, fmt.Errorf("error counting students: %w", err)
-    }
+// GetPagedByBranches returns students from accessible branches with pagination
+func (r *StudentRepository) GetPagedByBranches(companyID string, branchIDs []string, search string, page, pageSize int) ([]*models.Student, int, error) {
+	offset := (page - 1) * pageSize
+	// Base where - filter by accessible branches
+	var where string
+	var args []interface{}
 
-    // Paged select
-    selectQuery := "SELECT id, name, age, email, phone, status, avatar, created_at FROM students " + where + " ORDER BY name LIMIT $" + fmt.Sprint(len(args)+1) + " OFFSET $" + fmt.Sprint(len(args)+2)
-    args = append(args, pageSize, offset)
+	// Check if branchIDs contains companyID (fallback mode)
+	hasFallback := false
+	for _, bid := range branchIDs {
+		if bid == companyID {
+			hasFallback = true
+			break
+		}
+	}
 
-    rows, err := r.db.Query(selectQuery, args...)
-    if err != nil {
-        return nil, 0, fmt.Errorf("error getting students: %w", err)
-    }
-    defer rows.Close()
+	if hasFallback && len(branchIDs) == 1 {
+		// Fallback mode: don't filter by branch_id
+		where = "WHERE company_id = $1"
+		args = []interface{}{companyID}
+	} else {
+		// Filter by accessible branches only
+		placeholders := make([]string, len(branchIDs))
+		for i := range branchIDs {
+			placeholders[i] = fmt.Sprintf("$%d", i+2)
+		}
+		where = fmt.Sprintf("WHERE company_id = $1 AND branch_id IN (%s)", strings.Join(placeholders, ","))
+		args = make([]interface{}, len(branchIDs)+1)
+		args[0] = companyID
+		for i, bid := range branchIDs {
+			args[i+1] = bid
+		}
+	}
+	if search != "" {
+		// Prepare LIKE for name/email and normalized digits-only for phone
+		like := "%" + strings.ToLower(search) + "%"
+		normalized := strings.NewReplacer(" ", "", "-", "", "(", "", ")", "").Replace(search)
+		where += " AND (LOWER(name) LIKE $3 OR LOWER(email) LIKE $3 OR REPLACE(REPLACE(REPLACE(REPLACE(phone,' ',''),'-',''),'(', ''),')','') LIKE $4)"
+		args = append(args, like, "%"+normalized+"%")
+	}
 
-    students := []*models.Student{}
-    for rows.Next() {
-        student := &models.Student{}
-        var avatar sql.NullString
-        var age sql.NullInt32
-        var status sql.NullString
-        var createdAt sql.NullString
+	// Total count
+	totalQuery := "SELECT COUNT(*) FROM students " + where
+	var total int
+	if err := r.db.QueryRow(totalQuery, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("error counting students: %w", err)
+	}
 
-        if err := rows.Scan(&student.ID, &student.Name, &age, &student.Email, &student.Phone, &status, &avatar, &createdAt); err != nil {
-            return nil, 0, fmt.Errorf("error scanning student: %w", err)
-        }
-        if age.Valid {
-            student.Age = int(age.Int32)
-        }
-        if status.Valid {
-            student.Status = status.String
-        } else {
-            student.Status = "active"
-        }
-        if createdAt.Valid {
-            student.CreatedAt = createdAt.String
-        }
-        if avatar.Valid {
-            student.Avatar = avatar.String
-        }
-        student.Subjects = []string{}
-        student.GroupIds = []string{}
-        students = append(students, student)
-    }
+	// Paged select
+	selectQuery := "SELECT id, name, age, email, phone, status, avatar, created_at FROM students " + where + " ORDER BY name LIMIT $" + fmt.Sprint(len(args)+1) + " OFFSET $" + fmt.Sprint(len(args)+2)
+	args = append(args, pageSize, offset)
 
-    return students, total, nil
+	rows, err := r.db.Query(selectQuery, args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("error getting students: %w", err)
+	}
+	defer rows.Close()
+
+	students := []*models.Student{}
+	for rows.Next() {
+		student := &models.Student{}
+		var avatar sql.NullString
+		var age sql.NullInt32
+		var status sql.NullString
+		var createdAt sql.NullString
+
+		if err := rows.Scan(&student.ID, &student.Name, &age, &student.Email, &student.Phone, &status, &avatar, &createdAt); err != nil {
+			return nil, 0, fmt.Errorf("error scanning student: %w", err)
+		}
+		if age.Valid {
+			student.Age = int(age.Int32)
+		}
+		if status.Valid {
+			student.Status = status.String
+		} else {
+			student.Status = "active"
+		}
+		if createdAt.Valid {
+			student.CreatedAt = createdAt.String
+		}
+		if avatar.Valid {
+			student.Avatar = avatar.String
+		}
+		student.Subjects = []string{}
+		student.GroupIds = []string{}
+		students = append(students, student)
+	}
+
+	return students, total, nil
 }
 
 // GetCounts returns global counts of students by status (not affected by search)
 func (r *StudentRepository) GetCounts(companyID, branchID string) (active int, inactive int, total int, err error) {
-    // If branchID is empty string, get data from all branches
-    // If branchID equals companyID (fallback mode), filter only by company_id
-    var whereClause string
-    var args []interface{}
-    if branchID == "" {
-        whereClause = "WHERE company_id = $1"
-        args = []interface{}{companyID}
-    } else if branchID == companyID {
-        whereClause = "WHERE company_id = $1"
-        args = []interface{}{companyID}
-    } else {
-        whereClause = "WHERE company_id = $1 AND branch_id = $2"
-        args = []interface{}{companyID, branchID}
-    }
-    
-    // Total
-    if err = r.db.QueryRow(`SELECT COUNT(*) FROM students `+whereClause, args...).Scan(&total); err != nil {
-        return
-    }
-    // Active (has upcoming lessons OR status active?) — per request, use status column
-    if err = r.db.QueryRow(`SELECT COUNT(*) FROM students `+whereClause+` AND status = 'active'`, args...).Scan(&active); err != nil {
-        return
-    }
-    if err = r.db.QueryRow(`SELECT COUNT(*) FROM students `+whereClause+` AND status != 'active'`, args...).Scan(&inactive); err != nil {
-        return
-    }
-    return
+	return r.GetCountsByBranches(companyID, []string{branchID})
+}
+
+// GetCountsByBranches gets counts from accessible branches
+func (r *StudentRepository) GetCountsByBranches(companyID string, branchIDs []string) (active int, inactive int, total int, err error) {
+	// Filter by accessible branches
+	var whereClause string
+	var args []interface{}
+
+	// Check if branchIDs contains companyID (fallback mode)
+	hasFallback := false
+	for _, bid := range branchIDs {
+		if bid == companyID {
+			hasFallback = true
+			break
+		}
+	}
+
+	if hasFallback && len(branchIDs) == 1 {
+		// Fallback mode: don't filter by branch_id
+		whereClause = "WHERE company_id = $1"
+		args = []interface{}{companyID}
+	} else {
+		// Filter by accessible branches only
+		placeholders := make([]string, len(branchIDs))
+		for i := range branchIDs {
+			placeholders[i] = fmt.Sprintf("$%d", i+2)
+		}
+		whereClause = fmt.Sprintf("WHERE company_id = $1 AND branch_id IN (%s)", strings.Join(placeholders, ","))
+		args = make([]interface{}, len(branchIDs)+1)
+		args[0] = companyID
+		for i, bid := range branchIDs {
+			args[i+1] = bid
+		}
+	}
+
+	// Total
+	if err = r.db.QueryRow(`SELECT COUNT(*) FROM students `+whereClause, args...).Scan(&total); err != nil {
+		return
+	}
+	// Active (has upcoming lessons OR status active?) — per request, use status column
+	if err = r.db.QueryRow(`SELECT COUNT(*) FROM students `+whereClause+` AND status = 'active'`, args...).Scan(&active); err != nil {
+		return
+	}
+	if err = r.db.QueryRow(`SELECT COUNT(*) FROM students `+whereClause+` AND status != 'active'`, args...).Scan(&inactive); err != nil {
+		return
+	}
+	return
 }
 
 func (r *StudentRepository) GetByID(id string, companyID string) (*models.Student, error) {

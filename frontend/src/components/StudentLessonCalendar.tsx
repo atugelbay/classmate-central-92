@@ -201,9 +201,9 @@ export function StudentLessonCalendar({
     if (!status) {
       return {
         icon: User,
-        bgColor: "bg-gray-50",
-        iconColor: "text-gray-400",
-        borderColor: "border-gray-200",
+        bgColor: "bg-gray-50 dark:bg-gray-900/30",
+        iconColor: "text-gray-400 dark:text-gray-500",
+        borderColor: "border-gray-200 dark:border-gray-700",
         textDecoration: "",
         opacity: "opacity-100",
       };
@@ -219,49 +219,49 @@ export function StudentLessonCalendar({
     }> = {
       attended: {
         icon: CheckCircle2,
-        bgColor: "bg-green-100",
-        iconColor: "text-green-700",
-        borderColor: "border-green-400",
+        bgColor: "bg-green-100 dark:bg-green-950/30",
+        iconColor: "text-green-700 dark:text-green-400",
+        borderColor: "border-green-400 dark:border-green-600",
         textDecoration: "",
         opacity: "opacity-100",
       },
       missed_excused: {
         icon: Clock,
-        bgColor: "bg-yellow-100",
-        iconColor: "text-yellow-700",
-        borderColor: "border-yellow-400",
+        bgColor: "bg-yellow-100 dark:bg-yellow-950/30",
+        iconColor: "text-yellow-700 dark:text-yellow-400",
+        borderColor: "border-yellow-400 dark:border-yellow-600",
         textDecoration: "line-through",
         opacity: "opacity-90",
       },
       missed_unexcused: {
         icon: XCircle,
-        bgColor: "bg-red-100",
-        iconColor: "text-red-700",
-        borderColor: "border-red-400",
+        bgColor: "bg-red-100 dark:bg-red-950/30",
+        iconColor: "text-red-700 dark:text-red-400",
+        borderColor: "border-red-400 dark:border-red-600",
         textDecoration: "line-through",
         opacity: "opacity-90",
       },
       frozen: {
         icon: Snowflake,
-        bgColor: "bg-blue-100",
-        iconColor: "text-blue-700",
-        borderColor: "border-blue-400",
+        bgColor: "bg-blue-100 dark:bg-blue-950/30",
+        iconColor: "text-blue-700 dark:text-blue-400",
+        borderColor: "border-blue-400 dark:border-blue-600",
         textDecoration: "",
         opacity: "opacity-80",
       },
       cancelled: {
         icon: Ban,
-        bgColor: "bg-gray-100",
-        iconColor: "text-gray-500",
-        borderColor: "border-gray-300",
+        bgColor: "bg-gray-100 dark:bg-gray-900/30",
+        iconColor: "text-gray-500 dark:text-gray-400",
+        borderColor: "border-gray-300 dark:border-gray-700",
         textDecoration: "line-through",
         opacity: "opacity-60",
       },
       scheduled: {
         icon: GripVertical,
-        bgColor: "bg-green-50",
-        iconColor: "text-green-600",
-        borderColor: "border-green-300",
+        bgColor: "bg-green-50 dark:bg-green-950/20",
+        iconColor: "text-green-600 dark:text-green-400",
+        borderColor: "border-green-300 dark:border-green-700",
         textDecoration: "",
         opacity: "opacity-100",
       },
@@ -281,26 +281,26 @@ export function StudentLessonCalendar({
       </CardHeader>
       <CardContent>
         {/* Legend */}
-        <div className="flex flex-wrap gap-2 mb-4 text-xs">
+        <div className="flex flex-wrap gap-2 mb-4 text-xs text-foreground">
           <div className="flex items-center gap-1">
-            <CheckCircle2 className="h-3 w-3 text-green-600" />
-            <span>Посещен</span>
+            <CheckCircle2 className="h-3 w-3 text-green-600 dark:text-green-400" />
+            <span className="text-foreground">Посещен</span>
           </div>
           <div className="flex items-center gap-1">
-            <XCircle className="h-3 w-3 text-orange-600" />
-            <span>Пропущен</span>
+            <XCircle className="h-3 w-3 text-orange-600 dark:text-orange-400" />
+            <span className="text-foreground">Пропущен</span>
           </div>
           <div className="flex items-center gap-1">
-            <Clock className="h-3 w-3 text-orange-600" />
-            <span>Пропущен (ув.)</span>
+            <Clock className="h-3 w-3 text-orange-600 dark:text-orange-400" />
+            <span className="text-foreground">Пропущен (ув.)</span>
           </div>
           <div className="flex items-center gap-1">
-            <Snowflake className="h-3 w-3 text-gray-400" />
-            <span>Заморожен</span>
+            <Snowflake className="h-3 w-3 text-gray-400 dark:text-gray-300" />
+            <span className="text-foreground">Заморожен</span>
           </div>
           <div className="flex items-center gap-1">
-            <GripVertical className="h-3 w-3 text-green-600" />
-            <span>Запланирован</span>
+            <GripVertical className="h-3 w-3 text-green-600 dark:text-green-400" />
+            <span className="text-foreground">Запланирован</span>
           </div>
         </div>
 
@@ -341,19 +341,23 @@ export function StudentLessonCalendar({
                         <div className={cn(
                           "text-[10px] font-medium",
                           statusConfig.textDecoration,
-                          item.status === "cancelled" ? "text-gray-500" : "text-gray-700"
+                          item.status === "cancelled" 
+                            ? "text-gray-500 dark:text-gray-400" 
+                            : "text-gray-700 dark:text-gray-200"
                         )}>
                           {dayOfWeek}
                         </div>
                         <div className={cn(
                           "text-xs font-semibold",
                           statusConfig.textDecoration,
-                          item.status === "cancelled" ? "text-gray-500" : "text-gray-900"
+                          item.status === "cancelled" 
+                            ? "text-gray-500 dark:text-gray-400" 
+                            : "text-gray-900 dark:text-gray-100"
                         )}>
                           {dayOfMonth}
                         </div>
                         {isToday && (
-                          <div className="absolute top-0 right-0 flex items-center gap-0.5 text-[8px] text-green-600 font-semibold">
+                          <div className="absolute top-0 right-0 flex items-center gap-0.5 text-[8px] text-green-600 dark:text-green-400 font-semibold">
                             <Flag className="h-2 w-2" />
                             <span>сейчас</span>
                           </div>

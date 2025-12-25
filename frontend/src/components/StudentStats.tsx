@@ -63,43 +63,43 @@ export function StudentStats({ stats, className }: StudentStatsProps) {
 export function AttendanceStat({ attended, total }: { attended: number; total: number }) {
   const rate = total > 0 ? ((attended / total) * 100).toFixed(0) : 0;
   return {
-    icon: <Calendar className="h-5 w-5 text-green-600" />,
+    icon: <Calendar className="h-5 w-5 text-green-600 dark:text-green-400" />,
     label: "Посещаемость",
     value: `${rate}%`,
     subValue: `${attended} из ${total}`,
     trend: Number(rate) >= 80 ? ("up" as const) : ("neutral" as const),
-    color: "bg-green-50",
+    color: "bg-green-50 dark:bg-green-950/30",
   };
 }
 
 export function BalanceStat({ balance, currency = "₸" }: { balance: number; currency?: string }) {
   return {
-    icon: <DollarSign className="h-5 w-5 text-purple-600" />,
+    icon: <DollarSign className="h-5 w-5 text-purple-600 dark:text-purple-400" />,
     label: "Баланс",
     value: `${balance.toLocaleString()} ${currency}`,
     trend: balance > 0 ? ("up" as const) : ("down" as const),
-    color: "bg-purple-50",
+    color: "bg-purple-50 dark:bg-purple-950/30",
   };
 }
 
 export function LessonsStat({ remaining, total }: { remaining: number; total: number }) {
   return {
-    icon: <BookOpen className="h-5 w-5 text-blue-600" />,
+    icon: <BookOpen className="h-5 w-5 text-blue-600 dark:text-blue-400" />,
     label: "Уроки",
     value: remaining,
     subValue: `из ${total}`,
     trend: remaining > 0 ? ("up" as const) : ("down" as const),
-    color: "bg-blue-50",
+    color: "bg-blue-50 dark:bg-blue-950/30",
   };
 }
 
 export function NextLessonStat({ date }: { date?: string }) {
   return {
-    icon: <Clock className="h-5 w-5 text-orange-600" />,
+    icon: <Clock className="h-5 w-5 text-orange-600 dark:text-orange-400" />,
     label: "Следующий урок",
     value: date || "Нет",
     subValue: date ? "запланирован" : "уроков",
-    color: "bg-orange-50",
+    color: "bg-orange-50 dark:bg-orange-950/30",
   };
 }
 

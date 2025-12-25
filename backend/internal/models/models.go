@@ -10,9 +10,9 @@ type User struct {
 	Name                   string    `json:"name" db:"name"`
 	CompanyID              string    `json:"companyId" db:"company_id"`
 	RoleID                 *string   `json:"roleId,omitempty" db:"role_id"`
-	Roles                  []*Role   `json:"roles,omitempty"`       // Populated via JOIN
-	Permissions            []string  `json:"permissions,omitempty"` // Populated from roles
-	Branches               []*Branch `json:"branches,omitempty"`    // User's accessible branches
+	Roles                  []*Role   `json:"roles,omitempty"`           // Populated via JOIN
+	Permissions            []string  `json:"permissions,omitempty"`     // Populated from roles
+	Branches               []*Branch `json:"branches,omitempty"`        // User's accessible branches
 	CurrentBranchID        *string   `json:"currentBranchId,omitempty"` // Currently active branch
 	IsEmailVerified        bool      `json:"isEmailVerified" db:"is_email_verified"`
 	EmailVerificationToken *string   `json:"-" db:"email_verification_token"`
@@ -146,9 +146,10 @@ type RegisterRequest struct {
 
 // InviteUserRequest represents admin-driven user invitation
 type InviteUserRequest struct {
-	Name   string `json:"name" binding:"required"`
-	Email  string `json:"email" binding:"required,email"`
-	RoleID string `json:"roleId" binding:"required"`
+	Name      string   `json:"name" binding:"required"`
+	Email     string   `json:"email" binding:"required,email"`
+	RoleID    string   `json:"roleId" binding:"required"`
+	BranchIDs []string `json:"branchIds" binding:"required,min=1"` // At least one branch must be selected
 }
 
 // AcceptInviteRequest is used when invited user sets their password

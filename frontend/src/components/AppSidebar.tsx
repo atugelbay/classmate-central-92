@@ -30,13 +30,23 @@ import {
 import { useSettings } from "@/hooks/useData";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
+import { LucideIcon } from "lucide-react";
 
-const navItems = [
+type NavItem = {
+  title: string;
+  url: string;
+  icon: LucideIcon;
+  permission?: string;
+  roles?: string[]; // Optional role restriction
+};
+
+const navItems: NavItem[] = [
   {
     title: "Dashboard",
     url: "/",
     icon: LayoutDashboard,
     permission: "dashboard.view",
+    roles: ["admin", "manager"], // Only admin and manager can access Dashboard
   },
   {
     title: "Лиды",
@@ -158,6 +168,13 @@ export function AppSidebar() {
             <SidebarMenu>
               {navItems
                 .filter((item) => {
+                  // Check role restriction first (if specified)
+                  if (item.roles && user?.roles) {
+                    const userRoleNames = user.roles.map(r => r.name.toLowerCase());
+                    const hasRequiredRole = item.roles.some(role => userRoleNames.includes(role.toLowerCase()));
+                    if (!hasRequiredRole) return false;
+                  }
+                  // Then check permission
                   if (!item.permission) return true;
                   if (!user || !user.permissions || user.permissions.length === 0) return false;
                   return hasPermission(item.permission);

@@ -138,7 +138,14 @@ const App = () => (
                   <ProtectedRoute>
                     <Layout>
                       <Routes>
-                        <Route path="/" element={<Dashboard />} />
+                        <Route
+                          path="/"
+                          element={
+                            <RequirePermission permission="dashboard.view">
+                              <Dashboard />
+                            </RequirePermission>
+                          }
+                        />
                         <Route
                           path="/leads"
                           element={

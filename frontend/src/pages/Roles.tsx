@@ -10,6 +10,7 @@ import {
   useInviteUser,
   useUsers,
 } from "@/hooks/useData";
+import { useBranches } from "@/hooks/useBranches";
 import { Role, Permission, CreateRoleRequest, UpdateRoleRequest } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,6 +71,7 @@ export default function Roles() {
   const { data: roles = [], isLoading } = useRoles();
   const { data: permissions = [] } = usePermissions();
   const { data: users = [], isLoading: usersLoading } = useUsers();
+  const { data: branches = [] } = useBranches();
   const createRole = useCreateRole();
   const updateRole = useUpdateRole();
   const deleteRole = useDeleteRole();
@@ -81,6 +83,7 @@ export default function Roles() {
   const [inviteRoleId, setInviteRoleId] = useState<string>("");
   const [inviteEmail, setInviteEmail] = useState<string>("");
   const [inviteName, setInviteName] = useState<string>("");
+  const [inviteBranchIds, setInviteBranchIds] = useState<string[]>([]);
 
   const canManage = hasPermission("roles.manage");
 
@@ -259,15 +262,21 @@ export default function Roles() {
                   toast.error("Выберите роль");
                   return;
                 }
+                if (inviteBranchIds.length === 0) {
+                  toast.error("Выберите хотя бы один филиал");
+                  return;
+                }
                 try {
                   await inviteUser.mutateAsync({
                     email: inviteEmail,
                     name: inviteName,
                     roleId: inviteRoleId,
+                    branchIds: inviteBranchIds,
                   });
                   setInviteEmail("");
                   setInviteName("");
                   setInviteRoleId("");
+                  setInviteBranchIds([]);
                 } catch (err) {
                   // handled in hook
                 }
@@ -306,6 +315,36 @@ export default function Roles() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="md:col-span-3 space-y-2">
+                <Label>Доступ к филиалам *</Label>
+                <div className="grid grid-cols-2 gap-2 border rounded-lg p-4 max-h-48 overflow-y-auto">
+                  {branches.length === 0 ? (
+                    <p className="text-sm text-muted-foreground col-span-2">Нет доступных филиалов</p>
+                  ) : (
+                    branches.map((branch) => (
+                      <div key={branch.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`branch-${branch.id}`}
+                          checked={inviteBranchIds.includes(branch.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setInviteBranchIds([...inviteBranchIds, branch.id]);
+                            } else {
+                              setInviteBranchIds(inviteBranchIds.filter(id => id !== branch.id));
+                            }
+                          }}
+                        />
+                        <Label
+                          htmlFor={`branch-${branch.id}`}
+                          className="text-sm font-normal cursor-pointer"
+                        >
+                          {branch.name}
+                        </Label>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
               <div className="md:col-span-3 flex justify-end">
                 <Button type="submit" disabled={inviteUser.isPending}>

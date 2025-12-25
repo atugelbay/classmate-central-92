@@ -12,14 +12,12 @@ import {
   useLessons,
   useTeachers,
   useStudentsPaged,
-  useAllBalances,
-  useAllSubscriptions,
 } from "@/hooks/useData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Mail, Phone, Trash2, Edit, Loader2, AlertCircle, Clock, X, FileText, FileSpreadsheet } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Search, Mail, Phone, Trash2, Edit, Loader2, AlertCircle, Clock, X, FileText, FileSpreadsheet, ArrowUpDown } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -97,7 +95,6 @@ const StudentsGrid = React.memo(function StudentsGrid({
   lessons,
   teachers,
   isFetching,
-  activeMap,
   onEdit,
   onDelete,
   onNavigate,
@@ -107,18 +104,10 @@ const StudentsGrid = React.memo(function StudentsGrid({
   lessons: ReturnType<typeof useLessons>["data"];
   teachers: ReturnType<typeof useTeachers>["data"];
   isFetching: boolean;
-  activeMap: Record<string, boolean>;
   onEdit: (s: Student) => void;
   onDelete: (id: string) => void;
   onNavigate: (id: string) => void;
 }) {
-  const getIsActiveBySchedule = (student: Student) => {
-    const studentLessons = (lessons || []).filter((l) =>
-      l.studentIds?.includes(student.id) ||
-      (l.groupId && student.groupIds?.includes(l.groupId))
-    );
-    return studentLessons.some((l) => moment(l.start).isAfter(moment()));
-  };
 
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -141,8 +130,6 @@ const StudentsGrid = React.memo(function StudentsGrid({
           .sort((a, b) => moment(a.start).diff(moment(b.start)));
         const nextLesson = upcomingLessons[0];
         const nextLessonGroup = nextLesson?.groupId ? (groups || []).find((g) => g.id === nextLesson.groupId) : null;
-        const hasUpcomingLessons = getIsActiveBySchedule(student);
-        const isActive = activeMap[student.id] ?? hasUpcomingLessons;
 
         return (
           <Card 
@@ -163,26 +150,6 @@ const StudentsGrid = React.memo(function StudentsGrid({
                     </p>
                   </div>
                 </div>
-                {(() => {
-                  // If status is manually set to inactive/frozen/graduated, use it
-                  // Otherwise use computed status (getIsActive) for consistency with filtering
-                  const displayStatus = student.status === "inactive" || student.status === "frozen" || student.status === "graduated"
-                    ? student.status
-                    : (isActive ? "active" : "inactive");
-                  
-                  const statusLabels: Record<string, string> = {
-                    active: "Активный",
-                    inactive: "Неактивный",
-                    frozen: "Заморожен",
-                    graduated: "Закончил",
-                  };
-                  
-                  return (
-                    <Badge variant={displayStatus === "active" ? "default" : "secondary"}>
-                      {statusLabels[displayStatus] || "Неактивный"}
-                    </Badge>
-                  );
-                })()}
               </div>
             </CardHeader>
             <CardContent>
@@ -195,81 +162,99 @@ const StudentsGrid = React.memo(function StudentsGrid({
                   <Phone className="h-4 w-4" />
                   {student.phone}
                 </div>
-                {(() => {
-                  // build schedule string quickly from lessons
-                  const sl = (lessons || []).filter((l) =>
-                    (l.studentIds?.includes(student.id) || (l.groupId && student.groupIds?.includes(l.groupId))) &&
-                    l.status !== "cancelled"
-                  );
-                  if (sl.length === 0) return null;
-                  const weekdayNames = ["ВС","ПН","ВТ","СР","ЧТ","ПТ","СБ"];
-                  const map = new Map<number, string>();
-                  sl.forEach((l) => {
-                    const d = moment(l.start);
-                    map.set(d.day(), `${d.format("HH:mm")} - ${moment(l.end).format("HH:mm")}`);
-                  });
-                  const keys = Array.from(map.keys()).sort((a,b)=> (a===0?7:a)-(b===0?7:b));
-                  const label = keys.map(k=>weekdayNames[k===0?0:k]).join(" ");
-                  const time = map.get(keys[0]);
-                  return (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Clock className="h-4 w-4" />
-                      {label} {time}
-                    </div>
-                  );
-                })()}
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Clock className="h-4 w-4" />
+                  {(() => {
+                    // build schedule string quickly from lessons
+                    const sl = (lessons || []).filter((l) =>
+                      (l.studentIds?.includes(student.id) || (l.groupId && student.groupIds?.includes(l.groupId))) &&
+                      l.status !== "cancelled"
+                    );
+                    if (sl.length === 0) {
+                      return <span>Отсутствует</span>;
+                    }
+                    const weekdayNames = ["ВС","ПН","ВТ","СР","ЧТ","ПТ","СБ"];
+                    const map = new Map<number, string>();
+                    sl.forEach((l) => {
+                      const d = moment(l.start);
+                      map.set(d.day(), `${d.format("HH:mm")} - ${moment(l.end).format("HH:mm")}`);
+                    });
+                    const keys = Array.from(map.keys()).sort((a,b)=> (a===0?7:a)-(b===0?7:b));
+                    const label = keys.map(k=>weekdayNames[k===0?0:k]).join(" ");
+                    const time = map.get(keys[0]);
+                    return <span>{label} {time}</span>;
+                  })()}
+                </div>
 
-                {/* Next Lesson Info */}
-                {nextLesson && (
-                  <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Clock className="h-4 w-4 text-green-700" />
-                      <p className="text-sm font-medium text-green-900">Ближайшее занятие:</p>
+                {/* Next Lesson Info and Actions */}
+                <div className="flex flex-col gap-3">
+                  {nextLesson ? (
+                    <div className="p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Clock className="h-4 w-4 text-green-700 dark:text-green-400" />
+                        <p className="text-sm font-medium text-green-900 dark:text-green-100">Ближайшее занятие:</p>
+                      </div>
+                      <p className="text-sm text-green-800 dark:text-green-200">
+                        {moment(nextLesson.start).locale("ru").format("DD MMMM, dddd")} в {moment(nextLesson.start).locale("ru").format("HH:mm")}
+                      </p>
+                      {nextLesson?.teacherName && (
+                        <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+                          Преподаватель: {nextLesson.teacherName}
+                        </p>
+                      )}
+                      {nextLessonGroup && (
+                        <p className="text-xs text-green-700 dark:text-green-300">
+                          Группа: {nextLessonGroup.name}
+                        </p>
+                      )}
+                      {!nextLessonGroup && (
+                        <p className="text-xs text-green-700 dark:text-green-300">
+                          Индивидуальное занятие
+                        </p>
+                      )}
                     </div>
-                    <p className="text-sm text-green-800">
-                      {moment(nextLesson.start).locale("ru").format("DD MMMM, dddd")} в {moment(nextLesson.start).locale("ru").format("HH:mm")}
-                    </p>
-                    {nextLesson?.teacherName && (
-                      <p className="text-xs text-green-700 mt-1">
-                        Преподаватель: {nextLesson.teacherName}
+                  ) : (
+                    <div className="p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-900/50">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Clock className="h-4 w-4 text-red-600 dark:text-red-400" />
+                        <p className="text-sm font-medium text-red-700 dark:text-red-300">Ближайшее занятие:</p>
+                      </div>
+                      <p className="text-sm text-red-800 dark:text-red-200">
+                        Отсутствуют
                       </p>
-                    )}
-                    {nextLessonGroup && (
-                      <p className="text-xs text-green-700">
-                        Группа: {nextLessonGroup.name}
+                      <p className="text-xs text-red-700 dark:text-red-300 mt-1 invisible">
+                        Преподаватель: &nbsp;
                       </p>
-                    )}
-                    {!nextLessonGroup && (
-                      <p className="text-xs text-green-700">
-                        Индивидуальное занятие
+                      <p className="text-xs text-red-700 dark:text-red-300 invisible">
+                        Группа: &nbsp;
                       </p>
-                    )}
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEdit(student);
+                      }}
+                    >
+                      <Edit className="h-4 w-4 mr-1" />
+                      Изменить
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete(student.id);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
-                )}
-
-                <div className="flex gap-2 pt-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEdit(student);
-                    }}
-                  >
-                    <Edit className="h-4 w-4 mr-1" />
-                    Изменить
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDelete(student.id);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
                 </div>
               </div>
             </CardContent>
@@ -288,11 +273,9 @@ function StudentsGridContainer({
   groups,
   lessons,
   teachers,
-  balances,
-  subscriptions,
   allStudents,
-  activityFilter,
-  getIsActive,
+  sortBy,
+  sortOrder,
   onEdit,
   onDelete,
   onNavigate,
@@ -304,11 +287,9 @@ function StudentsGridContainer({
   groups: ReturnType<typeof useGroups>["data"];
   lessons: ReturnType<typeof useLessons>["data"];
   teachers: ReturnType<typeof useTeachers>["data"];
-  balances: any[];
-  subscriptions: any[];
   allStudents: Student[];
-  activityFilter: "all" | "active" | "inactive";
-  getIsActive: (s: Student) => boolean;
+  sortBy: "name" | "age" | "id";
+  sortOrder: "asc" | "desc";
   onEdit: (s: Student) => void;
   onDelete: (id: string) => void;
   onNavigate: (id: string) => void;
@@ -318,36 +299,53 @@ function StudentsGridContainer({
   const students: Student[] = (paged as any)?.items ?? [];
   const total = (paged as any)?.total ?? 0;
 
-  // Если включен фильтр активности и нет поискового запроса,
-  // используем полный список с клиентской пагинацией, чтобы не терять элементы между страницами
+  // Используем полный список для сортировки, если нет поискового запроса
   const baseList: Student[] = React.useMemo(() => {
-    if ((activityFilter === "active" || activityFilter === "inactive") && !query) {
+    if (!query) {
       return allStudents || [];
     }
     return students;
-  }, [activityFilter, query, allStudents, students]);
+  }, [query, allStudents, students]);
 
-  const filteredStudents = React.useMemo(() => {
-    if (activityFilter === "active") return baseList.filter(getIsActive);
-    if (activityFilter === "inactive") return baseList.filter((s) => !getIsActive(s));
-    return baseList;
-  }, [baseList, activityFilter, getIsActive]);
+  // Сортировка студентов
+  const sortedStudents = React.useMemo(() => {
+    const sorted = [...baseList];
+    
+    sorted.sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortBy) {
+        case "name":
+          comparison = a.name.localeCompare(b.name, "ru", { sensitivity: "base" });
+          break;
+        case "age":
+          comparison = a.age - b.age;
+          break;
+        case "id":
+          // Сортировка по id (обычно это порядок добавления)
+          comparison = a.id.localeCompare(b.id);
+          break;
+        default:
+          comparison = 0;
+      }
+      
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+    
+    return sorted;
+  }, [baseList, sortBy, sortOrder]);
 
-  const totalPages = Math.ceil(((activityFilter === "all" || query) ? (total || 0) : filteredStudents.length) / pageSize) || 1;
+  const totalPages = Math.ceil((query ? (total || 0) : sortedStudents.length) / pageSize) || 1;
 
   const paginatedStudents = React.useMemo(() => {
-    if (activityFilter === "all" || query) {
-      return filteredStudents;
+    if (query) {
+      // При поиске используем серверную пагинацию
+      return sortedStudents;
     }
+    // При отсутствии поиска используем клиентскую пагинацию
     const start = (page - 1) * pageSize;
-    return filteredStudents.slice(start, start + pageSize);
-  }, [filteredStudents, activityFilter, query, page, pageSize]);
-
-  const activeMap = React.useMemo(() => {
-    const map: Record<string, boolean> = {};
-    paginatedStudents.forEach((s) => { map[s.id] = getIsActive(s); });
-    return map;
-  }, [paginatedStudents, getIsActive]);
+    return sortedStudents.slice(start, start + pageSize);
+  }, [sortedStudents, query, page, pageSize]);
 
   return (
     <>
@@ -357,7 +355,6 @@ function StudentsGridContainer({
         lessons={lessons}
         teachers={teachers}
         isFetching={isFetching}
-        activeMap={activeMap}
         onEdit={onEdit}
         onDelete={onDelete}
         onNavigate={onNavigate}
@@ -428,54 +425,15 @@ export default function Students() {
   const { data: groups = [] } = useGroups();
   const { data: lessons = [] } = useLessons();
   const { data: teachers = [] } = useTeachers();
-  const { data: balances = [] } = useAllBalances();
-  const { data: subscriptions = [] } = useAllSubscriptions();
   const createStudent = useCreateStudent();
   const updateStudent = useUpdateStudent();
   const deleteStudent = useDeleteStudent();
   
-  const [activityFilter, setActivityFilter] = useState<"all" | "active" | "inactive">("active");
+  const [sortBy, setSortBy] = useState<"name" | "age" | "id">("name");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
-
-  // Build quick lookup maps for balances and active subscriptions
-  const balanceMap = React.useMemo(() => {
-    const map: Record<string, number> = {};
-    (balances as any[]).forEach((b: any) => { map[b.studentId] = b.balance; });
-    return map;
-  }, [balances]);
-
-  const activeSubMap = React.useMemo(() => {
-    const map: Record<string, boolean> = {};
-    const now = new Date();
-    (subscriptions as any[]).forEach((s: any) => {
-      const notExpired = s.paidTill ? (new Date(s.paidTill) >= now) : false;
-      const hasLessons = (s.lessonsRemaining ?? 0) > 0;
-      if (s.status === "active" && (hasLessons || notExpired)) {
-        map[s.studentId] = true;
-      }
-    });
-    return map;
-  }, [subscriptions]);
-
-  // Activity: upcoming lessons OR positive balance OR active subscription
-  // BUT: if student.status === "inactive", always return false
-  const getIsActive = React.useCallback((student: Student) => {
-    // Если статус вручную установлен как "inactive", студент неактивен
-    if (student.status === "inactive") {
-      return false;
-    }
-    const studentLessons = lessons.filter((l) => 
-      l.studentIds?.includes(student.id) || 
-      (l.groupId && student.groupIds?.includes(l.groupId))
-    );
-    const bySchedule = studentLessons.some((l) => moment(l.start).isAfter(moment()));
-    const byBalance = (balanceMap[student.id] ?? 0) > 0;
-    const bySubscription = !!activeSubMap[student.id];
-    // Активный только если ВСЕ три условия выполняются
-    return bySchedule && byBalance && bySubscription;
-  }, [lessons, balanceMap, activeSubMap]);
 
   // Get student schedule from lessons
   const getStudentSchedule = (studentId: string): string => {
@@ -556,12 +514,10 @@ export default function Students() {
     }
   };
 
-  // Фильтрация и пагинация перенесены в контейнер грида
-
   // Reset to first page when filters change
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, activityFilter]);
+  }, [searchQuery, sortBy, sortOrder]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -731,31 +687,27 @@ export default function Students() {
         )}
       </div>
 
-      {/* Activity Filter */}
+      {/* Sort Controls */}
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-sm font-medium hidden sm:inline">Статус:</span>
+        <span className="text-sm font-medium hidden sm:inline">Сортировка:</span>
+        <Select value={sortBy} onValueChange={(value) => setSortBy(value as "name" | "age" | "id")}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="name">По алфавиту</SelectItem>
+            <SelectItem value="age">По возрасту</SelectItem>
+            <SelectItem value="id">По дате добавления</SelectItem>
+          </SelectContent>
+        </Select>
         <Button
-          variant={activityFilter === "active" ? "default" : "outline"}
+          variant="outline"
           size="sm"
-          onClick={() => setActivityFilter("active")}
+          onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+          className="gap-2"
         >
-          <span className="hidden sm:inline">Активные ({(allStudents as Student[]).filter(s => getIsActive(s)).length})</span>
-          <span className="sm:hidden">Активн. ({(allStudents as Student[]).filter(s => getIsActive(s)).length})</span>
-        </Button>
-        <Button
-          variant={activityFilter === "inactive" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setActivityFilter("inactive")}
-        >
-          <span className="hidden sm:inline">Неактивные ({(allStudents as Student[]).filter(s => !getIsActive(s)).length})</span>
-          <span className="sm:hidden">Неакт. ({(allStudents as Student[]).filter(s => !getIsActive(s)).length})</span>
-        </Button>
-        <Button
-          variant={activityFilter === "all" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setActivityFilter("all")}
-        >
-          Все ({(allStudents as Student[]).length})
+          <ArrowUpDown className="h-4 w-4" />
+          {sortOrder === "asc" ? "Возрастание" : "Убывание"}
         </Button>
       </div>
       <StudentsGridContainer
@@ -765,11 +717,9 @@ export default function Students() {
         groups={groups}
         lessons={lessons}
         teachers={teachers}
-        balances={balances}
-        subscriptions={subscriptions}
         allStudents={allStudents as Student[]}
-        activityFilter={activityFilter}
-        getIsActive={getIsActive}
+        sortBy={sortBy}
+        sortOrder={sortOrder}
         onEdit={handleEdit}
         onDelete={(id) => deleteConfirm.open(id)}
         onNavigate={(id) => navigate(`/students/${id}`)}

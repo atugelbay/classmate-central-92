@@ -21,14 +21,16 @@ func NewTeacherHandler(repo *repository.TeacherRepository) *TeacherHandler {
 func (h *TeacherHandler) GetAll(c *gin.Context) {
 	companyID := c.GetString("company_id")
 	branchID := c.GetString("branch_id")
-	
+
 	// Используем выбранный филиал для изоляции данных
 	// Если branchID не установлен, используем company_id как fallback
 	if branchID == "" {
 		branchID = companyID
 	}
 	
-	teachers, err := h.repo.GetAll(companyID, branchID)
+	var teachers []*models.Teacher
+	var err error
+	teachers, err = h.repo.GetAll(companyID, branchID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

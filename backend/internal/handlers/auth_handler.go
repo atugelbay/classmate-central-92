@@ -3,8 +3,10 @@ package handlers
 import (
 	"crypto/rand"
 	"database/sql"
+	"fmt"
 	"math/big"
 	"net/http"
+	"os"
 
 	"classmate-central/internal/logger"
 	"classmate-central/internal/middleware"
@@ -24,10 +26,11 @@ type AuthHandler struct {
 	roleRepo     *repository.RoleRepository
 	settingsRepo *repository.SettingsRepository
 	emailService *services.EmailService
+	branchRepo   *repository.BranchRepository
 	db           *sql.DB
 }
 
-func NewAuthHandler(userRepo *repository.UserRepository, companyRepo *repository.CompanyRepository, roleRepo *repository.RoleRepository, settingsRepo *repository.SettingsRepository, emailService *services.EmailService, db *sql.DB) *AuthHandler {
+func NewAuthHandler(userRepo *repository.UserRepository, companyRepo *repository.CompanyRepository, roleRepo *repository.RoleRepository, settingsRepo *repository.SettingsRepository, emailService *services.EmailService, branchRepo *repository.BranchRepository, db *sql.DB) *AuthHandler {
 	return &AuthHandler{
 		userRepo:     userRepo,
 		db:           db,
@@ -35,6 +38,7 @@ func NewAuthHandler(userRepo *repository.UserRepository, companyRepo *repository
 		roleRepo:     roleRepo,
 		settingsRepo: settingsRepo,
 		emailService: emailService,
+		branchRepo:   branchRepo,
 	}
 }
 
@@ -405,7 +409,7 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 	for i, branch := range branches {
 		branchIDs[i] = branch.ID
 	}
-	
+
 	// Try to preserve current branch from token, otherwise use first available
 	if claims.CurrentBranchID != nil {
 		currentBranchID = claims.CurrentBranchID
@@ -502,6 +506,25 @@ func (h *AuthHandler) InviteUser(c *gin.Context) {
 		return
 	}
 
+	// Validate that all branches belong to the company
+	companyBranches, err := h.branchRepo.GetBranchesByCompany(companyID.(string))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load branches"})
+		return
+	}
+
+	branchMap := make(map[string]bool)
+	for _, branch := range companyBranches {
+		branchMap[branch.ID] = true
+	}
+
+	for _, branchID := range req.BranchIDs {
+		if !branchMap[branchID] {
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Branch %s does not belong to this company", branchID)})
+			return
+		}
+	}
+
 	// Check for existing user by email
 	existingUser, err := h.userRepo.GetByEmail(req.Email)
 	if err != nil {
@@ -542,6 +565,20 @@ func (h *AuthHandler) InviteUser(c *gin.Context) {
 		return
 	}
 
+	// Assign user to selected branches
+	userID, _ := c.Get("user_id")
+	var assignedBy *int
+	if uid, ok := userID.(int); ok {
+		assignedBy = &uid
+	}
+
+	for _, branchID := range req.BranchIDs {
+		if err := h.branchRepo.AssignUserToBranch(user.ID, branchID, &req.RoleID, companyID.(string), assignedBy); err != nil {
+			logger.Error("Failed to assign user to branch", logger.ErrorField(err), zap.Int("userId", user.ID), zap.String("branchId", branchID))
+			// Continue with other branches, but log the error
+		}
+	}
+
 	// Send invite/verification email
 	go func() {
 		if err := h.emailService.SendInviteEmail(user.Email, verificationCode); err != nil {
@@ -549,9 +586,19 @@ func (h *AuthHandler) InviteUser(c *gin.Context) {
 		}
 	}()
 
+	// Generate invite link for response (for console logging on frontend)
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		frontendURL = "http://localhost:8081"
+	}
+	inviteLink := fmt.Sprintf("%s/invite?email=%s&code=%s", frontendURL, user.Email, verificationCode)
+
 	c.JSON(http.StatusCreated, gin.H{
-		"message": "User invited successfully",
-		"userId":  user.ID,
+		"message":    "User invited successfully",
+		"userId":     user.ID,
+		"inviteLink": inviteLink,
+		"code":       verificationCode,
+		"email":      user.Email,
 	})
 }
 

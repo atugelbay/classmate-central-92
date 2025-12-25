@@ -1,11 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Loader2, Database, CheckCircle2, XCircle, AlertCircle, Trash2 } from 'lucide-react';
+import { Loader2, Database, CheckCircle2, XCircle, AlertCircle, Trash2, Clock, Info } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { migrationAPI, MigrationStatus } from '@/api/migration';
 import { useToast } from '@/hooks/use-toast';
 
@@ -21,7 +31,89 @@ export function MigrationSettings() {
   const [isMigrating, setIsMigrating] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
   const [migrationStatus, setMigrationStatus] = useState<MigrationStatus | null>(null);
+  const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
+  const migrationStartTimeRef = useRef<Date | null>(null);
+  const [elapsedTime, setElapsedTime] = useState<string>('00:00');
 
+  // Автоматическое восстановление статуса миграции при загрузке страницы
+  useEffect(() => {
+    const checkActiveMigration = async () => {
+      try {
+        const status = await migrationAPI.getStatus();
+        if (status.status === 'running') {
+          setIsMigrating(true);
+          setMigrationStatus(status);
+          migrationStartTimeRef.current = new Date(status.startedAt);
+          toast({
+            title: 'Миграция восстановлена',
+            description: 'Обнаружена активная миграция. Прогресс будет обновляться автоматически.',
+          });
+        }
+      } catch (error) {
+        // Игнорируем ошибки при проверке статуса
+        console.log('No active migration found');
+      }
+    };
+
+    checkActiveMigration();
+  }, [toast]);
+
+  // Предупреждение при попытке закрыть страницу во время миграции
+  useEffect(() => {
+    if (!isMigrating) {
+      return;
+    }
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = 'Миграция данных все еще выполняется. Вы уверены, что хотите закрыть страницу?';
+      return e.returnValue;
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isMigrating]);
+
+  // Таймер прошедшего времени миграции
+  useEffect(() => {
+    if (!isMigrating || !migrationStartTimeRef.current) {
+      setElapsedTime('00:00');
+      return;
+    }
+
+    const updateElapsedTime = () => {
+      const now = new Date();
+      const start = migrationStartTimeRef.current!;
+      const diff = Math.floor((now.getTime() - start.getTime()) / 1000);
+      const minutes = Math.floor(diff / 60);
+      const seconds = diff % 60;
+      setElapsedTime(`${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`);
+    };
+
+    updateElapsedTime();
+    const timerInterval = setInterval(updateElapsedTime, 1000);
+
+    return () => {
+      clearInterval(timerInterval);
+    };
+  }, [isMigrating]);
+
+  // Обновление заголовка страницы с прогрессом миграции
+  useEffect(() => {
+    if (isMigrating && migrationStatus) {
+      const originalTitle = document.title;
+      document.title = `[${migrationStatus.progress}%] Миграция... - ${originalTitle.split(' - ').pop() || 'Classmate Central'}`;
+      
+      return () => {
+        document.title = originalTitle;
+      };
+    }
+  }, [isMigrating, migrationStatus]);
+
+  // Проверка статуса миграции
   useEffect(() => {
     if (!isMigrating) {
       return;
@@ -44,22 +136,31 @@ export function MigrationSettings() {
         
         if (status.status === 'completed' || status.status === 'failed') {
           setIsMigrating(false);
+          migrationStartTimeRef.current = null;
           
           if (intervalId) {
             clearInterval(intervalId);
             intervalId = null;
           }
           
+          // Восстанавливаем заголовок страницы
+          const titleParts = document.title.split(' - ');
+          if (titleParts.length > 1) {
+            document.title = titleParts[titleParts.length - 1];
+          }
+          
           if (status.status === 'completed') {
             toast({
-              title: 'Миграция завершена!',
+              title: '🎉 Миграция завершена!',
               description: `Импортировано: ${status.teachersCount} учителей, ${status.studentsCount} студентов, ${status.groupsCount} групп`,
+              duration: 10000,
             });
           } else {
             toast({
               title: 'Ошибка миграции',
               description: status.error || 'Произошла ошибка при миграции',
               variant: 'destructive',
+              duration: 10000,
             });
           }
         }
@@ -76,6 +177,7 @@ export function MigrationSettings() {
           }
           
           setIsMigrating(false);
+          migrationStartTimeRef.current = null;
           if (intervalId) {
             clearInterval(intervalId);
             intervalId = null;
@@ -95,7 +197,7 @@ export function MigrationSettings() {
         clearInterval(intervalId);
         intervalId = null;
       }
-    }, 1000); // Уменьшено с 2000 до 1000 мс для более частых обновлений
+    }, 1000);
 
     return () => {
       isMounted = false;
@@ -159,6 +261,7 @@ export function MigrationSettings() {
 
     setIsMigrating(true);
     setMigrationStatus(null); // Сбрасываем предыдущий статус
+    migrationStartTimeRef.current = new Date();
 
     try {
       const result = await migrationAPI.startMigration({
@@ -167,63 +270,24 @@ export function MigrationSettings() {
         apiKey: formData.apiKey,
         migrateRooms: true,
         migrateLessons: true,
+        useOldScript: true, // Используем старый скрипт миграции
       });
       
       setMigrationStatus(result.status);
+      if (result.status.startedAt) {
+        migrationStartTimeRef.current = new Date(result.status.startedAt);
+      }
       
       // Если миграция уже завершена (не должна, но на всякий случай)
       if (result.status.status === 'completed' || result.status.status === 'failed') {
         setIsMigrating(false);
+        migrationStartTimeRef.current = null;
       }
       
       toast({
         title: 'Миграция запущена',
-        description: 'Процесс миграции начался. Это может занять несколько минут.',
-      });
-    } catch (error: any) {
-      setIsMigrating(false);
-      setMigrationStatus(null);
-      toast({
-        title: 'Ошибка запуска миграции',
-        description: error.response?.data?.error || 'Не удалось запустить миграцию',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleStartOldMigration = async () => {
-    if (!connectionTested) {
-      toast({
-        title: 'Проверьте соединение',
-        description: 'Сначала проверьте подключение к AlfaCRM',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsMigrating(true);
-    setMigrationStatus(null); // Сбрасываем предыдущий статус
-
-    try {
-      const result = await migrationAPI.startMigration({
-        alfacrmUrl: formData.alfacrmUrl,
-        email: formData.email,
-        apiKey: formData.apiKey,
-        migrateRooms: true,
-        migrateLessons: true,
-        useOldScript: true, // Флаг для использования старого скрипта
-      });
-      
-      setMigrationStatus(result.status);
-      
-      // Если миграция уже завершена (не должна, но на всякий случай)
-      if (result.status.status === 'completed' || result.status.status === 'failed') {
-        setIsMigrating(false);
-      }
-      
-      toast({
-        title: 'Старая миграция запущена',
-        description: 'Процесс миграции начался. Это может занять несколько минут.',
+        description: 'Процесс миграции начался. Вы можете переключиться на другую вкладку - прогресс сохранится.',
+        duration: 5000,
       });
     } catch (error: any) {
       setIsMigrating(false);
@@ -237,21 +301,6 @@ export function MigrationSettings() {
   };
 
   const handleClearData = async () => {
-    const confirmed = window.confirm(
-      '⚠️ ВНИМАНИЕ! Это удалит ВСЕ данные вашей компании:\n' +
-      '• Всех учителей\n' +
-      '• Всех студентов\n' +
-      '• Все группы\n' +
-      '• Все уроки\n' +
-      '• Все абонементы\n' +
-      '• Все транзакции\n' +
-      '• Все долги\n\n' +
-      'Это действие НЕОБРАТИМО!\n\n' +
-      'Продолжить?'
-    );
-
-    if (!confirmed) return;
-
     setIsClearing(true);
 
     try {
@@ -265,6 +314,7 @@ export function MigrationSettings() {
       // Reset migration status and stop polling
       setMigrationStatus(null);
       setIsMigrating(false);
+      setIsClearDialogOpen(false);
     } catch (error: any) {
       toast({
         title: 'Ошибка очистки данных',
@@ -334,17 +384,17 @@ export function MigrationSettings() {
               onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
               disabled={isMigrating}
             />
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
               API ключ из настроек AlfaCRM (Настройки → API → Ключ)
             </p>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Button
               variant="outline"
               onClick={handleTestConnection}
               disabled={isTestingConnection || isMigrating}
-              className="flex-1"
+              className="w-full sm:flex-1"
             >
               {isTestingConnection ? (
                 <>
@@ -354,17 +404,20 @@ export function MigrationSettings() {
               ) : connectionTested === true ? (
                 <>
                   <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" />
-                  Соединение установлено
+                  <span className="hidden sm:inline">Соединение установлено</span>
+                  <span className="sm:hidden">Соединение ОК</span>
                 </>
               ) : connectionTested === false ? (
                 <>
                   <XCircle className="mr-2 h-4 w-4 text-red-500" />
-                  Ошибка подключения
+                  <span className="hidden sm:inline">Ошибка подключения</span>
+                  <span className="sm:hidden">Ошибка</span>
                 </>
               ) : (
                 <>
                   <Database className="mr-2 h-4 w-4" />
-                  Проверить соединение
+                  <span className="hidden sm:inline">Проверить соединение</span>
+                  <span className="sm:hidden">Проверить</span>
                 </>
               )}
             </Button>
@@ -372,7 +425,7 @@ export function MigrationSettings() {
             <Button
               onClick={handleStartMigration}
               disabled={!connectionTested || isMigrating || isClearing}
-              className="flex-1"
+              className="w-full sm:flex-1"
             >
               {isMigrating ? (
                 <>
@@ -382,40 +435,16 @@ export function MigrationSettings() {
               ) : (
                 <>
                   <Database className="mr-2 h-4 w-4" />
-                  Запустить миграцию
+                  Запуск миграции
                 </>
               )}
             </Button>
-          </div>
-
-          <div className="pt-4 border-t">
-            <Button
-              onClick={handleStartOldMigration}
-              disabled={!connectionTested || isMigrating || isClearing}
-              variant="outline"
-              className="w-full"
-            >
-              {isMigrating ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Миграция...
-                </>
-              ) : (
-                <>
-                  <Database className="mr-2 h-4 w-4" />
-                  Запустить старую миграцию (с филиалами)
-                </>
-              )}
-            </Button>
-            <p className="mt-2 text-sm text-muted-foreground text-center">
-              Использует проверенный старый скрипт миграции с поддержкой филиалов
-            </p>
           </div>
 
           <div className="pt-4 border-t">
             <Button
               variant="destructive"
-              onClick={handleClearData}
+              onClick={() => setIsClearDialogOpen(true)}
               disabled={isMigrating || isClearing}
               className="w-full"
             >
@@ -439,19 +468,56 @@ export function MigrationSettings() {
       </Card>
 
       {migrationStatus && (
-        <Card>
+        <Card className="border-2 border-primary/20">
           <CardHeader>
-            <CardTitle>Прогресс миграции</CardTitle>
-            <CardDescription>{migrationStatus.currentStep}</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  {migrationStatus.status === 'running' && (
+                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  )}
+                  {migrationStatus.status === 'completed' && (
+                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  )}
+                  {migrationStatus.status === 'failed' && (
+                    <XCircle className="h-5 w-5 text-destructive" />
+                  )}
+                  Прогресс миграции
+                </CardTitle>
+                <CardDescription className="mt-1">{migrationStatus.currentStep}</CardDescription>
+              </div>
+              {migrationStatus.status === 'running' && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Clock className="h-4 w-4" />
+                  <span className="font-mono">{elapsedTime}</span>
+                </div>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span>Прогресс</span>
-                <span className="font-medium">{migrationStatus.progress}%</span>
+                <span className="font-medium">Прогресс</span>
+                <span className="font-bold text-primary">{migrationStatus.progress}%</span>
               </div>
-              <Progress value={migrationStatus.progress} />
+              <Progress value={migrationStatus.progress} className="h-3" />
             </div>
+
+            {migrationStatus.status === 'running' && (
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertTitle>Миграция выполняется</AlertTitle>
+                <AlertDescription className="text-sm">
+                  <p className="mt-1">
+                    Процесс может занять 10-20 минут в зависимости от объема данных.
+                    Вы можете переключиться на другую вкладку - прогресс будет сохранен.
+                  </p>
+                  <p className="mt-2 font-medium">
+                    ⚠️ Не закрывайте эту страницу до завершения миграции!
+                  </p>
+                </AlertDescription>
+              </Alert>
+            )}
 
             {migrationStatus.status === 'completed' && (
               <Alert>
@@ -495,18 +561,74 @@ export function MigrationSettings() {
         </Card>
       )}
 
-      <Alert variant="destructive">
-        <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Важно!</AlertTitle>
-        <AlertDescription>
-          <ul className="mt-2 list-disc list-inside space-y-1">
-            <li>Миграция может занять несколько минут в зависимости от объема данных</li>
-            <li>Не закрывайте страницу во время миграции</li>
-            <li>Повторная миграция обновит существующие данные</li>
-            <li>Все импортированные данные будут привязаны к вашей компании</li>
-          </ul>
-        </AlertDescription>
-      </Alert>
+      {!isMigrating && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Важно!</AlertTitle>
+          <AlertDescription>
+            <ul className="mt-2 list-disc list-inside space-y-1">
+              <li>Миграция может занять 10-20 минут в зависимости от объема данных</li>
+              <li>Не закрывайте страницу во время миграции - вы получите предупреждение при попытке закрыть</li>
+              <li>Если вы случайно закрыли страницу - просто вернитесь, миграция продолжится автоматически</li>
+              <li>Повторная миграция обновит существующие данные</li>
+              <li>Все импортированные данные будут привязаны к вашей компании</li>
+            </ul>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <AlertDialog open={isClearDialogOpen} onOpenChange={setIsClearDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-destructive" />
+              Внимание! Необратимое действие
+            </AlertDialogTitle>
+            <AlertDialogDescription className="pt-2">
+              <p className="mb-4 font-medium text-foreground">
+                Это действие удалит <span className="text-destructive font-semibold">ВСЕ данные</span> вашей компании:
+              </p>
+              <ul className="space-y-2 text-sm list-disc list-inside text-muted-foreground">
+                <li>Всех учителей</li>
+                <li>Всех студентов</li>
+                <li>Все группы</li>
+                <li>Все уроки</li>
+                <li>Все абонементы</li>
+                <li>Все транзакции</li>
+                <li>Все долги</li>
+              </ul>
+              <p className="mt-4 font-semibold text-foreground">
+                Это действие <span className="text-destructive">НЕОБРАТИМО</span>!
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Вы уверены, что хотите продолжить?
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel disabled={isClearing} className="w-full sm:w-auto">
+              Отмена
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleClearData}
+              disabled={isClearing}
+              className="w-full sm:w-auto bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isClearing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Очистка...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Да, удалить все данные
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

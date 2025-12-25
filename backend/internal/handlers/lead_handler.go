@@ -20,6 +20,21 @@ func NewLeadHandler(repo *repository.LeadRepository) *LeadHandler {
 
 func (h *LeadHandler) GetAll(c *gin.Context) {
 	companyID := c.GetString("company_id")
+	branchID := c.GetString("branch_id")
+	
+	// Get accessible branch IDs from context (set by middleware)
+	accessibleBranchIDs, _ := c.Get("accessible_branch_ids")
+	var branchIDs []string
+	if ids, ok := accessibleBranchIDs.([]string); ok && len(ids) > 0 {
+		branchIDs = ids
+	} else {
+		// Fallback: use current branch or company_id
+		if branchID == "" {
+			branchID = companyID
+		}
+		branchIDs = []string{branchID}
+	}
+	
 	// Check if filtering by status or source
 	status := c.Query("status")
 	source := c.Query("source")
@@ -32,7 +47,11 @@ func (h *LeadHandler) GetAll(c *gin.Context) {
 	} else if source != "" {
 		leads, err = h.repo.GetBySource(source, companyID)
 	} else {
-		leads, err = h.repo.GetAll(companyID)
+		if len(branchIDs) > 0 {
+			leads, err = h.repo.GetAllByBranches(companyID, branchIDs)
+		} else {
+			leads, err = h.repo.GetAll(companyID)
+		}
 	}
 
 	if err != nil {

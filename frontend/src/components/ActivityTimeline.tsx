@@ -54,14 +54,14 @@ export function ActivityTimeline({ items, maxItems = 10, className }: ActivityTi
   const getTypeColor = (type: TimelineItem["type"]) => {
     switch (type) {
       case "payment":
-        return "text-green-600 bg-green-50";
+        return "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/30";
       case "refund":
       case "debt":
-        return "text-red-600 bg-red-50";
+        return "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30";
       case "lesson":
-        return "text-blue-600 bg-blue-50";
+        return "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30";
       default:
-        return "text-gray-600 bg-gray-50";
+        return "text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/30";
     }
   };
 
@@ -120,7 +120,7 @@ export function ActivityTimeline({ items, maxItems = 10, className }: ActivityTi
                   <div
                     className={cn(
                       "text-sm font-bold whitespace-nowrap",
-                      item.amount > 0 ? "text-green-600" : "text-red-600"
+                      item.amount > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
                     )}
                   >
                     {item.amount > 0 ? "+" : ""}

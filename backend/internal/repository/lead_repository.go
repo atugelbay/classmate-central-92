@@ -3,6 +3,8 @@ package repository
 import (
 	"classmate-central/internal/models"
 	"database/sql"
+	"fmt"
+	"strings"
 	"time"
 )
 
@@ -15,9 +17,51 @@ func NewLeadRepository(db *sql.DB) *LeadRepository {
 }
 
 func (r *LeadRepository) GetAll(companyID string) ([]models.Lead, error) {
-	query := `SELECT id, name, phone, email, source, status, notes, assigned_to, created_at, updated_at 
-	          FROM leads WHERE company_id = $1 ORDER BY created_at DESC`
-	rows, err := r.db.Query(query, companyID)
+	return r.GetAllByBranches(companyID, []string{})
+}
+
+// GetAllByBranches gets leads from specified accessible branches (for branch isolation)
+func (r *LeadRepository) GetAllByBranches(companyID string, branchIDs []string) ([]models.Lead, error) {
+	var query string
+	var args []interface{}
+	
+	// If no branchIDs provided or empty, get all leads (backward compatibility)
+	if len(branchIDs) == 0 {
+		query = `SELECT id, name, phone, email, source, status, notes, assigned_to, created_at, updated_at 
+		          FROM leads WHERE company_id = $1 ORDER BY created_at DESC`
+		args = []interface{}{companyID}
+	} else {
+		// Check if branchIDs contains companyID (fallback mode)
+		hasFallback := false
+		for _, bid := range branchIDs {
+			if bid == companyID {
+				hasFallback = true
+				break
+			}
+		}
+		
+		if hasFallback && len(branchIDs) == 1 {
+			// Fallback mode: don't filter by branch_id
+			query = `SELECT id, name, phone, email, source, status, notes, assigned_to, created_at, updated_at 
+			          FROM leads WHERE company_id = $1 ORDER BY created_at DESC`
+			args = []interface{}{companyID}
+		} else {
+			// Filter by accessible branches only
+			placeholders := make([]string, len(branchIDs))
+			for i := range branchIDs {
+				placeholders[i] = fmt.Sprintf("$%d", i+2)
+			}
+			query = fmt.Sprintf(`SELECT id, name, phone, email, source, status, notes, assigned_to, created_at, updated_at 
+			          FROM leads WHERE company_id = $1 AND branch_id IN (%s) ORDER BY created_at DESC`, strings.Join(placeholders, ","))
+			args = make([]interface{}, len(branchIDs)+1)
+			args[0] = companyID
+			for i, bid := range branchIDs {
+				args[i+1] = bid
+			}
+		}
+	}
+	
+	rows, err := r.db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}

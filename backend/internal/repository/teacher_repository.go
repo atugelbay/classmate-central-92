@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"classmate-central/internal/models"
 )
@@ -36,20 +37,39 @@ func (r *TeacherRepository) Create(teacher *models.Teacher, companyID string, br
 }
 
 func (r *TeacherRepository) GetAll(companyID string, branchID string) ([]*models.Teacher, error) {
-	// If branchID is empty string, get data from all branches (for multi-branch view)
-	// If branchID equals companyID (fallback mode), filter only by company_id
+	return r.GetAllByBranches(companyID, []string{branchID})
+}
+
+// GetAllByBranches gets teachers from specified accessible branches (for branch isolation)
+func (r *TeacherRepository) GetAllByBranches(companyID string, branchIDs []string) ([]*models.Teacher, error) {
 	var query string
 	var args []interface{}
-	if branchID == "" {
-		// Get data from all branches for the company
-		query = `SELECT id, name, subject, email, phone, status, avatar, workload, company_id FROM teachers WHERE company_id = $1 ORDER BY name`
-		args = []interface{}{companyID}
-	} else if branchID == companyID {
+	
+	// Check if branchIDs contains companyID (fallback mode)
+	hasFallback := false
+	for _, bid := range branchIDs {
+		if bid == companyID {
+			hasFallback = true
+			break
+		}
+	}
+	
+	if hasFallback && len(branchIDs) == 1 {
+		// Fallback mode: don't filter by branch_id
 		query = `SELECT id, name, subject, email, phone, status, avatar, workload, company_id FROM teachers WHERE company_id = $1 ORDER BY name`
 		args = []interface{}{companyID}
 	} else {
-		query = `SELECT id, name, subject, email, phone, status, avatar, workload, company_id FROM teachers WHERE company_id = $1 AND branch_id = $2 ORDER BY name`
-		args = []interface{}{companyID, branchID}
+		// Filter by accessible branches only
+		placeholders := make([]string, len(branchIDs))
+		for i := range branchIDs {
+			placeholders[i] = fmt.Sprintf("$%d", i+2)
+		}
+		query = fmt.Sprintf(`SELECT id, name, subject, email, phone, status, avatar, workload, company_id FROM teachers WHERE company_id = $1 AND branch_id IN (%s) ORDER BY name`, strings.Join(placeholders, ","))
+		args = make([]interface{}, len(branchIDs)+1)
+		args[0] = companyID
+		for i, bid := range branchIDs {
+			args[i+1] = bid
+		}
 	}
 
 	rows, err := r.db.Query(query, args...)

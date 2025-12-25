@@ -178,6 +178,10 @@ func (s *EmailService) SendInviteEmail(toEmail, code string) error {
 			return fmt.Errorf("failed to send invite email: %w", err)
 		}
 		logger.Info("Invite email sent successfully via Resend", zap.String("to", toEmail))
+		// Always duplicate to console for local development
+		fmt.Printf("📧 Invite email sent to %s\n", toEmail)
+		fmt.Printf("   Link: %s\n", inviteLink)
+		fmt.Printf("   Code: %s\n", code)
 		return nil
 	}
 
@@ -201,6 +205,10 @@ func (s *EmailService) SendInviteEmail(toEmail, code string) error {
 	}
 
 	logger.Info("Invite email sent successfully", zap.String("to", toEmail))
+	// Always duplicate to console for local development
+	fmt.Printf("📧 Invite email sent to %s\n", toEmail)
+	fmt.Printf("   Link: %s\n", inviteLink)
+	fmt.Printf("   Code: %s\n", code)
 	return nil
 }
 

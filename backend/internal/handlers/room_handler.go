@@ -21,13 +21,16 @@ func (h *RoomHandler) GetAll(c *gin.Context) {
 	companyID := c.GetString("company_id")
 	branchID := c.GetString("branch_id")
 	
+	// Get accessible branch IDs from context (set by middleware)
 	// Используем выбранный филиал для изоляции данных
 	// Если branchID не установлен, используем company_id как fallback
 	if branchID == "" {
 		branchID = companyID
 	}
 	
-	rooms, err := h.repo.GetAll(companyID, branchID)
+	var rooms []models.Room
+	var err error
+	rooms, err = h.repo.GetAll(companyID, branchID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

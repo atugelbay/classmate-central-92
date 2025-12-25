@@ -17,6 +17,7 @@ export interface InviteUserRequest {
   name: string;
   email: string;
   roleId: string;
+  branchIds: string[]; // At least one branch must be selected
 }
 
 export interface AcceptInviteRequest {

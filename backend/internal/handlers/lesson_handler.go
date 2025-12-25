@@ -34,7 +34,9 @@ func (h *LessonHandler) GetAll(c *gin.Context) {
 		branchID = companyID
 	}
 	
-	lessons, err := h.repo.GetAll(companyID, branchID)
+	var lessons []*models.Lesson
+	var err error
+	lessons, err = h.repo.GetAll(companyID, branchID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

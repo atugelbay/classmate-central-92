@@ -1421,8 +1421,15 @@ export const useRemoveRole = () => {
 export const useInviteUser = () => {
   return useMutation({
     mutationFn: (data: InviteUserRequest) => authAPI.invite(data),
-    onSuccess: () => {
+    onSuccess: (response: any) => {
       toast.success("Приглашение отправлено");
+      // Log to browser console for local development
+      if (response?.inviteLink && response?.code) {
+        console.log("📧 Приглашение отправлено:");
+        console.log("   Email:", response.email);
+        console.log("   Ссылка:", response.inviteLink);
+        console.log("   Код:", response.code);
+      }
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.error || "Ошибка при приглашении");

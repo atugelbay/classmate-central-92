@@ -32,7 +32,8 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *AuthHandler, *sql.DB) {
 	emailService := services.NewEmailService()
 
 	// Create handler
-	authHandler := NewAuthHandler(userRepo, companyRepo, roleRepo, settingsRepo, emailService, db)
+	branchRepo := repository.NewBranchRepository(db)
+	authHandler := NewAuthHandler(userRepo, companyRepo, roleRepo, settingsRepo, emailService, branchRepo, db)
 
 	// Setup router
 	router := gin.New()

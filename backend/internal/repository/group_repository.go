@@ -59,53 +59,50 @@ func (r *GroupRepository) Create(group *models.Group, companyID string, branchID
 }
 
 func (r *GroupRepository) GetAll(companyID string, branchID string) ([]*models.Group, error) {
-	// If branchID is empty string, get data from all branches (for multi-branch view)
-	// If branchID equals companyID (fallback mode), filter only by company_id
+	return r.GetAllByBranches(companyID, []string{branchID})
+}
+
+// GetAllByBranches gets groups from specified accessible branches (for branch isolation)
+func (r *GroupRepository) GetAllByBranches(companyID string, branchIDs []string) ([]*models.Group, error) {
 	var query string
 	var args []interface{}
-	if branchID == "" {
-		// Get data from all branches for the company
-		query = `
-			SELECT 
-				g.id, g.name, g.subject, g.teacher_id, g.room_id, g.schedule, 
-				g.description, g.status, g.color, g.company_id,
-				t.name as teacher_name,
-				rm.name as room_name
-			FROM groups g
-			LEFT JOIN teachers t ON g.teacher_id = t.id
-			LEFT JOIN rooms rm ON g.room_id = rm.id
-			WHERE g.company_id = $1
-			ORDER BY g.name
-		`
-		args = []interface{}{companyID}
-	} else if branchID == companyID {
-		query = `
-			SELECT 
-				g.id, g.name, g.subject, g.teacher_id, g.room_id, g.schedule, 
-				g.description, g.status, g.color, g.company_id,
-				t.name as teacher_name,
-				rm.name as room_name
-			FROM groups g
-			LEFT JOIN teachers t ON g.teacher_id = t.id
-			LEFT JOIN rooms rm ON g.room_id = rm.id
-			WHERE g.company_id = $1
-			ORDER BY g.name
-		`
+	
+	// Check if branchIDs contains companyID (fallback mode)
+	hasFallback := false
+	for _, bid := range branchIDs {
+		if bid == companyID {
+			hasFallback = true
+			break
+		}
+	}
+	
+	baseQuery := `
+		SELECT 
+			g.id, g.name, g.subject, g.teacher_id, g.room_id, g.schedule, 
+			g.description, g.status, g.color, g.company_id,
+			t.name as teacher_name,
+			rm.name as room_name
+		FROM groups g
+		LEFT JOIN teachers t ON g.teacher_id = t.id
+		LEFT JOIN rooms rm ON g.room_id = rm.id
+	`
+	
+	if hasFallback && len(branchIDs) == 1 {
+		// Fallback mode: don't filter by branch_id
+		query = baseQuery + ` WHERE g.company_id = $1 ORDER BY g.name`
 		args = []interface{}{companyID}
 	} else {
-		query = `
-			SELECT 
-				g.id, g.name, g.subject, g.teacher_id, g.room_id, g.schedule, 
-				g.description, g.status, g.color, g.company_id,
-				t.name as teacher_name,
-				rm.name as room_name
-			FROM groups g
-			LEFT JOIN teachers t ON g.teacher_id = t.id
-			LEFT JOIN rooms rm ON g.room_id = rm.id
-			WHERE g.company_id = $1 AND g.branch_id = $2
-			ORDER BY g.name
-		`
-		args = []interface{}{companyID, branchID}
+		// Filter by accessible branches only
+		placeholders := make([]string, len(branchIDs))
+		for i := range branchIDs {
+			placeholders[i] = fmt.Sprintf("$%d", i+2)
+		}
+		query = baseQuery + fmt.Sprintf(` WHERE g.company_id = $1 AND g.branch_id IN (%s) ORDER BY g.name`, strings.Join(placeholders, ","))
+		args = make([]interface{}, len(branchIDs)+1)
+		args[0] = companyID
+		for i, bid := range branchIDs {
+			args[i+1] = bid
+		}
 	}
 
 	rows, err := r.db.Query(query, args...)

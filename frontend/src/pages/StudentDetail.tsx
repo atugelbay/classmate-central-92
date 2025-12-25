@@ -289,9 +289,9 @@ export default function StudentDetail() {
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
+    <div className="min-h-screen bg-background">
       {/* Hero Header */}
-      <div className="relative bg-white border-b shadow-sm">
+      <div className="relative bg-card border-b shadow-sm">
         <div className="relative px-6 py-8">
           <div className="max-w-7xl mx-auto">
             <div className="flex items-start justify-between mb-6">
@@ -378,9 +378,9 @@ export default function StudentDetail() {
       {/* Notifications */}
       {notifications.filter((n) => !n.isRead).length > 0 && (
         <div className="max-w-7xl mx-auto px-6 -mt-4">
-          <Card className="border-2 border-yellow-400 bg-gradient-to-r from-yellow-50 to-orange-50 shadow-lg">
+          <Card className="border-2 border-yellow-400 dark:border-yellow-500 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-950/30 dark:to-orange-950/30 shadow-lg">
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-yellow-800">
+              <CardTitle className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200">
                 <Bell className="h-5 w-5" />
                 Важные уведомления ({notifications.filter((n) => !n.isRead).length})
               </CardTitle>
@@ -391,11 +391,11 @@ export default function StudentDetail() {
                 .map((notification) => (
                   <div
                     key={notification.id}
-                    className="flex items-start justify-between gap-4 cursor-pointer hover:bg-yellow-100/50 p-3 rounded-lg transition-colors"
+                    className="flex items-start justify-between gap-4 cursor-pointer hover:bg-yellow-100/50 dark:hover:bg-yellow-900/30 p-3 rounded-lg transition-colors"
                     onClick={() => handleNotificationClick(notification.id)}
                   >
-                    <p className="text-sm text-yellow-900">{notification.message}</p>
-                    <Badge variant="outline" className="text-xs shrink-0 border-yellow-600 text-yellow-700">
+                    <p className="text-sm text-yellow-900 dark:text-yellow-100">{notification.message}</p>
+                    <Badge variant="outline" className="text-xs shrink-0 border-yellow-600 dark:border-yellow-500 text-yellow-700 dark:text-yellow-300">
                       {moment(notification.createdAt).fromNow()}
                     </Badge>
                   </div>
@@ -496,7 +496,7 @@ export default function StudentDetail() {
                       const scheduleTime = scheduleMap.get(sortedDays[0]) || "";
 
                       return (
-                        <div key={group.id} className="p-4 border-2 rounded-lg hover:shadow-md transition-shadow bg-gradient-to-br from-white to-slate-50">
+                        <div key={group.id} className="p-4 border-2 rounded-lg hover:shadow-md transition-shadow bg-card">
                           <div className="flex items-start justify-between mb-3">
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-2">
@@ -664,7 +664,7 @@ export default function StudentDetail() {
                     {studentDiscounts.map((sd) => {
                       const discount = discounts.find((d) => d.id === sd.discountId);
                       return discount ? (
-                        <div key={sd.id} className="flex items-center justify-between p-3 border-2 rounded-lg text-sm bg-gradient-to-r from-green-50 to-emerald-50 hover:shadow-md transition-shadow">
+                        <div key={sd.id} className="flex items-center justify-between p-3 border-2 rounded-lg text-sm bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 hover:shadow-md transition-shadow">
                           <div>
                             <div className="font-medium">{discount.name}</div>
                             <div className="text-xs text-muted-foreground">
@@ -728,7 +728,7 @@ export default function StudentDetail() {
                   <p className="text-xs text-center text-muted-foreground py-4">Нет заметок</p>
                 ) : (
                   notes.map((note) => (
-                    <div key={note.id} className="border-l-4 border-primary pl-3 py-2 bg-slate-50 rounded-r">
+                    <div key={note.id} className="border-l-4 border-primary pl-3 py-2 bg-muted rounded-r">
                       <p className="text-sm">{note.note}</p>
                       <p className="text-xs text-muted-foreground mt-1">
                         {moment(note.createdAt).format("DD.MM.YYYY HH:mm")}

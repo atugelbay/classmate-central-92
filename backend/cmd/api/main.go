@@ -82,7 +82,8 @@ func main() {
 	exportService := services.NewExportService()
 
 	// Initialize handlers
-	authHandler := handlers.NewAuthHandler(userRepo, companyRepo, roleRepo, settingsRepo, emailService, db.DB)
+	branchRepo := repository.NewBranchRepository(db.DB)
+	authHandler := handlers.NewAuthHandler(userRepo, companyRepo, roleRepo, settingsRepo, emailService, branchRepo, db.DB)
 	teacherHandler := handlers.NewTeacherHandler(teacherRepo)
 	studentHandler := handlers.NewStudentHandler(studentRepo, activityRepo, notificationRepo, activityService)
 	groupHandler := handlers.NewGroupHandler(groupRepo, lessonRepo)
@@ -95,7 +96,6 @@ func main() {
 	discountHandler := handlers.NewDiscountHandler(discountRepo)
 	debtHandler := handlers.NewDebtHandler(debtRepo)
 	subscriptionHandler := handlers.NewSubscriptionHandler(subscriptionRepo, attendanceService, activityService, subscriptionService)
-	branchRepo := repository.NewBranchRepository(db.DB)
 	migrationHandler := handlers.NewMigrationHandler(teacherRepo, studentRepo, groupRepo, roomRepo, lessonRepo, subscriptionRepo, branchRepo)
 	dashboardHandler := handlers.NewDashboardHandler(lessonRepo, paymentRepo, subscriptionRepo, studentRepo, leadRepo, debtRepo)
 	roleHandler := handlers.NewRoleHandler(roleRepo, permRepo)

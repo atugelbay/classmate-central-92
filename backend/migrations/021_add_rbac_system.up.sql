@@ -175,12 +175,12 @@ BEGIN
     VALUES (teacher_role_id, 'teacher', 'Teacher with limited access to students and schedule', company_id_param)
     ON CONFLICT (id) DO NOTHING;
     
-    -- Assign permissions to teacher
+    -- Assign permissions to teacher (dashboard.view removed - only admin and manager have access)
     INSERT INTO role_permissions (role_id, permission_id)
     SELECT teacher_role_id, id FROM permissions
     WHERE id IN (
-        'perm_dashboard_view',
         'perm_students_view',
+        'perm_groups_view',
         'perm_lessons_view',
         'perm_schedule_view',
         'perm_attendance_view',
@@ -196,11 +196,10 @@ BEGIN
     VALUES (accountant_role_id, 'accountant', 'Accountant with access to financial data', company_id_param)
     ON CONFLICT (id) DO NOTHING;
     
-    -- Assign permissions to accountant
+    -- Assign permissions to accountant (dashboard.view removed - only admin and manager have access)
     INSERT INTO role_permissions (role_id, permission_id)
     SELECT accountant_role_id, id FROM permissions
     WHERE id IN (
-        'perm_dashboard_view',
         'perm_students_view',
         'perm_finance_view',
         'perm_finance_transactions',
@@ -219,10 +218,10 @@ BEGIN
     VALUES (view_only_role_id, 'view_only', 'View only access without modification rights', company_id_param)
     ON CONFLICT (id) DO NOTHING;
     
-    -- Assign view permissions only
+    -- Assign view permissions only (except dashboard.view - only admin and manager have access)
     INSERT INTO role_permissions (role_id, permission_id)
     SELECT view_only_role_id, id FROM permissions
-    WHERE action = 'view'
+    WHERE action = 'view' AND id != 'perm_dashboard_view'
     ON CONFLICT DO NOTHING;
 END;
 $$ LANGUAGE plpgsql;
