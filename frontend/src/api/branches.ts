@@ -1,7 +1,9 @@
 import axios from 'axios';
 import { Branch } from '@/types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+// Use same env variable as client.ts for consistency
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+const API_BASE_URL = API_URL.endsWith('/api') ? API_URL.replace('/api', '') : API_URL;
 
 // Create axios instance with auth token
 const getAuthHeaders = () => {
@@ -31,16 +33,19 @@ const api = axios.create({
 
 // Add interceptor to include branch ID in requests
 api.interceptors.request.use((config) => {
-  // Ensure headers object exists
-  if (!config.headers) {
-    config.headers = {} as any;
-  }
+  // Always ensure headers object exists
+  config.headers = config.headers || {};
   
+  // Always get fresh token from localStorage
   const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  if (!token) {
+    return Promise.reject(new Error('No authentication token found'));
   }
   
+  // Set Authorization header
+  config.headers.Authorization = `Bearer ${token}`;
+  
+  // Add branch ID if available
   const branchId = getCurrentBranchId();
   if (branchId) {
     config.headers['X-Branch-ID'] = branchId;
@@ -51,36 +56,10 @@ api.interceptors.request.use((config) => {
   return Promise.reject(error);
 });
 
-// Response interceptor to handle token refresh
+// Response interceptor - just pass through, let errors bubble up
 api.interceptors.response.use(
   (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-
-      try {
-        const refreshToken = localStorage.getItem('refreshToken');
-        if (refreshToken) {
-          const response = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
-            refreshToken,
-          });
-
-          const { token, refreshToken: newRefreshToken } = response.data;
-          localStorage.setItem('token', token);
-          localStorage.setItem('refreshToken', newRefreshToken);
-
-          // Retry original request with new token
-          originalRequest.headers.Authorization = `Bearer ${token}`;
-          return api(originalRequest);
-        }
-      } catch (refreshError) {
-        // If refresh fails, just reject - don't redirect here
-        return Promise.reject(refreshError);
-      }
-    }
-
+  (error) => {
     return Promise.reject(error);
   }
 );

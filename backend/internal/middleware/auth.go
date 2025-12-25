@@ -7,8 +7,10 @@ import (
 	"strings"
 	"time"
 
+	"classmate-central/internal/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"go.uber.org/zap"
 )
 
 type Claims struct {
@@ -100,6 +102,11 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		claims, err := ValidateToken(tokenString)
 		if err != nil {
+			tokenPrefix := tokenString
+			if len(tokenString) > 20 {
+				tokenPrefix = tokenString[:20]
+			}
+			logger.Error("Token validation failed", logger.ErrorField(err), zap.String("tokenPrefix", tokenPrefix))
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 			c.Abort()
 			return
