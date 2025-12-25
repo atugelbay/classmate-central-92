@@ -31,11 +31,14 @@ const api = axios.create({
 
 // Add interceptor to include branch ID in requests
 api.interceptors.request.use((config) => {
+  // Ensure headers object exists
+  if (!config.headers) {
+    config.headers = {} as any;
+  }
+  
   const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
-  } else {
-    console.warn('[branchesAPI] No token found in localStorage');
   }
   
   const branchId = getCurrentBranchId();
