@@ -114,19 +114,24 @@ func (h *BranchHandler) CreateBranch(c *gin.Context) {
 	if roleIDStr, ok := roleID.(string); ok {
 		roleIDPtr = &roleIDStr
 	}
-	
-	// Check if user is already assigned to this branch
-	hasAccess, err := h.branchRepo.CheckUserBranchAccess(userID.(int), branch.ID, companyID.(string))
-	if err == nil && !hasAccess {
-		// User is not assigned, assign them to the new branch
-		if assignErr := h.branchRepo.AssignUserToBranch(userID.(int), branch.ID, roleIDPtr, companyID.(string), nil); assignErr != nil {
-			logger.Warn("Failed to auto-assign user to new branch", logger.ErrorField(assignErr), zap.Int("userId", userID.(int)), zap.String("branchId", branch.ID))
-			// Don't fail branch creation if assignment fails
+
+	// Always assign user to the new branch (AssignUserToBranch uses ON CONFLICT, so it's safe)
+	logger.Info("Assigning user to new branch", zap.Int("userId", userID.(int)), zap.String("branchId", branch.ID), zap.String("companyId", companyID.(string)))
+	if assignErr := h.branchRepo.AssignUserToBranch(userID.(int), branch.ID, roleIDPtr, companyID.(string), nil); assignErr != nil {
+		logger.Error("Failed to auto-assign user to new branch", logger.ErrorField(assignErr), zap.Int("userId", userID.(int)), zap.String("branchId", branch.ID))
+		// Don't fail branch creation if assignment fails, but log the error
+	} else {
+		logger.Info("Successfully assigned user to new branch", zap.Int("userId", userID.(int)), zap.String("branchId", branch.ID))
+
+		// Verify assignment was successful
+		hasAccess, checkErr := h.branchRepo.CheckUserBranchAccess(userID.(int), branch.ID, companyID.(string))
+		if checkErr != nil {
+			logger.Warn("Failed to verify user branch access after assignment", logger.ErrorField(checkErr), zap.Int("userId", userID.(int)), zap.String("branchId", branch.ID))
+		} else if !hasAccess {
+			logger.Warn("User assignment to branch may not have taken effect yet", zap.Int("userId", userID.(int)), zap.String("branchId", branch.ID))
 		} else {
-			logger.Info("Auto-assigned user to new branch", zap.Int("userId", userID.(int)), zap.String("branchId", branch.ID))
+			logger.Info("Verified user has access to new branch", zap.Int("userId", userID.(int)), zap.String("branchId", branch.ID))
 		}
-	} else if hasAccess {
-		logger.Info("User already has access to branch", zap.Int("userId", userID.(int)), zap.String("branchId", branch.ID))
 	}
 
 	c.JSON(http.StatusCreated, branch)
@@ -363,4 +368,3 @@ func (h *BranchHandler) RemoveUserFromBranch(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "User removed from branch successfully"})
 }
-

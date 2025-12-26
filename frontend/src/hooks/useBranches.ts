@@ -33,9 +33,35 @@ export const useCreateBranch = () => {
 
   return useMutation({
     mutationFn: branchesAPI.createBranch,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['branches'] });
-      toast.success('Филиал успешно создан');
+    onSuccess: async (newBranch) => {
+      // Invalidate branches query to refetch the list
+      await queryClient.invalidateQueries({ queryKey: ['branches'] });
+      
+      // Wait a bit to ensure the database transaction is committed
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Refetch branches to ensure the new branch is in the list
+      await queryClient.refetchQueries({ queryKey: ['branches'] });
+      
+      // Automatically switch to the newly created branch
+      try {
+        const switchData = await branchesAPI.switchBranch(newBranch.id);
+        localStorage.setItem('token', switchData.token);
+        localStorage.setItem('refreshToken', switchData.refreshToken);
+        setCurrentBranchId(switchData.branchId);
+        
+        // Invalidate all queries to refetch with new branch context
+        queryClient.invalidateQueries();
+        
+        toast.success('Филиал успешно создан и активирован');
+        
+        // Reload the page to ensure all components use the new branch context
+        window.location.reload();
+      } catch (switchError: any) {
+        // If switch fails, still show success for creation
+        toast.success('Филиал успешно создан');
+        toast.warning(switchError?.response?.data?.error || 'Не удалось автоматически переключиться на новый филиал. Вы можете переключиться вручную.');
+      }
     },
     onError: (error: any) => {
       toast.error(error?.response?.data?.error || 'Ошибка при создании филиала');
