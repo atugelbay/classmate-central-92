@@ -51,8 +51,12 @@ func CompanyMiddleware(db *sql.DB) gin.HandlerFunc {
 		c.Set("company_id", companyID.String)
 
 	// Handle branch context
-	// Priority: 1. X-Branch-ID header, 2. current_branch_id from token, 3. First available branch from DB
-	branchID := c.GetHeader("X-Branch-ID")
+	// Priority: 1. X-Branch-ID header (skip for /api/branches endpoint), 2. current_branch_id from token, 3. First available branch from DB
+	branchID := ""
+	// Don't use X-Branch-ID header for /api/branches endpoint to avoid blocking access
+	if c.Request.URL.Path != "/api/branches" {
+		branchID = c.GetHeader("X-Branch-ID")
+	}
 	if branchID == "" {
 		// Try to get from token
 		if tokenBranchID, exists := c.Get("current_branch_id"); exists && tokenBranchID != nil {
@@ -84,16 +88,27 @@ func CompanyMiddleware(db *sql.DB) gin.HandlerFunc {
 			if branchRepo == nil {
 				branchRepo = repository.NewBranchRepository(db)
 			}
-			hasAccess, err := branchRepo.CheckUserBranchAccess(userID.(int), branchID, companyID.String)
-			if err != nil {
-				// If check fails (e.g., branches table doesn't exist), fallback to company_id
-				logger.Warn("Failed to check branch access, using company_id fallback", logger.ErrorField(err), zap.Any("userId", userID), zap.String("branchId", branchID))
+			
+			// Check if user has any branches - if not, allow access (user might be registering)
+			userBranches, err := branchRepo.GetUserBranches(userID.(int), companyID.String)
+			if err == nil && len(userBranches) == 0 {
+				// User has no branches yet - this might be during registration
+				// Allow access but use company_id as fallback
+				logger.Info("User has no branches yet, using company_id fallback", zap.Any("userId", userID), zap.String("branchId", branchID))
 				branchID = companyID.String
-			} else if !hasAccess {
-				logger.Error("User does not have access to branch", zap.Any("userId", userID), zap.String("branchId", branchID))
-				c.JSON(http.StatusForbidden, gin.H{"error": "Access denied to this branch"})
-				c.Abort()
-				return
+			} else {
+				// User has branches, check access to requested branch
+				hasAccess, err := branchRepo.CheckUserBranchAccess(userID.(int), branchID, companyID.String)
+				if err != nil {
+					// If check fails (e.g., branches table doesn't exist), fallback to company_id
+					logger.Warn("Failed to check branch access, using company_id fallback", logger.ErrorField(err), zap.Any("userId", userID), zap.String("branchId", branchID))
+					branchID = companyID.String
+				} else if !hasAccess {
+					logger.Error("User does not have access to branch", zap.Any("userId", userID), zap.String("branchId", branchID))
+					c.JSON(http.StatusForbidden, gin.H{"error": "Access denied to this branch"})
+					c.Abort()
+					return
+				}
 			}
 		}
 
