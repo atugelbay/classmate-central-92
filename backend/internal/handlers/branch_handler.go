@@ -107,22 +107,26 @@ func (h *BranchHandler) CreateBranch(c *gin.Context) {
 		return
 	}
 
-	// Automatically assign the creator to the new branch if they don't have any branches yet
+	// Automatically assign the creator to the new branch
 	userID, _ := c.Get("user_id")
-	userBranches, err := h.branchRepo.GetUserBranches(userID.(int), companyID.(string))
-	if err == nil && len(userBranches) == 0 {
-		// User has no branches, assign them to this new branch
-		roleID, _ := c.Get("role_id")
-		var roleIDPtr *string
-		if roleIDStr, ok := roleID.(string); ok {
-			roleIDPtr = &roleIDStr
-		}
+	roleID, _ := c.Get("role_id")
+	var roleIDPtr *string
+	if roleIDStr, ok := roleID.(string); ok {
+		roleIDPtr = &roleIDStr
+	}
+	
+	// Check if user is already assigned to this branch
+	hasAccess, err := h.branchRepo.CheckUserBranchAccess(userID.(int), branch.ID, companyID.(string))
+	if err == nil && !hasAccess {
+		// User is not assigned, assign them to the new branch
 		if assignErr := h.branchRepo.AssignUserToBranch(userID.(int), branch.ID, roleIDPtr, companyID.(string), nil); assignErr != nil {
 			logger.Warn("Failed to auto-assign user to new branch", logger.ErrorField(assignErr), zap.Int("userId", userID.(int)), zap.String("branchId", branch.ID))
 			// Don't fail branch creation if assignment fails
 		} else {
 			logger.Info("Auto-assigned user to new branch", zap.Int("userId", userID.(int)), zap.String("branchId", branch.ID))
 		}
+	} else if hasAccess {
+		logger.Info("User already has access to branch", zap.Int("userId", userID.(int)), zap.String("branchId", branch.ID))
 	}
 
 	c.JSON(http.StatusCreated, branch)
@@ -133,6 +137,14 @@ func (h *BranchHandler) CreateBranch(c *gin.Context) {
 func (h *BranchHandler) UpdateBranch(c *gin.Context) {
 	branchID := c.Param("id")
 	companyID, _ := c.Get("company_id")
+	userID, _ := c.Get("user_id")
+
+	// Verify user has access to this branch
+	hasAccess, err := h.branchRepo.CheckUserBranchAccess(userID.(int), branchID, companyID.(string))
+	if err != nil || !hasAccess {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied to this branch"})
+		return
+	}
 
 	var req struct {
 		Name    string `json:"name"`
@@ -178,8 +190,16 @@ func (h *BranchHandler) UpdateBranch(c *gin.Context) {
 func (h *BranchHandler) DeleteBranch(c *gin.Context) {
 	branchID := c.Param("id")
 	companyID, _ := c.Get("company_id")
+	userID, _ := c.Get("user_id")
 
-	err := h.branchRepo.DeleteBranch(branchID, companyID.(string))
+	// Verify user has access to this branch
+	hasAccess, err := h.branchRepo.CheckUserBranchAccess(userID.(int), branchID, companyID.(string))
+	if err != nil || !hasAccess {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied to this branch"})
+		return
+	}
+
+	err = h.branchRepo.DeleteBranch(branchID, companyID.(string))
 	if err != nil {
 		logger.Error("Failed to delete branch", logger.ErrorField(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete branch"})
