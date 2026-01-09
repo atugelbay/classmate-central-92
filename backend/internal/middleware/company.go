@@ -3,6 +3,7 @@ package middleware
 import (
 	"database/sql"
 	"net/http"
+	"strings"
 
 	"classmate-central/internal/logger"
 	"classmate-central/internal/repository"
@@ -51,10 +52,11 @@ func CompanyMiddleware(db *sql.DB) gin.HandlerFunc {
 		c.Set("company_id", companyID.String)
 
 	// Handle branch context
-	// Priority: 1. X-Branch-ID header (skip for /api/branches endpoint), 2. current_branch_id from token, 3. First available branch from DB
+	// Priority: 1. X-Branch-ID header (skip for /api/branches endpoints), 2. current_branch_id from token, 3. First available branch from DB
 	branchID := ""
-	// Don't use X-Branch-ID header for /api/branches endpoint to avoid blocking access
-	if c.Request.URL.Path != "/api/branches" {
+	// Don't use X-Branch-ID header for /api/branches endpoints to avoid blocking access
+	// This allows users to view, create, and switch branches without being blocked by branch access checks
+	if !strings.HasPrefix(c.Request.URL.Path, "/api/branches") {
 		branchID = c.GetHeader("X-Branch-ID")
 	}
 	if branchID == "" {
@@ -82,35 +84,38 @@ func CompanyMiddleware(db *sql.DB) gin.HandlerFunc {
 			}
 		}
 
-		// Verify user has access to this branch (skip if using company_id as fallback)
-		if branchID != companyID.String {
-			// Use branchRepo created earlier, or create if not exists
-			if branchRepo == nil {
-				branchRepo = repository.NewBranchRepository(db)
-			}
-			
-			// Check if user has any branches - if not, allow access (user might be registering)
-			userBranches, err := branchRepo.GetUserBranches(userID.(int), companyID.String)
-			if err == nil && len(userBranches) == 0 {
-				// User has no branches yet - this might be during registration
-				// Allow access but use company_id as fallback
-				logger.Info("User has no branches yet, using company_id fallback", zap.Any("userId", userID), zap.String("branchId", branchID))
+	// Verify user has access to this branch (skip if using company_id as fallback or for branch management endpoints)
+	// Skip branch access checks for /api/branches/* endpoints to allow users to view and switch branches
+	skipBranchAccessCheck := strings.HasPrefix(c.Request.URL.Path, "/api/branches")
+	
+	if branchID != companyID.String && !skipBranchAccessCheck {
+		// Use branchRepo created earlier, or create if not exists
+		if branchRepo == nil {
+			branchRepo = repository.NewBranchRepository(db)
+		}
+		
+		// Check if user has any branches - if not, allow access (user might be registering)
+		userBranches, err := branchRepo.GetUserBranches(userID.(int), companyID.String)
+		if err == nil && len(userBranches) == 0 {
+			// User has no branches yet - this might be during registration
+			// Allow access but use company_id as fallback
+			logger.Info("User has no branches yet, using company_id fallback", zap.Any("userId", userID), zap.String("branchId", branchID))
+			branchID = companyID.String
+		} else {
+			// User has branches, check access to requested branch
+			hasAccess, err := branchRepo.CheckUserBranchAccess(userID.(int), branchID, companyID.String)
+			if err != nil {
+				// If check fails (e.g., branches table doesn't exist), fallback to company_id
+				logger.Warn("Failed to check branch access, using company_id fallback", logger.ErrorField(err), zap.Any("userId", userID), zap.String("branchId", branchID))
 				branchID = companyID.String
-			} else {
-				// User has branches, check access to requested branch
-				hasAccess, err := branchRepo.CheckUserBranchAccess(userID.(int), branchID, companyID.String)
-				if err != nil {
-					// If check fails (e.g., branches table doesn't exist), fallback to company_id
-					logger.Warn("Failed to check branch access, using company_id fallback", logger.ErrorField(err), zap.Any("userId", userID), zap.String("branchId", branchID))
-					branchID = companyID.String
-				} else if !hasAccess {
-					logger.Error("User does not have access to branch", zap.Any("userId", userID), zap.String("branchId", branchID))
-					c.JSON(http.StatusForbidden, gin.H{"error": "Access denied to this branch"})
-					c.Abort()
-					return
-				}
+			} else if !hasAccess {
+				logger.Error("User does not have access to branch", zap.Any("userId", userID), zap.String("branchId", branchID))
+				c.JSON(http.StatusForbidden, gin.H{"error": "Access denied to this branch"})
+				c.Abort()
+				return
 			}
 		}
+	}
 
 		// Add branch_id to context
 		c.Set("branch_id", branchID)

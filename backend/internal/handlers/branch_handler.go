@@ -116,22 +116,26 @@ func (h *BranchHandler) CreateBranch(c *gin.Context) {
 	}
 
 	// Always assign user to the new branch (AssignUserToBranch uses ON CONFLICT, so it's safe)
-	logger.Info("Assigning user to new branch", zap.Int("userId", userID.(int)), zap.String("branchId", branch.ID), zap.String("companyId", companyID.(string)))
+	logger.Info("Assigning user to new branch", zap.Int("userId", userID.(int)), zap.String("branchId", branch.ID), zap.String("companyId", companyID.(string)), zap.Any("roleId", roleIDPtr))
 	if assignErr := h.branchRepo.AssignUserToBranch(userID.(int), branch.ID, roleIDPtr, companyID.(string), nil); assignErr != nil {
 		logger.Error("Failed to auto-assign user to new branch", logger.ErrorField(assignErr), zap.Int("userId", userID.(int)), zap.String("branchId", branch.ID))
-		// Don't fail branch creation if assignment fails, but log the error
-	} else {
-		logger.Info("Successfully assigned user to new branch", zap.Int("userId", userID.(int)), zap.String("branchId", branch.ID))
+		// This is critical - user won't be able to access the branch they just created
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Branch created but failed to assign access. Please contact support."})
+		return
+	}
+	
+	logger.Info("Successfully assigned user to new branch", zap.Int("userId", userID.(int)), zap.String("branchId", branch.ID))
 
-		// Verify assignment was successful
-		hasAccess, checkErr := h.branchRepo.CheckUserBranchAccess(userID.(int), branch.ID, companyID.(string))
-		if checkErr != nil {
-			logger.Warn("Failed to verify user branch access after assignment", logger.ErrorField(checkErr), zap.Int("userId", userID.(int)), zap.String("branchId", branch.ID))
-		} else if !hasAccess {
-			logger.Warn("User assignment to branch may not have taken effect yet", zap.Int("userId", userID.(int)), zap.String("branchId", branch.ID))
-		} else {
-			logger.Info("Verified user has access to new branch", zap.Int("userId", userID.(int)), zap.String("branchId", branch.ID))
-		}
+	// Verify assignment was successful
+	hasAccess, checkErr := h.branchRepo.CheckUserBranchAccess(userID.(int), branch.ID, companyID.(string))
+	if checkErr != nil {
+		logger.Warn("Failed to verify user branch access after assignment", logger.ErrorField(checkErr), zap.Int("userId", userID.(int)), zap.String("branchId", branch.ID))
+	} else if !hasAccess {
+		logger.Error("User assignment to branch did not take effect", zap.Int("userId", userID.(int)), zap.String("branchId", branch.ID))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to verify branch access. Please try refreshing."})
+		return
+	} else {
+		logger.Info("Verified user has access to new branch", zap.Int("userId", userID.(int)), zap.String("branchId", branch.ID))
 	}
 
 	c.JSON(http.StatusCreated, branch)
