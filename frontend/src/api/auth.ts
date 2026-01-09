@@ -60,8 +60,13 @@ export const authAPI = {
     return response.data;
   },
 
-  resendVerification: async (email: string) => {
-    const response = await apiClient.post('/auth/resend-verification', { email });
+  resendVerification: async (email?: string) => {
+    // For authenticated users, use protected endpoint (email from context)
+    // For unauthenticated users, use public endpoint with email in body
+    const token = localStorage.getItem('token');
+    const endpoint = token ? '/auth/me/resend-verification' : '/auth/resend-verification';
+    const body = token ? {} : { email };
+    const response = await apiClient.post(endpoint, body);
     return response.data;
   },
 

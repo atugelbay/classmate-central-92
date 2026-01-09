@@ -449,6 +449,7 @@ export interface User {
   permissions?: string[];
   branches?: Branch[];
   currentBranchId?: string;
+  isEmailVerified?: boolean;
   createdAt: string;
   updatedAt: string;
 }

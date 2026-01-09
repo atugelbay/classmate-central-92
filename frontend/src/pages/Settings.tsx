@@ -22,6 +22,7 @@ import {
 import { useThemeContext } from "@/context/ThemeContext";
 import { ColorThemeName, InterfaceSize, DataDensity } from "@/types";
 import { PageHeader } from "@/components/PageHeader";
+import { EmailVerification } from "@/components/EmailVerification";
 
 const COLOR_THEMES = [
   { name: "blue" as ColorThemeName, label: "Синий", color: "#6366F1" },
@@ -117,6 +118,8 @@ export default function Settings() {
               </form>
             </CardContent>
           </Card>
+
+          <EmailVerification />
 
           <Card>
             <CardHeader>

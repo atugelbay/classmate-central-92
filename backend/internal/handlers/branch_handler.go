@@ -123,7 +123,7 @@ func (h *BranchHandler) CreateBranch(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Branch created but failed to assign access. Please contact support."})
 		return
 	}
-	
+
 	logger.Info("Successfully assigned user to new branch", zap.Int("userId", userID.(int)), zap.String("branchId", branch.ID))
 
 	// Verify assignment was successful

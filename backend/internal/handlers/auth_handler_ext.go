@@ -38,17 +38,29 @@ func (h *AuthHandler) VerifyEmail(c *gin.Context) {
 }
 
 // ResendVerificationEmail sends a new verification email
+// For authenticated users (via /auth/me/resend-verification), email is taken from context (user_email)
+// For unauthenticated users (via /auth/resend-verification), email must be provided in request body
 func (h *AuthHandler) ResendVerificationEmail(c *gin.Context) {
-	var req struct {
-		Email string `json:"email" binding:"required,email"`
+	var email string
+	
+	// Try to get email from authenticated user context first
+	if userEmail, exists := c.Get("user_email"); exists {
+		email = userEmail.(string)
+		logger.Info("Using email from authenticated user context", zap.String("email", email))
+	} else {
+		// For unauthenticated users, require email in request body
+		var req struct {
+			Email string `json:"email" binding:"required,email"`
+		}
+
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": validation.FormatValidationErrors(err)})
+			return
+		}
+		email = req.Email
 	}
 
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": validation.FormatValidationErrors(err)})
-		return
-	}
-
-	user, err := h.userRepo.GetByEmail(req.Email)
+	user, err := h.userRepo.GetByEmail(email)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
 		return
@@ -66,7 +78,11 @@ func (h *AuthHandler) ResendVerificationEmail(c *gin.Context) {
 
 	// Generate new code and persist
 	newCode := generateVerificationCode()
-	_ = h.userRepo.UpdateVerificationCode(user.ID, newCode)
+	if err := h.userRepo.UpdateVerificationCode(user.ID, newCode); err != nil {
+		logger.Error("Failed to update verification code", logger.ErrorField(err), zap.Int("userId", user.ID))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate verification code"})
+		return
+	}
 
 	// Send email
 	go func() {

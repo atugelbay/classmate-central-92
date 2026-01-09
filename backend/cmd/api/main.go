@@ -131,6 +131,7 @@ func main() {
 	{
 		// Auth
 		api.GET("/auth/me", authHandler.Me)
+		api.POST("/auth/me/resend-verification", authHandler.ResendVerificationEmail) // Protected route for authenticated users (uses email from context)
 		api.GET("/auth/users", middleware.RequirePermission("users", "manage"), authHandler.GetUsers)
 		api.POST("/auth/invite", middleware.RequirePermission("users", "manage"), authHandler.InviteUser)
 		api.POST("/auth/logout", authHandler.Logout)
