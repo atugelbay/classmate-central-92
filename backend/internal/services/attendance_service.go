@@ -52,17 +52,43 @@ func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendan
 	}
 	defer tx.Rollback()
 
-	// Guard: prevent marking attendance before lesson start (company timezone)
-	var lessonStart time.Time
-	if err := tx.QueryRow(`SELECT start_time FROM lessons WHERE id = $1 AND company_id = $2`, req.LessonID, companyID).Scan(&lessonStart); err == nil {
+	// Guard: prevent marking attendance for future lessons (tomorrow and later)
+	// Allow marking attendance for today's lessons (even if not started yet) and past lessons
+	var lessonStartRaw time.Time
+	if err := tx.QueryRow(`SELECT start_time FROM lessons WHERE id = $1 AND company_id = $2`, req.LessonID, companyID).Scan(&lessonStartRaw); err == nil {
 		// Load company timezone; fallback to Asia/Almaty
 		tz := "Asia/Almaty"
 		_ = tx.QueryRow(`SELECT timezone FROM settings WHERE company_id = $1 LIMIT 1`, companyID).Scan(&tz)
-		if loc, locErr := time.LoadLocation(tz); locErr == nil {
-			now := time.Now().In(loc)
-			if now.Before(lessonStart.In(loc)) {
-				return nil, fmt.Errorf("attendance cannot be marked before lesson start")
-			}
+		
+		var loc *time.Location
+		var locErr error
+		if loc, locErr = time.LoadLocation(tz); locErr != nil {
+			// Fallback to fixed offset for Asia/Almaty (UTC+5)
+			loc = time.FixedZone("Asia/Almaty", 5*60*60)
+		}
+		
+		// PostgreSQL driver returns TIMESTAMP (no tz) as UTC, but we stored it as wall-clock in company tz
+		// The raw time from DB has the correct wall-clock components but wrong timezone (UTC)
+		// We need to reinterpret those components as being in the company timezone
+		// This matches the logic in lesson_repository.go's attachAlmatyOffset function
+		lessonStartInTz := time.Date(
+			lessonStartRaw.Year(), lessonStartRaw.Month(), lessonStartRaw.Day(),
+			lessonStartRaw.Hour(), lessonStartRaw.Minute(), lessonStartRaw.Second(),
+			lessonStartRaw.Nanosecond(), loc,
+		)
+		
+		// Get current date in company timezone (date only, no time)
+		nowInTz := time.Now().In(loc)
+		today := time.Date(nowInTz.Year(), nowInTz.Month(), nowInTz.Day(), 0, 0, 0, 0, loc)
+		
+		// Get lesson date (date only, no time)
+		lessonDate := time.Date(lessonStartInTz.Year(), lessonStartInTz.Month(), lessonStartInTz.Day(), 0, 0, 0, 0, loc)
+		
+		// Only prevent marking attendance for future lessons (tomorrow and later)
+		// Allow all lessons for today and past dates (even if lesson hasn't started yet today)
+		if lessonDate.After(today) {
+			return nil, fmt.Errorf("attendance cannot be marked for future lessons (lesson date: %s, today: %s)", 
+				lessonDate.Format("2006-01-02"), today.Format("2006-01-02"))
 		}
 	}
 
@@ -254,13 +280,21 @@ func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendan
 	}
 
 	// Mark attendance using transaction
-	insertQuery := `INSERT INTO lesson_attendance (lesson_id, student_id, subscription_id, status, marked_by, company_id) 
-	          VALUES ($1, $2, $3, $4, $5, $6) 
+	insertQuery := `INSERT INTO lesson_attendance (lesson_id, student_id, subscription_id, status, reason, notes, marked_by, company_id) 
+	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
 	          ON CONFLICT (lesson_id, student_id) DO UPDATE 
-	          SET subscription_id = EXCLUDED.subscription_id, status = EXCLUDED.status, marked_at = CURRENT_TIMESTAMP, marked_by = EXCLUDED.marked_by, company_id = EXCLUDED.company_id
+	          SET subscription_id = EXCLUDED.subscription_id, status = EXCLUDED.status, reason = EXCLUDED.reason, notes = EXCLUDED.notes, marked_at = CURRENT_TIMESTAMP, marked_by = EXCLUDED.marked_by, company_id = EXCLUDED.company_id
 	          RETURNING id, marked_at`
-	err = tx.QueryRow(insertQuery, attendance.LessonID, attendance.StudentID, attendance.SubscriptionID, attendance.Status, attendance.MarkedBy, attendance.CompanyID).
-		Scan(&attendance.ID, &attendance.MarkedAt)
+	err = tx.QueryRow(insertQuery, 
+		attendance.LessonID, 
+		attendance.StudentID, 
+		attendance.SubscriptionID, 
+		attendance.Status, 
+		attendance.Reason, 
+		attendance.Notes, 
+		attendance.MarkedBy, 
+		attendance.CompanyID,
+	).Scan(&attendance.ID, &attendance.MarkedAt)
 	if err != nil {
 		return nil, fmt.Errorf("error marking attendance: %w", err)
 	}

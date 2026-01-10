@@ -19,14 +19,51 @@ func NewDatabase() (*Database, error) {
 
 	// If DATABASE_URL is not set, build connection string from individual env vars
 	if connStr == "" {
+		// Get env vars with defaults for local development
+		dbHost := os.Getenv("DB_HOST")
+		dbPort := os.Getenv("DB_PORT")
+		dbUser := os.Getenv("DB_USER")
+		dbPassword := os.Getenv("DB_PASSWORD")
+		dbName := os.Getenv("DB_NAME")
+		dbSSLMode := os.Getenv("DB_SSLMODE")
+
+		// Set defaults for local development if not provided
+		if dbHost == "" {
+			dbHost = "localhost"
+		}
+		if dbPort == "" {
+			dbPort = "5432"
+		}
+		if dbUser == "" {
+			dbUser = "postgres"
+		}
+		if dbPassword == "" {
+			dbPassword = "postgres"
+		}
+		if dbName == "" {
+			dbName = "classmate_central"
+		}
+		if dbSSLMode == "" {
+			dbSSLMode = "disable"
+		}
+
+		// Validate required fields
+		if dbHost == "" || dbPort == "" || dbUser == "" || dbName == "" {
+			return nil, fmt.Errorf(
+				"missing required database configuration. Please set either DATABASE_URL or the following environment variables:\n"+
+					"  DB_HOST (default: localhost)\n"+
+					"  DB_PORT (default: 5432)\n"+
+					"  DB_USER (default: postgres)\n"+
+					"  DB_PASSWORD (default: postgres)\n"+
+					"  DB_NAME (default: classmate_central)\n"+
+					"  DB_SSLMODE (default: disable)\n\n"+
+					"Current values: DB_HOST=%s, DB_PORT=%s, DB_USER=%s, DB_NAME=%s",
+				dbHost, dbPort, dbUser, dbName)
+		}
+
 		connStr = fmt.Sprintf(
 			"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s connect_timeout=5",
-			os.Getenv("DB_HOST"),
-			os.Getenv("DB_PORT"),
-			os.Getenv("DB_USER"),
-			os.Getenv("DB_PASSWORD"),
-			os.Getenv("DB_NAME"),
-			os.Getenv("DB_SSLMODE"),
+			dbHost, dbPort, dbUser, dbPassword, dbName, dbSSLMode,
 		)
 	}
 
@@ -36,7 +73,11 @@ func NewDatabase() (*Database, error) {
 	}
 
 	if err := db.Ping(); err != nil {
-		return nil, fmt.Errorf("error connecting to database: %w", err)
+		return nil, fmt.Errorf("error connecting to database: %w\n\nPlease check:\n"+
+			"  1. PostgreSQL is running\n"+
+			"  2. Database connection settings are correct\n"+
+			"  3. Database exists: CREATE DATABASE classmate_central;\n"+
+			"  4. User has proper permissions", err)
 	}
 
 	log.Println("Successfully connected to database")
