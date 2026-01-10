@@ -95,7 +95,7 @@ func main() {
 	tariffHandler := handlers.NewTariffHandler(tariffRepo)
 	discountHandler := handlers.NewDiscountHandler(discountRepo)
 	debtHandler := handlers.NewDebtHandler(debtRepo)
-	subscriptionHandler := handlers.NewSubscriptionHandler(subscriptionRepo, attendanceService, activityService, subscriptionService)
+	subscriptionHandler := handlers.NewSubscriptionHandler(subscriptionRepo, discountRepo, attendanceService, activityService, subscriptionService)
 	migrationHandler := handlers.NewMigrationHandler(teacherRepo, studentRepo, groupRepo, roomRepo, lessonRepo, subscriptionRepo, branchRepo)
 	dashboardHandler := handlers.NewDashboardHandler(lessonRepo, paymentRepo, subscriptionRepo, studentRepo, leadRepo, debtRepo)
 	roleHandler := handlers.NewRoleHandler(roleRepo, permRepo)

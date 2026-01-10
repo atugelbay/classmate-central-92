@@ -610,7 +610,15 @@ export default function StudentDetail() {
                       <div className="space-y-2 pt-2 border-t">
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-muted-foreground">Стоимость</span>
-                          <span className="font-semibold">{sub.totalPrice.toLocaleString()} ₸</span>
+                          {sub.originalPrice && sub.originalPrice > sub.totalPrice && sub.discountAmount ? (
+                            <div className="flex flex-col items-end">
+                              <span className="font-semibold text-green-600">{sub.totalPrice.toLocaleString()} ₸</span>
+                              <span className="line-through text-muted-foreground text-[10px]">{sub.originalPrice.toLocaleString()} ₸</span>
+                              <span className="text-green-600 text-[10px]">-{sub.discountAmount.toLocaleString()} ₸</span>
+                            </div>
+                          ) : (
+                            <span className="font-semibold">{sub.totalPrice.toLocaleString()} ₸</span>
+                          )}
                         </div>
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-muted-foreground">За урок</span>

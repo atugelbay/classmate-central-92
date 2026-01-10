@@ -3,6 +3,8 @@ package repository
 import (
 	"database/sql"
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -66,7 +68,7 @@ func (r *GroupRepository) GetAll(companyID string, branchID string) ([]*models.G
 func (r *GroupRepository) GetAllByBranches(companyID string, branchIDs []string) ([]*models.Group, error) {
 	var query string
 	var args []interface{}
-	
+
 	// Check if branchIDs contains companyID (fallback mode)
 	hasFallback := false
 	for _, bid := range branchIDs {
@@ -75,7 +77,7 @@ func (r *GroupRepository) GetAllByBranches(companyID string, branchIDs []string)
 			break
 		}
 	}
-	
+
 	baseQuery := `
 		SELECT 
 			g.id, g.name, g.subject, g.teacher_id, g.room_id, g.schedule, 
@@ -86,7 +88,7 @@ func (r *GroupRepository) GetAllByBranches(companyID string, branchIDs []string)
 		LEFT JOIN teachers t ON g.teacher_id = t.id
 		LEFT JOIN rooms rm ON g.room_id = rm.id
 	`
-	
+
 	if hasFallback && len(branchIDs) == 1 {
 		// Fallback mode: don't filter by branch_id
 		query = baseQuery + ` WHERE g.company_id = $1 ORDER BY g.name`
@@ -191,7 +193,7 @@ func (r *GroupRepository) GetByID(id string, companyID string) (*models.Group, e
 	query := `
 		SELECT 
 			g.id, g.name, g.subject, g.teacher_id, g.room_id, g.schedule, 
-			g.description, g.status, g.color, g.company_id,
+			g.description, g.status, g.color, g.company_id, g.branch_id,
 			t.name as teacher_name,
 			rm.name as room_name
 		FROM groups g
@@ -201,7 +203,7 @@ func (r *GroupRepository) GetByID(id string, companyID string) (*models.Group, e
 	`
 
 	var roomName sql.NullString
-	err := r.db.QueryRow(query, id, companyID).Scan(&group.ID, &group.Name, &group.Subject, &teacherID, &roomID, &schedule, &description, &status, &color, &group.CompanyID, &teacherName, &roomName)
+	err := r.db.QueryRow(query, id, companyID).Scan(&group.ID, &group.Name, &group.Subject, &teacherID, &roomID, &schedule, &description, &status, &color, &group.CompanyID, &group.BranchID, &teacherName, &roomName)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -242,7 +244,8 @@ func (r *GroupRepository) GetByID(id string, companyID string) (*models.Group, e
 	group.StudentIds = []string{}
 
 	// Get students from enrollment table (active enrollments only)
-	studentRows, err := r.db.Query(`SELECT student_id FROM enrollment WHERE group_id = $1 AND left_at IS NULL`, group.ID)
+	// Note: company_id is included in the query for proper multi-tenancy isolation
+	studentRows, err := r.db.Query(`SELECT student_id FROM enrollment WHERE group_id = $1 AND company_id = $2 AND left_at IS NULL`, group.ID, companyID)
 	if err == nil {
 		for studentRows.Next() {
 			var studentID string
@@ -292,36 +295,101 @@ func (r *GroupRepository) Update(group *models.Group, companyID string) error {
 		return fmt.Errorf("error updating group: %w", err)
 	}
 
-	// Mark old enrollments as left (preserve history)
-	_, err = tx.Exec(`
-		UPDATE enrollment 
-		SET left_at = CURRENT_TIMESTAMP 
+	// Get current active student IDs before marking them as left
+	var currentActiveStudentIDs []string
+	studentRows, err := tx.Query(`
+		SELECT student_id FROM enrollment 
 		WHERE group_id = $1 AND company_id = $2 AND left_at IS NULL
 	`, group.ID, companyID)
-	if err != nil {
-		return fmt.Errorf("error updating old enrollments: %w", err)
+	if err == nil {
+		defer studentRows.Close()
+		for studentRows.Next() {
+			var studentID string
+			if err := studentRows.Scan(&studentID); err == nil {
+				currentActiveStudentIDs = append(currentActiveStudentIDs, studentID)
+			}
+		}
 	}
 
-	// Insert new enrollments
-	for _, studentID := range group.StudentIds {
-		_, err = tx.Exec(`
-			INSERT INTO enrollment (student_id, group_id, joined_at, company_id)
-			VALUES ($1, $2, CURRENT_TIMESTAMP, $3)
-			ON CONFLICT (student_id, group_id) WHERE left_at IS NULL DO NOTHING
-		`, studentID, group.ID, companyID)
-		if err != nil {
-			return fmt.Errorf("error inserting enrollment: %w", err)
+	// Update enrollments only if studentIds were provided
+	// If empty array is provided AND we're updating (not creating), keep existing enrollments
+	// This prevents accidental removal of students when only updating schedule
+	shouldUpdateEnrollments := false
+	if len(group.StudentIds) > 0 {
+		shouldUpdateEnrollments = true
+	} else if len(currentActiveStudentIDs) > 0 && len(group.StudentIds) == 0 {
+		// If empty array provided but group has existing students, it means explicitly remove all
+		// Only update if we have existing students to avoid issues
+		shouldUpdateEnrollments = true
+	}
+	
+	if shouldUpdateEnrollments {
+		// Create a set of new student IDs for fast lookup
+		newStudentIDsSet := make(map[string]bool)
+		for _, studentID := range group.StudentIds {
+			newStudentIDsSet[studentID] = true
 		}
-		// If enrollment exists but was left, reactivate it
-		_, err = tx.Exec(`
-			UPDATE enrollment 
-			SET left_at = NULL, joined_at = CURRENT_TIMESTAMP 
-			WHERE student_id = $1 AND group_id = $2 AND company_id = $3 AND left_at IS NOT NULL
-		`, studentID, group.ID, companyID)
-		if err != nil {
-			return fmt.Errorf("error reactivating enrollment: %w", err)
+
+		// Mark old enrollments as left (preserve history) - только для тех, кого нет в новом списке
+		for _, oldStudentID := range currentActiveStudentIDs {
+			if !newStudentIDsSet[oldStudentID] {
+				// Студента нет в новом списке - деактивируем
+				_, err = tx.Exec(`
+					UPDATE enrollment 
+					SET left_at = CURRENT_TIMESTAMP 
+					WHERE student_id = $1 AND group_id = $2 AND company_id = $3 AND left_at IS NULL
+				`, oldStudentID, group.ID, companyID)
+				if err != nil {
+					return fmt.Errorf("error updating old enrollments: %w", err)
+				}
+			}
+		}
+
+		// Ensure all new students have active enrollments
+		for _, studentID := range group.StudentIds {
+			// Проверяем, есть ли уже активная запись для этого студента и группы
+			var hasActiveEnrollment bool
+			err = tx.QueryRow(`
+				SELECT EXISTS(
+					SELECT 1 FROM enrollment 
+					WHERE student_id = $1 AND group_id = $2 AND company_id = $3 AND left_at IS NULL
+				)
+			`, studentID, group.ID, companyID).Scan(&hasActiveEnrollment)
+			if err != nil {
+				return fmt.Errorf("error checking active enrollment: %w", err)
+			}
+
+			if !hasActiveEnrollment {
+				// Активной записи нет - пытаемся реактивировать старую или создать новую
+				result, err := tx.Exec(`
+					UPDATE enrollment 
+					SET left_at = NULL, joined_at = CURRENT_TIMESTAMP
+					WHERE student_id = $1 AND group_id = $2 AND company_id = $3 AND left_at IS NOT NULL
+					AND NOT EXISTS (
+						SELECT 1 FROM enrollment 
+						WHERE student_id = $1 AND group_id = $2 AND company_id = $3 AND left_at IS NULL
+					)
+				`, studentID, group.ID, companyID)
+				if err != nil {
+					return fmt.Errorf("error reactivating enrollment: %w", err)
+				}
+
+				rowsAffected, _ := result.RowsAffected()
+				if rowsAffected == 0 {
+					// Не удалось реактивировать - создаем новую запись
+					_, err = tx.Exec(`
+						INSERT INTO enrollment (student_id, group_id, joined_at, company_id, left_at)
+						VALUES ($1, $2, CURRENT_TIMESTAMP, $3, NULL)
+					`, studentID, group.ID, companyID)
+					if err != nil {
+						return fmt.Errorf("error inserting enrollment: %w", err)
+					}
+				}
+			}
+			// Если активная запись уже существует - ничего не делаем
 		}
 	}
+	// Если group.StudentIds == nil, не трогаем enrollments (обновляем только другие поля группы)
 
 	return tx.Commit()
 }
@@ -346,7 +414,9 @@ func (r *GroupRepository) GenerateLessonsForGroup(group *models.Group, companyID
 
 	fmt.Printf("🔍 Parsing schedule: '%s' for group %s\n", schedule, group.Name)
 
-	// Parse schedule: "Пн, Ср, Пт 20:00-21:30"
+	// Supported formats:
+	// - "Пн, Ср, Пт 20:00-21:30"
+	// - "Пн, Ср 10:00-11:00; Пт 15:00-16:00" (different times per day group)
 	weekdaysMap := map[string]time.Weekday{
 		"пн": time.Monday, "понедельник": time.Monday,
 		"вт": time.Tuesday, "вторник": time.Tuesday,
@@ -357,58 +427,76 @@ func (r *GroupRepository) GenerateLessonsForGroup(group *models.Group, companyID
 		"вс": time.Sunday, "воскресенье": time.Sunday,
 	}
 
-	// Extract weekdays and time from schedule
-	var targetWeekdays []time.Weekday
-	var startHour, startMin, endHour, endMin int
-
-	// Simple parsing
-	schedLower := strings.ToLower(schedule)
-	for key, day := range weekdaysMap {
-		if strings.Contains(schedLower, key) {
-			targetWeekdays = append(targetWeekdays, day)
-		}
+	type dayTime struct {
+		StartHour int
+		StartMin  int
+		EndHour   int
+		EndMin    int
 	}
 
-	fmt.Printf("📅 Parsed weekdays: %v\n", targetWeekdays)
+	weekdayTimes := map[time.Weekday]dayTime{}
+	timeRe := regexp.MustCompile(`(?i)(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})`)
 
-	// Extract time using regex or simple string split
-	// Format: "20:00-21:30" or "20:00 - 21:30"
-	timePattern := strings.Split(schedLower, " ")
-	for _, part := range timePattern {
-		if strings.Contains(part, ":") && strings.Contains(part, "-") {
-			// Found time range
-			times := strings.Split(part, "-")
-			if len(times) == 2 {
-				// Parse start time
-				startParts := strings.Split(times[0], ":")
-				if len(startParts) == 2 {
-					fmt.Sscanf(startParts[0], "%d", &startHour)
-					fmt.Sscanf(startParts[1], "%d", &startMin)
+	segments := strings.Split(schedule, ";")
+	if len(segments) == 0 {
+		segments = []string{schedule}
+	}
+
+	for _, seg := range segments {
+		seg = strings.TrimSpace(seg)
+		if seg == "" {
+			continue
+		}
+		segLower := strings.ToLower(seg)
+
+		// Parse time range from this segment
+		m := timeRe.FindStringSubmatch(seg)
+		if len(m) != 5 {
+			continue
+		}
+		sh, _ := strconv.Atoi(m[1])
+		sm, _ := strconv.Atoi(m[2])
+		eh, _ := strconv.Atoi(m[3])
+		em, _ := strconv.Atoi(m[4])
+
+		// Parse weekdays from this segment
+		segDays := []time.Weekday{}
+		for key, day := range weekdaysMap {
+			if strings.Contains(segLower, key) {
+				already := false
+				for _, existing := range segDays {
+					if existing == day {
+						already = true
+						break
+					}
 				}
-				// Parse end time
-				endParts := strings.Split(times[1], ":")
-				if len(endParts) == 2 {
-					fmt.Sscanf(endParts[0], "%d", &endHour)
-					fmt.Sscanf(endParts[1], "%d", &endMin)
+				if !already {
+					segDays = append(segDays, day)
 				}
 			}
 		}
+
+		// Apply this segment's time to all its weekdays
+		for _, d := range segDays {
+			weekdayTimes[d] = dayTime{StartHour: sh, StartMin: sm, EndHour: eh, EndMin: em}
+		}
 	}
 
-	fmt.Printf("⏰ Parsed time: %02d:%02d - %02d:%02d\n", startHour, startMin, endHour, endMin)
-
-	// Default time if parsing failed
-	if startHour == 0 && endHour == 0 {
-		fmt.Println("⚠️  Time parsing failed, using defaults: 10:00-11:30")
-		startHour, startMin = 10, 0
-		endHour, endMin = 11, 30
+	// Defaults if parsing failed
+	if len(weekdayTimes) == 0 {
+		fmt.Println("⚠️  Schedule parsing failed, using defaults: Mon/Wed/Fri 10:00-11:30")
+		weekdayTimes[time.Monday] = dayTime{StartHour: 10, StartMin: 0, EndHour: 11, EndMin: 30}
+		weekdayTimes[time.Wednesday] = dayTime{StartHour: 10, StartMin: 0, EndHour: 11, EndMin: 30}
+		weekdayTimes[time.Friday] = dayTime{StartHour: 10, StartMin: 0, EndHour: 11, EndMin: 30}
 	}
 
-	// Default weekdays if parsing failed
-	if len(targetWeekdays) == 0 {
-		fmt.Println("⚠️  Weekdays parsing failed, using defaults: Mon, Wed, Fri")
-		targetWeekdays = []time.Weekday{time.Monday, time.Wednesday, time.Friday}
+	targetWeekdays := make([]time.Weekday, 0, len(weekdayTimes))
+	for d := range weekdayTimes {
+		targetWeekdays = append(targetWeekdays, d)
 	}
+
+	fmt.Printf("📅 Parsed weekdays: %v\n", targetWeekdays)
+	fmt.Printf("⏰ Parsed weekday times: %+v\n", weekdayTimes)
 
 	// Use group's room_id, or get a default room if not set
 	var roomID sql.NullString
@@ -428,7 +516,7 @@ func (r *GroupRepository) GenerateLessonsForGroup(group *models.Group, companyID
 
 	fmt.Printf("🌍 Using timezone: %s (offset: %+d hours)\n", loc.String(), kazakhstanOffset/3600)
 
-	// Generate exactly 12 lessons
+	// Generate lessons for 12 weeks ahead (like frontend does)
 	lessonsCreated := 0
 
 	// Get current time in Kazakhstan timezone
@@ -439,35 +527,32 @@ func (r *GroupRepository) GenerateLessonsForGroup(group *models.Group, companyID
 	currentDate := now.In(loc)
 	fmt.Printf("⏰ Current time (Kazakhstan): %s\n", currentDate.Format("2006-01-02 15:04:05 MST"))
 
-	// Start from tomorrow
+	// Start from tomorrow (or start of next week if we want to align with frontend)
 	currentDate = time.Date(currentDate.Year(), currentDate.Month(), currentDate.Day()+1, 0, 0, 0, 0, loc)
+	
+	// Calculate end date: 12 weeks from start
+	endDate := currentDate.AddDate(0, 0, 12*7) // 12 weeks = 84 days
 
 	fmt.Printf("📍 Starting generation from: %s (timezone: %s)\n", currentDate.Format("2006-01-02"), loc.String())
-	fmt.Printf("🎯 Target: 12 lessons, Room: %v\n", roomID)
+	fmt.Printf("📍 End date: %s (12 weeks ahead)\n", endDate.Format("2006-01-02"))
+	fmt.Printf("🎯 Target: lessons for 12 weeks, Room: %v\n", roomID)
 
-	maxIterations := 100 // Safety limit
+	maxIterations := 1000 // Safety limit (12 weeks * 7 days = 84 days, but with multiple weekdays per week it could be more)
 	iterations := 0
 
-	for lessonsCreated < 12 && iterations < maxIterations {
+	for currentDate.Before(endDate) && iterations < maxIterations {
 		iterations++
 
 		// Check if current date is one of our target weekdays
-		isTargetDay := false
-		for _, targetDay := range targetWeekdays {
-			if currentDate.Weekday() == targetDay {
-				isTargetDay = true
-				break
-			}
-		}
-
+		dayCfg, isTargetDay := weekdayTimes[currentDate.Weekday()]
 		if isTargetDay {
 			fmt.Printf("✓ %s is target day (%s), creating lesson...\n",
 				currentDate.Format("2006-01-02"), currentDate.Weekday())
 			// Create a lesson with proper timezone
 			lessonStart := time.Date(currentDate.Year(), currentDate.Month(), currentDate.Day(),
-				startHour, startMin, 0, 0, loc)
+				dayCfg.StartHour, dayCfg.StartMin, 0, 0, loc)
 			lessonEnd := time.Date(currentDate.Year(), currentDate.Month(), currentDate.Day(),
-				endHour, endMin, 0, 0, loc)
+				dayCfg.EndHour, dayCfg.EndMin, 0, 0, loc)
 
 			lessonID := fmt.Sprintf("lesson-%s-%d", group.ID, lessonStart.Unix())
 
@@ -511,11 +596,12 @@ func (r *GroupRepository) GenerateLessonsForGroup(group *models.Group, companyID
 			fmt.Printf("      - start_time: %v (Go time.Time)\n", lessonStart)
 			fmt.Printf("      - end_time: %v (Go time.Time)\n", lessonEnd)
 
+			// Propagate branch_id so lesson appears for current branch filter
 			result, err := r.db.Exec(`
-				INSERT INTO lessons (id, title, teacher_id, group_id, subject, start_time, end_time, room_id, status, company_id)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+				INSERT INTO lessons (id, title, teacher_id, group_id, subject, start_time, end_time, room_id, status, company_id, branch_id)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 				ON CONFLICT (id) DO NOTHING
-			`, lessonID, group.Name, group.TeacherID, group.ID, group.Subject, lessonStart, lessonEnd, roomID, "scheduled", companyID)
+			`, lessonID, group.Name, group.TeacherID, group.ID, group.Subject, lessonStart, lessonEnd, roomID, "scheduled", companyID, group.BranchID)
 
 			if err != nil {
 				fmt.Printf("❌ Error creating lesson: %v\n", err)

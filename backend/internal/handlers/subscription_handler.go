@@ -5,6 +5,7 @@ import (
 	"classmate-central/internal/repository"
 	"classmate-central/internal/services"
 	"classmate-central/internal/validation"
+	"math"
 	"net/http"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 
 type SubscriptionHandler struct {
 	repo                *repository.SubscriptionRepository
+	discountRepo        *repository.DiscountRepository
 	attendanceService    *services.AttendanceService
 	activityService      *services.ActivityService
 	subscriptionService  *services.SubscriptionService
@@ -21,16 +23,65 @@ type SubscriptionHandler struct {
 
 func NewSubscriptionHandler(
 	repo *repository.SubscriptionRepository,
+	discountRepo *repository.DiscountRepository,
 	attendanceService *services.AttendanceService,
 	activityService *services.ActivityService,
 	subscriptionService *services.SubscriptionService,
 ) *SubscriptionHandler {
 	return &SubscriptionHandler{
 		repo:               repo,
+		discountRepo:       discountRepo,
 		attendanceService:  attendanceService,
 		activityService:    activityService,
 		subscriptionService: subscriptionService,
 	}
+}
+
+// calculatePriceWithDiscounts applies active student discounts to a base price
+// Returns: finalPrice, discountAmount
+func calculatePriceWithDiscounts(basePrice float64, discounts []models.Discount) (float64, float64) {
+	if len(discounts) == 0 {
+		return basePrice, 0
+	}
+
+	finalPrice := basePrice
+	totalDiscount := 0.0
+
+	// Apply discounts sequentially
+	// First apply percentage discounts, then fixed discounts
+	var percentageDiscounts []models.Discount
+	var fixedDiscounts []models.Discount
+
+	for _, d := range discounts {
+		if !d.IsActive {
+			continue
+		}
+		if d.Type == "percentage" {
+			percentageDiscounts = append(percentageDiscounts, d)
+		} else if d.Type == "fixed" {
+			fixedDiscounts = append(fixedDiscounts, d)
+		}
+	}
+
+	// Apply percentage discounts first
+	for _, d := range percentageDiscounts {
+		if d.Value > 0 && d.Value <= 100 {
+			discountAmount := finalPrice * (d.Value / 100.0)
+			finalPrice = math.Max(0, finalPrice-discountAmount)
+			totalDiscount += discountAmount
+		}
+	}
+
+	// Apply fixed discounts after percentage
+	for _, d := range fixedDiscounts {
+		if d.Value > 0 {
+			discountAmount := math.Min(finalPrice, d.Value)
+			finalPrice = math.Max(0, finalPrice-discountAmount)
+			totalDiscount += discountAmount
+		}
+	}
+
+	return finalPrice, totalDiscount
 }
 
 // ============= Subscription Types =============
@@ -145,6 +196,27 @@ func (h *SubscriptionHandler) CreateStudentSubscription(c *gin.Context) {
 	}
 
 	companyID := c.GetString("company_id")
+	
+	// Get active discounts for the student and apply them to the price
+	originalPrice := sub.TotalPrice
+	discounts, err := h.discountRepo.GetActiveStudentDiscountsWithDetails(sub.StudentID, companyID)
+	if err != nil {
+		// Log error but continue without discounts
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get student discounts: " + err.Error()})
+		return
+	}
+
+	// Calculate final price with discounts applied
+	finalPrice, discountAmount := calculatePriceWithDiscounts(originalPrice, discounts)
+	
+	// Update subscription with discounted price and save original price
+	sub.TotalPrice = finalPrice
+	sub.OriginalPrice = &originalPrice
+	sub.DiscountAmount = &discountAmount
+	if sub.TotalLessons > 0 {
+		sub.PricePerLesson = finalPrice / float64(sub.TotalLessons)
+	}
+
 	sub.ID = uuid.New().String()
 	if err := h.repo.CreateStudentSubscription(&sub, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

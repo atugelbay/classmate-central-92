@@ -53,6 +53,15 @@ export default function WeekScheduleView({
   const [containerWidth, setContainerWidth] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Refs for robust global mouse/pointer end handling (prevents "sticky" drag)
+  const draggingLessonRef = useRef<Lesson | null>(null);
+  const pendingDragLessonRef = useRef<Lesson | null>(null);
+  const handleLessonDragEndRef = useRef<() => void>(() => {});
+
+  // Lessons can come as ISO strings; drag needs Date + safe comparisons
+  const toDate = (v: any): Date => (v instanceof Date ? v : moment.parseZone(v as any).toDate());
+  const toMs = (v: any): number => (v instanceof Date ? v.getTime() : moment.parseZone(v as any).valueOf());
+
   // Get week days (Monday to Sunday)
   const weekStart = moment(selectedDate).startOf('isoWeek');
   const weekDays = Array.from({ length: 7 }, (_, i) => 
@@ -68,7 +77,7 @@ export default function WeekScheduleView({
   // Filter lessons for the week
   const weekEnd = moment(weekStart).endOf('isoWeek');
   const filteredLessons = lessons.filter((lesson) => {
-    const lessonDate = moment.utc(lesson.start).local();
+    const lessonDate = moment.parseZone(lesson.start as any);
     return lessonDate.isBetween(weekStart, weekEnd, 'day', '[]');
   });
 
@@ -79,7 +88,7 @@ export default function WeekScheduleView({
     rooms.forEach((room) => {
       lessonsByDayAndRoom[index][room.id] = filteredLessons.filter(
         (lesson) => {
-          const lessonDate = moment.utc(lesson.start).local();
+          const lessonDate = moment.parseZone(lesson.start as any);
           return lessonDate.isSame(day, 'day') && lesson.roomId === room.id;
         }
       );
@@ -233,8 +242,8 @@ export default function WeekScheduleView({
     }
     
     // Check if the lesson was actually moved (not just clicked)
-    const startChanged = tempLessonPosition.start.getTime() !== draggingLesson.start.getTime();
-    const endChanged = tempLessonPosition.end.getTime() !== draggingLesson.end.getTime();
+    const startChanged = tempLessonPosition.start.getTime() !== toMs(draggingLesson.start);
+    const endChanged = tempLessonPosition.end.getTime() !== toMs(draggingLesson.end);
     const roomChanged = tempLessonPosition.roomId !== draggingLesson.roomId;
     
     // Only update if position actually changed
@@ -253,14 +262,53 @@ export default function WeekScheduleView({
     setMouseDownPosition(null);
   };
 
+  // Keep refs in sync + provide robust global end handlers.
   useEffect(() => {
-    if (draggingLesson) {
-      document.addEventListener('mouseup', handleLessonDragEnd);
-      return () => {
-        document.removeEventListener('mouseup', handleLessonDragEnd);
-      };
-    }
-  }, [draggingLesson, tempLessonPosition]);
+    draggingLessonRef.current = draggingLesson;
+  }, [draggingLesson]);
+  useEffect(() => {
+    pendingDragLessonRef.current = pendingDragLesson;
+  }, [pendingDragLesson]);
+  useEffect(() => {
+    handleLessonDragEndRef.current = handleLessonDragEnd;
+  });
+
+  useEffect(() => {
+    const endAll = () => {
+      if (draggingLessonRef.current) {
+        handleLessonDragEndRef.current();
+      }
+      // Clean up pending drag if mouseup happened before threshold
+      if (pendingDragLessonRef.current && !draggingLessonRef.current) {
+        setPendingDragLesson(null);
+        setMouseDownPosition(null);
+        setHasActuallyMoved(false);
+      }
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== "visible") {
+        endAll();
+      }
+    };
+
+    // Use capture so stopPropagation() inside components can't block us.
+    window.addEventListener("mouseup", endAll, { capture: true });
+    window.addEventListener("pointerup", endAll, { capture: true });
+    window.addEventListener("pointercancel", endAll, { capture: true });
+    window.addEventListener("blur", endAll);
+    window.addEventListener("mouseleave", endAll, { capture: true });
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      window.removeEventListener("mouseup", endAll, { capture: true } as any);
+      window.removeEventListener("pointerup", endAll, { capture: true } as any);
+      window.removeEventListener("pointercancel", endAll, { capture: true } as any);
+      window.removeEventListener("blur", endAll);
+      window.removeEventListener("mouseleave", endAll, { capture: true } as any);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, []);
 
   // Check mouse movement distance to start dragging
   useEffect(() => {
@@ -291,23 +339,7 @@ export default function WeekScheduleView({
     }
   }, [pendingDragLesson, draggingLesson, mouseDownPosition, DRAG_THRESHOLD]);
 
-  // Clean up pending drag on mouseup if no actual drag happened
-  useEffect(() => {
-    const handleGlobalMouseUp = () => {
-      if (pendingDragLesson && !draggingLesson) {
-        setPendingDragLesson(null);
-        setMouseDownPosition(null);
-        setHasActuallyMoved(false);
-      }
-    };
-
-    if (pendingDragLesson && !draggingLesson) {
-      document.addEventListener('mouseup', handleGlobalMouseUp);
-      return () => {
-        document.removeEventListener('mouseup', handleGlobalMouseUp);
-      };
-    }
-  }, [pendingDragLesson, draggingLesson]);
+  // pending-drag cleanup is handled by the global end listener above
 
   // Track container resize for responsive columns
   useEffect(() => {

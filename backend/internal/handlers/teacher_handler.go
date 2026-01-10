@@ -68,10 +68,14 @@ func (h *TeacherHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := validation.ValidateEmail(teacher.Email); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+	// Email is optional - validate only if provided
+	if teacher.Email != "" {
+		if err := validation.ValidateEmail(teacher.Email); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 	}
+	// Phone is optional - validate only if provided
 	if teacher.Phone != "" {
 		if err := validation.ValidatePhone(teacher.Phone); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -82,6 +86,22 @@ func (h *TeacherHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	// Rate type and rate are REQUIRED for new teachers
+	if teacher.RateType == nil || *teacher.RateType == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "rateType is required"})
+		return
+	}
+	if *teacher.RateType == "hourly" {
+		if teacher.HourlyRate == nil || *teacher.HourlyRate <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "hourlyRate is required and must be greater than 0"})
+			return
+		}
+	} else if *teacher.RateType == "per_lesson" {
+		if teacher.LessonRate == nil || *teacher.LessonRate <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "lessonRate is required and must be greater than 0"})
+			return
+		}
+	}
 
 	companyID := c.GetString("company_id")
 	branchID := c.GetString("branch_id")
@@ -90,7 +110,14 @@ func (h *TeacherHandler) Create(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, teacher)
+	// Get created teacher from database to return complete data
+	createdTeacher, err := h.repo.GetByID(teacher.ID, companyID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get created teacher"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, createdTeacher)
 }
 
 func (h *TeacherHandler) Update(c *gin.Context) {
@@ -130,7 +157,14 @@ func (h *TeacherHandler) Update(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, teacher)
+	// Get updated teacher from database to return complete data
+	updatedTeacher, err := h.repo.GetByID(id, companyID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get updated teacher"})
+		return
+	}
+
+	c.JSON(http.StatusOK, updatedTeacher)
 }
 
 func (h *TeacherHandler) Delete(c *gin.Context) {

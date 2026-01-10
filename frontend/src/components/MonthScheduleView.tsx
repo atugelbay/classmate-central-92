@@ -35,7 +35,7 @@ export default function MonthScheduleView({
   // Group lessons by date
   const lessonsByDate: Record<string, Lesson[]> = {};
   lessons.forEach((lesson) => {
-    const dateKey = moment.utc(lesson.start).local().format('YYYY-MM-DD');
+    const dateKey = moment.parseZone(lesson.start as any).format('YYYY-MM-DD');
     if (!lessonsByDate[dateKey]) {
       lessonsByDate[dateKey] = [];
     }
@@ -138,7 +138,7 @@ export default function MonthScheduleView({
                             {getGroupName(lesson.groupId) || lesson.title}
                           </div>
                           <div className="text-[8px] sm:text-[9px] text-muted-foreground leading-tight truncate overflow-hidden text-ellipsis whitespace-nowrap">
-                            {moment.utc(lesson.start).local().format("HH:mm")}
+                            {moment.parseZone(lesson.start as any).format("HH:mm")}
                           </div>
                         </Card>
                       ))}
@@ -171,7 +171,7 @@ export default function MonthScheduleView({
                                       {getGroupName(lesson.groupId) || lesson.title}
                                     </div>
                                     <div className="text-xs text-muted-foreground">
-                                      {moment.utc(lesson.start).local().format("HH:mm")} - {moment.utc(lesson.end).local().format("HH:mm")}
+                                      {moment.parseZone(lesson.start as any).format("HH:mm")} - {moment.parseZone(lesson.end as any).format("HH:mm")}
                                     </div>
                                     <div className="text-xs text-muted-foreground truncate">
                                       {lesson.subject}

@@ -4,21 +4,20 @@ import { Lesson, CheckConflictsRequest, CheckConflictsResponse, BulkCreateLesson
 export const lessonsAPI = {
   getAll: async (): Promise<Lesson[]> => {
     const response = await apiClient.get('/lessons');
-    // Convert date strings to Date objects
+    // Keep original ISO strings with offset to avoid client timezone shifts
     return response.data.map((lesson: any) => ({
       ...lesson,
-      start: new Date(lesson.start),
-      end: new Date(lesson.end),
+      start: lesson.start,
+      end: lesson.end,
     }));
   },
 
   getIndividual: async (): Promise<Lesson[]> => {
     const response = await apiClient.get('/lessons/individual');
-    // Convert date strings to Date objects
     return response.data.map((lesson: any) => ({
       ...lesson,
-      start: new Date(lesson.start),
-      end: new Date(lesson.end),
+      start: lesson.start,
+      end: lesson.end,
     }));
   },
 
@@ -26,8 +25,8 @@ export const lessonsAPI = {
     const response = await apiClient.get(`/lessons/${id}`);
     return {
       ...response.data,
-      start: new Date(response.data.start),
-      end: new Date(response.data.end),
+      start: response.data.start,
+      end: response.data.end,
     };
   },
 
@@ -39,8 +38,9 @@ export const lessonsAPI = {
     const response = await apiClient.get(`/lessons/teacher/${teacherId}?${params.toString()}`);
     return response.data.map((lesson: any) => ({
       ...lesson,
-      start: new Date(lesson.start),
-      end: new Date(lesson.end),
+      // Keep original ISO strings with offset to avoid client timezone shifts
+      start: lesson.start,
+      end: lesson.end,
     }));
   },
 
@@ -52,8 +52,8 @@ export const lessonsAPI = {
     const response = await apiClient.post('/lessons', lessonWithId);
     return {
       ...response.data,
-      start: new Date(response.data.start),
-      end: new Date(response.data.end),
+      start: response.data.start,
+      end: response.data.end,
     };
   },
 
@@ -61,8 +61,8 @@ export const lessonsAPI = {
     const response = await apiClient.put(`/lessons/${id}`, lesson);
     return {
       ...response.data,
-      start: new Date(response.data.start),
-      end: new Date(response.data.end),
+      start: response.data.start,
+      end: response.data.end,
     };
   },
 
@@ -77,8 +77,9 @@ export const lessonsAPI = {
       ...response.data,
       conflicts: response.data.conflicts.map((conflict: any) => ({
         ...conflict,
-        start: new Date(conflict.start),
-        end: new Date(conflict.end),
+        // Keep as strings to avoid implicit local TZ shifts in UI
+        start: conflict.start,
+        end: conflict.end,
       })),
     };
   },

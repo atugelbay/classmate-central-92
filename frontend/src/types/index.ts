@@ -26,7 +26,10 @@ export interface Teacher {
   phone: string;
   status: "active" | "inactive";
   avatar?: string;
-  workload: number; // lessons per week
+  workload: number; // lessons per week (planned)
+  rateType?: "hourly" | "per_lesson"; // Payment rate type
+  hourlyRate?: number; // Hourly rate (e.g., 2000 tenge/hour)
+  lessonRate?: number; // Rate per lesson (e.g., 2500 tenge/lesson)
 }
 
 export type StudentStatus = "active" | "inactive" | "frozen" | "graduated";
@@ -51,8 +54,10 @@ export interface Lesson {
   groupId?: string;
   groupName?: string; // Populated via JOIN from backend
   subject: string;
-  start: Date;
-  end: Date;
+  // Note: backend sends ISO strings; some legacy code still uses Date.
+  // Keep union to avoid runtime crashes while we normalize gradually.
+  start: string | Date;
+  end: string | Date;
   room: string;
   roomId?: string;
   roomName?: string; // Populated via JOIN from backend
@@ -65,8 +70,8 @@ export interface Lesson {
 export interface ConflictInfo {
   lessonId: string;
   title: string;
-  start: Date;
-  end: Date;
+  start: string | Date;
+  end: string | Date;
   teacherName?: string;
   roomName?: string;
   conflictType: "teacher" | "room";
@@ -271,7 +276,9 @@ export interface StudentSubscription {
   totalLessons: number; // Total lessons in subscription
   usedLessons: number; // Lessons already used
   lessonsRemaining: number; // Computed: total - used
-  totalPrice: number; // Total price (can be customized)
+  totalPrice: number; // Total price (with discounts applied)
+  originalPrice?: number; // Original price before discounts
+  discountAmount?: number; // Discount amount applied
   pricePerLesson: number; // Price per lesson
   startDate: string;
   endDate?: string; // null = no expiry

@@ -4,7 +4,9 @@ import (
 	"classmate-central/internal/models"
 	"classmate-central/internal/repository"
 	"classmate-central/internal/validation"
+	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -21,7 +23,8 @@ func NewDiscountHandler(repo *repository.DiscountRepository) *DiscountHandler {
 
 func (h *DiscountHandler) GetAll(c *gin.Context) {
 	companyID := c.GetString("company_id")
-	discounts, err := h.repo.GetAll(companyID)
+	branchID := c.GetString("branch_id")
+	discounts, err := h.repo.GetAll(companyID, branchID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -33,8 +36,9 @@ func (h *DiscountHandler) GetAll(c *gin.Context) {
 func (h *DiscountHandler) GetByID(c *gin.Context) {
 	id := c.Param("id")
 	companyID := c.GetString("company_id")
+	branchID := c.GetString("branch_id")
 
-	discount, err := h.repo.GetByID(id, companyID)
+	discount, err := h.repo.GetByID(id, companyID, branchID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Discount not found"})
 		return
@@ -69,7 +73,9 @@ func (h *DiscountHandler) Create(c *gin.Context) {
 	}
 
 	companyID := c.GetString("company_id")
+	branchID := c.GetString("branch_id")
 	discount.ID = uuid.New().String()
+	discount.BranchID = branchID
 	if err := h.repo.Create(&discount, companyID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -124,8 +130,8 @@ func (h *DiscountHandler) ApplyToStudent(c *gin.Context) {
 	companyID := c.GetString("company_id")
 
 	var req struct {
-		DiscountID string     `json:"discountId" binding:"required"`
-		ExpiresAt  *time.Time `json:"expiresAt,omitempty"`
+		DiscountID string  `json:"discountId" binding:"required"`
+		ExpiresAt  *string `json:"expiresAt,omitempty"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -133,11 +139,21 @@ func (h *DiscountHandler) ApplyToStudent(c *gin.Context) {
 		return
 	}
 
+	var expiresAt *time.Time
+	if req.ExpiresAt != nil {
+		parsed, err := parseDateOrRFC3339(*req.ExpiresAt)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		expiresAt = parsed
+	}
+
 	studentDiscount := &models.StudentDiscount{
 		StudentID:  studentID,
 		DiscountID: req.DiscountID,
 		AppliedAt:  time.Now(),
-		ExpiresAt:  req.ExpiresAt,
+		ExpiresAt:  expiresAt,
 		IsActive:   true,
 	}
 
@@ -147,6 +163,27 @@ func (h *DiscountHandler) ApplyToStudent(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, studentDiscount)
+}
+
+func parseDateOrRFC3339(input string) (*time.Time, error) {
+	s := strings.TrimSpace(input)
+	if s == "" {
+		return nil, nil
+	}
+
+	// Try RFC3339 first (e.g. 2026-02-10T00:00:00+05:00)
+	if t, err := time.Parse(time.RFC3339, s); err == nil {
+		return &t, nil
+	}
+
+	// Then allow date-only (YYYY-MM-DD). Interpret as end-of-day in Almaty.
+	loc := time.FixedZone("Asia/Almaty", 5*60*60)
+	if d, err := time.ParseInLocation("2006-01-02", s, loc); err == nil {
+		t := time.Date(d.Year(), d.Month(), d.Day(), 23, 59, 59, 0, loc)
+		return &t, nil
+	}
+
+	return nil, fmt.Errorf("invalid expiresAt: expected RFC3339 or YYYY-MM-DD")
 }
 
 // GetStudentDiscounts gets all active discounts for a student

@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
 import moment from "moment";
 import "moment/locale/ru";
-import { useGroups, useCreateGroup, useUpdateGroup, useDeleteGroup, useTeachers, useStudents, useRooms, useCheckConflicts, useLessons, useExtendGroup } from "@/hooks/useData";
+import { useQueryClient } from "@tanstack/react-query";
+import { useGroups, useCreateGroup, useUpdateGroup, useDeleteGroup, useTeachers, useStudents, useRooms, useCheckConflicts, useLessons, useExtendGroup, useCreateBulkLessons } from "@/hooks/useData";
 import { useConfirmDelete } from "@/hooks/useConfirmDelete";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { toast } from "sonner";
 
 moment.locale("ru");
+import { CreateGroupModal } from "@/components/CreateGroupModal";
 import { GroupScheduleForm } from "@/components/GroupScheduleForm";
-import { LessonFormModal } from "@/components/LessonFormModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -43,20 +45,13 @@ import { PageHeader } from "@/components/PageHeader";
 const ITEMS_PER_PAGE = 39;
 
 const formatDateRu = (input: string | Date) =>
-  new Date(input).toLocaleDateString("ru-RU", {
-    day: "2-digit",
-    month: "long",
-    weekday: "long",
-  });
+  moment.parseZone(input as any).format("DD MMMM, dddd");
 
 const formatTimeRu = (input: string | Date) =>
-  new Date(input).toLocaleTimeString("ru-RU", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
+  moment.parseZone(input as any).format("HH:mm");
 
 export default function Groups() {
+  const queryClient = useQueryClient();
   const { data: groups = [], isLoading } = useGroups();
   const { data: teachers = [] } = useTeachers();
   const { data: students = [] } = useStudents();
@@ -66,26 +61,24 @@ export default function Groups() {
   const updateGroup = useUpdateGroup();
   const deleteGroup = useDeleteGroup();
   const extendGroup = useExtendGroup();
+  const createBulkLessons = useCreateBulkLessons();
   
   const [searchQuery, setSearchQuery] = useState("");
   const [activityFilter, setActivityFilter] = useState<"all" | "active" | "inactive">("active");
   const [currentPage, setCurrentPage] = useState(1);
+  const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isLessonFormOpen, setIsLessonFormOpen] = useState(false);
-  const [lessonFormData, setLessonFormData] = useState<any>(null);
   const [editingGroup, setEditingGroup] = useState<Group | null>(null);
   const [selectedGroupForDetails, setSelectedGroupForDetails] = useState<Group | null>(null);
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [selectedTeacherId, setSelectedTeacherId] = useState("");
   const [scheduleData, setScheduleData] = useState<{
     weekdays: number[];
-    startTime: string;
-    endTime: string;
+    dayTimes: Record<number, { start: string; end: string }>;
     roomId: string;
   }>({
     weekdays: [],
-    startTime: "10:00",
-    endTime: "11:30",
+    dayTimes: {},
     roomId: "",
   });
   const [conflicts, setConflicts] = useState<CheckConflictsResponse | null>(null);
@@ -93,10 +86,77 @@ export default function Groups() {
   
   const checkConflictsMutation = useCheckConflicts();
 
+  // Генерация уроков для группы на основе расписания с разными временами для разных дней
+  const generateGroupLessons = (group: Group, weekdays: number[], dayTimes: Record<number, { start: string; end: string }>, roomId: string) => {
+    const lessons: any[] = [];
+    // Генерируем уроки на 12 недель вперед (как делает бэкенд)
+    const startDate = moment().startOf('isoWeek'); // Начало текущей недели
+    const endDate = moment(startDate).add(12, 'weeks'); // 12 недель вперед
+
+    console.log("Generating lessons from", startDate.format("YYYY-MM-DD"), "to", endDate.format("YYYY-MM-DD"));
+    console.log("Weekdays:", weekdays, "DayTimes:", dayTimes);
+
+    let currentDate = startDate.clone();
+    const selectedRoom = rooms.find((r) => r.id === roomId);
+
+    let dayCount = 0;
+    while (currentDate.isSameOrBefore(endDate)) {
+      // moment.day() возвращает 0 (воскресенье) - 6 (суббота), что совпадает с нашими weekdays
+      const dayOfWeek = currentDate.day();
+      
+      // Проверяем соответствие дня недели и наличие времени для этого дня
+      if (weekdays.includes(dayOfWeek) && dayTimes[dayOfWeek]) {
+        const { start, end } = dayTimes[dayOfWeek];
+        const [startHour, startMin] = start.split(':').map(Number);
+        const [endHour, endMin] = end.split(':').map(Number);
+
+        const lessonStart = currentDate.clone().set({
+          hour: startHour,
+          minute: startMin,
+          second: 0,
+          millisecond: 0,
+        });
+        const lessonEnd = currentDate.clone().set({
+          hour: endHour,
+          minute: endMin,
+          second: 0,
+          millisecond: 0,
+        });
+
+        lessons.push({
+          title: group.name,
+          subject: group.subject,
+          teacherId: group.teacherId,
+          groupId: group.id,
+          studentIds: group.studentIds || [],
+          start: lessonStart.toDate(),
+          end: lessonEnd.toDate(),
+          room: selectedRoom?.name || "",
+          roomId: roomId,
+          status: "scheduled" as const,
+          lessonType: "group" as const,
+        });
+        dayCount++;
+      }
+      currentDate.add(1, 'day');
+    }
+
+    console.log(`Generated ${dayCount} lessons out of ${lessons.length} total`);
+    return lessons;
+  };
+
   // Проверка конфликтов для расписания группы
   useEffect(() => {
     const checkScheduleConflicts = async () => {
-      if (!selectedTeacherId || !scheduleData.roomId || scheduleData.weekdays.length === 0 || !scheduleData.startTime || !scheduleData.endTime) {
+      if (!selectedTeacherId || !scheduleData.roomId || scheduleData.weekdays.length === 0) {
+        setConflicts(null);
+        return;
+      }
+
+      // Проверяем что у всех выбранных дней есть время
+      const firstDay = scheduleData.weekdays[0];
+      const firstDayTime = scheduleData.dayTimes[firstDay];
+      if (!firstDayTime?.start || !firstDayTime?.end) {
         setConflicts(null);
         return;
       }
@@ -105,16 +165,15 @@ export default function Groups() {
       try {
         // Берем ближайший выбранный день недели для проверки конфликтов
         const today = moment();
-        const targetDay = scheduleData.weekdays[0];
         let checkDate = moment(today);
         
         // Найти ближайший день недели из выбранных
-        while (checkDate.day() !== targetDay) {
+        while (checkDate.day() !== firstDay) {
           checkDate.add(1, "day");
         }
 
-        const startDateTime = moment(checkDate.format("YYYY-MM-DD") + " " + scheduleData.startTime);
-        const endDateTime = moment(checkDate.format("YYYY-MM-DD") + " " + scheduleData.endTime);
+        const startDateTime = moment(checkDate.format("YYYY-MM-DD") + " " + firstDayTime.start);
+        const endDateTime = moment(checkDate.format("YYYY-MM-DD") + " " + firstDayTime.end);
 
         const result = await checkConflictsMutation.mutateAsync({
           teacherId: selectedTeacherId,
@@ -138,7 +197,7 @@ export default function Groups() {
 
     return () => clearTimeout(timeoutId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTeacherId, scheduleData.roomId, scheduleData.startTime, scheduleData.endTime, JSON.stringify(scheduleData.weekdays)]);
+  }, [selectedTeacherId, scheduleData.roomId, scheduleData.dayTimes, JSON.stringify(scheduleData.weekdays)]);
 
   // Extract schedule from group lessons if schedule field is empty
   const getGroupScheduleFromLessons = (groupId: string): string => {
@@ -217,7 +276,7 @@ export default function Groups() {
   const getGroupActivity = (group: Group) => {
     const groupLessons = lessons.filter((l) => l.groupId === group.id);
     const now = moment();
-    const upcomingLessons = groupLessons.filter((l) => moment(l.start).isAfter(now));
+    const upcomingLessons = groupLessons.filter((l) => moment.parseZone(l.start).isAfter(now));
     const completedLessons = groupLessons.filter((l) => l.status === "completed");
     
     // Group is active if:
@@ -233,7 +292,7 @@ export default function Groups() {
                      (hasSchedule && groupStatusActive);
     
     const nextLesson = upcomingLessons.length > 0 
-      ? upcomingLessons.sort((a, b) => moment(a.start).diff(moment(b.start)))[0]
+      ? upcomingLessons.sort((a, b) => moment.parseZone(a.start).diff(moment.parseZone(b.start)))[0]
       : undefined;
     
     return {
@@ -287,19 +346,61 @@ export default function Groups() {
     const formData = new FormData(e.currentTarget);
     
     // Format schedule string from scheduleData
-    const weekdayNames = ["ВС", "ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ"];
-    const scheduleString = scheduleData.weekdays.length > 0
-      ? `${scheduleData.weekdays.map(d => weekdayNames[d]).join(" ")} ${scheduleData.startTime} - ${scheduleData.endTime}`
-      : "";
+    // Поддерживаем несколько времен для разных дней: "Пн, Ср 10:00-11:30; Пт 14:00-15:30"
+    const weekdayNames = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
+    let scheduleString = "";
     
-    const groupData = {
+    if (scheduleData.weekdays.length > 0) {
+      // Группируем дни по времени
+      const timeGroups = new Map<string, number[]>();
+      scheduleData.weekdays.forEach(day => {
+        const dayTime = scheduleData.dayTimes[day];
+        if (dayTime?.start && dayTime?.end) {
+          const timeKey = `${dayTime.start}-${dayTime.end}`;
+          if (!timeGroups.has(timeKey)) {
+            timeGroups.set(timeKey, []);
+          }
+          timeGroups.get(timeKey)!.push(day);
+        }
+      });
+      
+      // Формируем строку расписания
+      const scheduleParts: string[] = [];
+      timeGroups.forEach((days, timeKey) => {
+        const [start, end] = timeKey.split("-");
+        const dayLabels = days.map(d => weekdayNames[d]).join(", ");
+        scheduleParts.push(`${dayLabels} ${start}-${end}`);
+      });
+      
+      scheduleString = scheduleParts.join("; ");
+    }
+    
+    // При обновлении группы: если selectedStudents пустой, но в editingGroup были студенты,
+    // это означает что пользователь удалил всех студентов - передаем пустой массив
+    // Если selectedStudents пустой и в editingGroup не было студентов - не передаем studentIds вообще
+    const groupData: any = {
       name: formData.get("name") as string,
       subject: formData.get("subject") as string,
       teacherId: selectedTeacherId || (formData.get("teacherId") as string),
       schedule: scheduleString,
       roomId: scheduleData.roomId,
-      studentIds: selectedStudents,
     };
+    
+    // При редактировании: всегда передаем studentIds (даже пустой массив означает удалить всех)
+    // При создании: передаем studentIds только если они есть
+    if (editingGroup) {
+      groupData.studentIds = selectedStudents;
+    } else if (selectedStudents.length > 0) {
+      groupData.studentIds = selectedStudents;
+    }
+
+    console.log("Updating group:", {
+      id: editingGroup?.id,
+      studentIds: groupData.studentIds,
+      schedule: groupData.schedule,
+      selectedStudents: selectedStudents.length,
+      editingGroupStudentIds: editingGroup?.studentIds?.length || 0,
+    });
 
     try {
       if (editingGroup) {
@@ -307,14 +408,41 @@ export default function Groups() {
       } else {
         const createdGroup = await createGroup.mutateAsync(groupData as any);
         // Автоматически генерировать уроки для новой группы если есть расписание
-        if (createdGroup && scheduleData.weekdays.length > 0) {
+        // Используем ту же логику, что и в создании серии уроков
+        console.log("Creating group with schedule:", {
+          hasGroup: !!createdGroup,
+          weekdays: scheduleData.weekdays,
+          dayTimes: scheduleData.dayTimes,
+          roomId: scheduleData.roomId
+        });
+
+        // Проверяем что у всех выбранных дней есть время
+        const allDaysHaveTime = scheduleData.weekdays.every(day => scheduleData.dayTimes[day]?.start && scheduleData.dayTimes[day]?.end);
+        if (createdGroup && scheduleData.weekdays.length > 0 && allDaysHaveTime && scheduleData.roomId) {
           try {
-            const { groupsAPI } = await import("@/api/groups");
-            await groupsAPI.generateLessons(createdGroup.id);
-          } catch (genError) {
+            const lessons = generateGroupLessons(
+              createdGroup,
+              scheduleData.weekdays,
+              scheduleData.dayTimes,
+              scheduleData.roomId
+            );
+
+            console.log(`Generated ${lessons.length} lessons:`, lessons.slice(0, 3));
+
+            if (lessons.length > 0) {
+              const result = await createBulkLessons.mutateAsync({ lessons });
+              console.log("Bulk create result:", result);
+              // Toast уже показывается в useCreateBulkLessons
+            } else {
+              toast.warning("Группа создана, но уроки не были сгенерированы (нет подходящих дней)");
+            }
+          } catch (genError: any) {
             console.error("Failed to generate lessons:", genError);
-            // Не показываем ошибку пользователю, группа уже создана
+            toast.error("Ошибка при генерации уроков: " + (genError?.response?.data?.error || genError?.message || "Неизвестная ошибка"));
           }
+        } else {
+          console.log("Skipping lesson generation - missing required fields");
+          toast.success("Группа создана (без уроков - не указано расписание)");
         }
       }
       setIsDialogOpen(false);
@@ -324,8 +452,7 @@ export default function Groups() {
       setConflicts(null);
       setScheduleData({
         weekdays: [],
-        startTime: "10:00",
-        endTime: "11:30",
+        dayTimes: {},
         roomId: "",
       });
     } catch (error) {
@@ -338,8 +465,8 @@ export default function Groups() {
     setSelectedStudents(group.studentIds || []);
     setSelectedTeacherId(group.teacherId || "");
     
-    // Parse schedule string to extract weekdays and time
-    // Format: "ПН СР ПТ 20:00 - 21:30" or "Пн, Ср, Пт 20:00-21:30" (for backwards compatibility)
+    // Parse schedule string to extract weekdays and times
+    // Формат: "Пн, Ср 10:00-11:30; Пт 14:00-15:30" или "Пн СР ПТ 20:00-21:30" (для обратной совместимости)
     if (group.schedule) {
       const weekdayMap: Record<string, number> = {
         "пн": 1, "понедельник": 1, "pn": 1,
@@ -351,26 +478,68 @@ export default function Groups() {
         "вс": 0, "воскресенье": 0, "vs": 0,
       };
       
-      const scheduleLower = group.schedule.toLowerCase();
       const parsedWeekdays: number[] = [];
+      const parsedDayTimes: Record<number, { start: string; end: string }> = {};
       
-      Object.entries(weekdayMap).forEach(([key, value]) => {
-        if (scheduleLower.includes(key)) {
-          if (!parsedWeekdays.includes(value)) {
-            parsedWeekdays.push(value);
+      // Разбиваем по ";" для поддержки нескольких времен
+      const scheduleParts = group.schedule.split(";").map(s => s.trim()).filter(s => s);
+      
+      scheduleParts.forEach(part => {
+        const scheduleLower = part.toLowerCase();
+        
+        // Находим все дни недели в этой части
+        const daysInPart: number[] = [];
+        Object.entries(weekdayMap).forEach(([key, value]) => {
+          if (scheduleLower.includes(key) && !daysInPart.includes(value)) {
+            daysInPart.push(value);
           }
+        });
+        
+        // Извлекаем время из этой части (формат: "10:00-11:30" или "10:00 - 11:30")
+        const timeMatch = part.match(/(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/);
+        if (timeMatch && daysInPart.length > 0) {
+          const startTime = timeMatch[1];
+          const endTime = timeMatch[2];
+          
+          daysInPart.forEach(day => {
+            if (!parsedWeekdays.includes(day)) {
+              parsedWeekdays.push(day);
+            }
+            parsedDayTimes[day] = { start: startTime, end: endTime };
+          });
         }
       });
       
-      // Extract time - supports both "10:00-11:30" and "10:00 - 11:30" formats
-      const timeMatch = group.schedule.match(/(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/);
-      const startTime = timeMatch?.[1] || "10:00";
-      const endTime = timeMatch?.[2] || "11:30";
+      // Если не нашли времена (старый формат), пробуем найти одно общее время
+      if (parsedWeekdays.length === 0) {
+        const scheduleLower = group.schedule.toLowerCase();
+        Object.entries(weekdayMap).forEach(([key, value]) => {
+          if (scheduleLower.includes(key) && !parsedWeekdays.includes(value)) {
+            parsedWeekdays.push(value);
+          }
+        });
+      }
+      
+      // Если нашли дни, но не нашли времена, используем дефолтные
+      if (parsedWeekdays.length > 0 && Object.keys(parsedDayTimes).length === 0) {
+        const timeMatch = group.schedule.match(/(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/);
+        const defaultStartTime = timeMatch?.[1] || "10:00";
+        const defaultEndTime = timeMatch?.[2] || "11:30";
+        
+        parsedWeekdays.forEach(day => {
+          parsedDayTimes[day] = { start: defaultStartTime, end: defaultEndTime };
+        });
+      }
       
       setScheduleData({
         weekdays: parsedWeekdays.sort(),
-        startTime,
-        endTime,
+        dayTimes: parsedDayTimes,
+        roomId: group.roomId || "",
+      });
+    } else {
+      setScheduleData({
+        weekdays: [],
+        dayTimes: {},
         roomId: group.roomId || "",
       });
     }
@@ -412,10 +581,7 @@ export default function Groups() {
         title="Группы"
         description="Управление учебными группами"
         actions={
-          <Button onClick={() => {
-            setLessonFormData({ lessonType: "group" });
-            setIsLessonFormOpen(true);
-          }} size="sm" className="sm:size-default">
+          <Button onClick={() => setIsCreateGroupModalOpen(true)} size="sm" className="sm:size-default">
             <Plus className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Создать группу</span>
             <span className="sm:hidden">Создать</span>
@@ -435,14 +601,13 @@ export default function Groups() {
               setConflicts(null);
               setScheduleData({
                 weekdays: [],
-                startTime: "10:00",
-                endTime: "11:30",
+                dayTimes: {},
                 roomId: "",
               });
             }
           }}
         >
-          <DialogContent>
+          <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[calc(100vh-2rem)] sm:max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingGroup ? "Редактировать группу" : "Новая группа"}
@@ -490,8 +655,7 @@ export default function Groups() {
               {/* Schedule Selection */}
               <GroupScheduleForm
                 initialWeekdays={scheduleData.weekdays}
-                initialStartTime={scheduleData.startTime}
-                initialEndTime={scheduleData.endTime}
+                initialDayTimes={scheduleData.dayTimes}
                 initialRoomId={scheduleData.roomId}
                 rooms={rooms}
                 onScheduleChange={setScheduleData}
@@ -530,12 +694,24 @@ export default function Groups() {
                             type="button"
                             className="mr-2 mb-1"
                             onClick={() => {
-                              setScheduleData(prev => ({
-                                ...prev,
-                                startTime: moment(time.start).format("HH:mm"),
-                                endTime: moment(time.end).format("HH:mm"),
-                                roomId: time.roomId || prev.roomId,
-                              }));
+                              const suggestedStart = moment(time.start).format("HH:mm");
+                              const suggestedEnd = moment(time.end).format("HH:mm");
+                              
+                              setScheduleData(prev => {
+                                const newDayTimes = { ...prev.dayTimes };
+                                
+                                // Применяем предложенное время к первому выбранному дню
+                                if (prev.weekdays.length > 0) {
+                                  const firstDay = prev.weekdays[0];
+                                  newDayTimes[firstDay] = { start: suggestedStart, end: suggestedEnd };
+                                }
+                                
+                                return {
+                                  ...prev,
+                                  dayTimes: newDayTimes,
+                                  roomId: time.roomId || prev.roomId,
+                                };
+                              });
                               setConflicts(null);
                             }}
                           >
@@ -832,22 +1008,6 @@ export default function Groups() {
           </PaginationContent>
         </Pagination>
       )}
-      
-      {/* Lesson Form Modal for creating groups/lessons */}
-      <LessonFormModal
-        open={isLessonFormOpen}
-        onOpenChange={setIsLessonFormOpen}
-        teachers={teachers}
-        groups={groups}
-        rooms={rooms}
-        students={students}
-        initialData={lessonFormData}
-        mode="create"
-        allowLessonTypeChange={false}
-        onSuccess={() => {
-          setLessonFormData(null);
-        }}
-      />
 
       {/* Group Details Modal */}
       {selectedGroupForDetails && (
@@ -983,16 +1143,12 @@ export default function Groups() {
                             <div className="min-w-0 flex-1">
                               <p className="font-medium text-sm sm:text-base truncate">{lesson.title}</p>
                               <p className="text-xs sm:text-sm text-muted-foreground">
-                                {new Date(lesson.start).toLocaleDateString("ru-RU", {
-                                  day: "numeric",
-                                  month: "long",
-                                  weekday: "long",
-                                })}
+                                {moment.parseZone(lesson.start as any).format("dddd, D MMMM")}
                               </p>
                             </div>
                             <div className="text-left sm:text-right shrink-0">
                               <p className="font-medium text-sm sm:text-base">
-                                {moment(lesson.start).format("HH:mm")} - {moment(lesson.end).format("HH:mm")}
+                                {moment.parseZone(lesson.start as any).format("HH:mm")} - {moment.parseZone(lesson.end as any).format("HH:mm")}
                               </p>
                               <p className="text-xs sm:text-sm text-muted-foreground truncate">{room?.name}</p>
                             </div>
@@ -1007,6 +1163,24 @@ export default function Groups() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Create Group Modal */}
+      <CreateGroupModal
+        open={isCreateGroupModalOpen}
+        onOpenChange={(open) => {
+          setIsCreateGroupModalOpen(open);
+          if (!open) {
+            queryClient.invalidateQueries({ queryKey: ["groups"] });
+          }
+        }}
+        teachers={teachers}
+        rooms={rooms}
+        students={students}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["groups"] });
+          queryClient.invalidateQueries({ queryKey: ["lessons"] });
+        }}
+      />
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog

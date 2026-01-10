@@ -31,10 +31,11 @@ export default function MobileScheduleView({
   unmarkedLessonIds = new Set(),
 }: MobileScheduleViewProps) {
   // Filter lessons based on view mode
+  const selectedDateKey = moment(selectedDate).format('YYYY-MM-DD');
   const filteredLessons = lessons.filter((lesson) => {
-    const lessonDate = moment.utc(lesson.start).local();
+    const lessonDate = moment.parseZone(lesson.start as any);
     if (viewMode === "day") {
-      return lessonDate.isSame(selectedDate, "day");
+      return lessonDate.format('YYYY-MM-DD') === selectedDateKey;
     } else {
       // Week view
       const weekStart = moment(selectedDate).startOf('isoWeek');
@@ -52,7 +53,7 @@ export default function MobileScheduleView({
   const lessonsByDate: Record<string, Lesson[]> = {};
   if (viewMode === "week") {
     sortedLessons.forEach((lesson) => {
-      const dateKey = moment.utc(lesson.start).local().format('YYYY-MM-DD');
+      const dateKey = moment.parseZone(lesson.start as any).format('YYYY-MM-DD');
       if (!lessonsByDate[dateKey]) {
         lessonsByDate[dateKey] = [];
       }
@@ -155,10 +156,10 @@ export default function MobileScheduleView({
             <div className="flex items-center gap-2 text-sm flex-wrap">
               <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
               <span className="font-medium whitespace-nowrap">
-                {moment.utc(lesson.start).local().format("HH:mm")} - {moment.utc(lesson.end).local().format("HH:mm")}
+                {moment.parseZone(lesson.start as any).format("HH:mm")} - {moment.parseZone(lesson.end as any).format("HH:mm")}
               </span>
               <span className="text-muted-foreground whitespace-nowrap">
-                ({moment.utc(lesson.end).diff(moment.utc(lesson.start), 'minutes')} мин)
+                ({moment.parseZone(lesson.end as any).diff(moment.parseZone(lesson.start as any), 'minutes')} мин)
               </span>
             </div>
 

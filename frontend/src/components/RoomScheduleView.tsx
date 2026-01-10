@@ -65,6 +65,19 @@ export default function RoomScheduleView({
   // Track container width for responsive column sizing
   const [containerWidth, setContainerWidth] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Lessons can come as ISO strings; drag/resize needs Date + safe comparisons
+  const toDate = (v: any): Date => (v instanceof Date ? v : moment.parseZone(v as any).toDate());
+  const toMs = (v: any): number => (v instanceof Date ? v.getTime() : moment.parseZone(v as any).valueOf());
+
+  // Refs for robust global mouse/pointer end handling (prevents "sticky" drag)
+  const draggingLessonRef = useRef<Lesson | null>(null);
+  const resizingLessonRef = useRef<{ lesson: Lesson; mode: 'top' | 'bottom' } | null>(null);
+  const pendingDragLessonRef = useRef<Lesson | null>(null);
+  const isDraggingRef = useRef<boolean>(false);
+  const handleSlotMouseUpRef = useRef<() => void>(() => {});
+  const handleLessonDragEndRef = useRef<() => void>(() => {});
+  const handleResizeEndRef = useRef<() => void>(() => {});
   
   // Time slots from 8:00 to 21:00 (every hour)
   const timeSlots: string[] = [];
@@ -73,9 +86,11 @@ export default function RoomScheduleView({
   }
 
   // Filter lessons for selected date
+  const selectedDateKey = moment(selectedDate).format("YYYY-MM-DD");
   const filteredLessons = lessons.filter((lesson) => {
-    const lessonDate = moment.utc(lesson.start).local();
-    return lessonDate.isSame(selectedDate, "day");
+    // Фиксируем offset из строки/Date и не конвертируем в локаль пользователя
+    const lessonDate = moment.parseZone(lesson.start as any);
+    return lessonDate.format("YYYY-MM-DD") === selectedDateKey;
   });
 
   // Group lessons by room
@@ -87,8 +102,8 @@ export default function RoomScheduleView({
   });
 
   const getLessonPosition = (lesson: Lesson) => {
-    const startTime = moment.utc(lesson.start).local();
-    const endTime = moment.utc(lesson.end).local();
+    const startTime = moment.parseZone(lesson.start as any);
+    const endTime = moment.parseZone(lesson.end as any);
     
     const startHour = startTime.hour() + startTime.minute() / 60;
     const endHour = endTime.hour() + endTime.minute() / 60;
@@ -335,8 +350,8 @@ export default function RoomScheduleView({
     }
     
     // Check if the lesson was actually moved (not just clicked)
-    const startChanged = tempLessonPosition.start.getTime() !== draggingLesson.start.getTime();
-    const endChanged = tempLessonPosition.end.getTime() !== draggingLesson.end.getTime();
+    const startChanged = tempLessonPosition.start.getTime() !== toMs(draggingLesson.start);
+    const endChanged = tempLessonPosition.end.getTime() !== toMs(draggingLesson.end);
     const roomChanged = tempLessonPosition.roomId !== draggingLesson.roomId;
     
     // Only update if position actually changed
@@ -359,7 +374,7 @@ export default function RoomScheduleView({
   const handleResizeStart = (lesson: Lesson, mode: 'top' | 'bottom', e: React.MouseEvent) => {
     e.stopPropagation();
     setResizingLesson({ lesson, mode });
-    setTempLessonPosition({ start: lesson.start, end: lesson.end });
+    setTempLessonPosition({ start: toDate(lesson.start), end: toDate(lesson.end) });
   };
 
   const handleResizeMove = (e: React.MouseEvent, roomElement: HTMLElement) => {
@@ -383,11 +398,11 @@ export default function RoomScheduleView({
       const minDuration = 30; // minimum 30 minutes
       const maxStart = moment(resizingLesson.lesson.end).subtract(minDuration, 'minutes').toDate();
       const newStart = newTime < maxStart ? newTime : maxStart;
-      setTempLessonPosition({ start: newStart, end: resizingLesson.lesson.end });
+      setTempLessonPosition({ start: newStart, end: toDate(resizingLesson.lesson.end) });
     } else {
       const minEnd = moment(resizingLesson.lesson.start).add(30, 'minutes').toDate();
       const newEnd = newTime > minEnd ? newTime : minEnd;
-      setTempLessonPosition({ start: resizingLesson.lesson.start, end: newEnd });
+      setTempLessonPosition({ start: toDate(resizingLesson.lesson.start), end: newEnd });
     }
   };
 
@@ -399,8 +414,8 @@ export default function RoomScheduleView({
     }
     
     // Check if the lesson size was actually changed (not just clicked)
-    const startChanged = tempLessonPosition.start.getTime() !== resizingLesson.lesson.start.getTime();
-    const endChanged = tempLessonPosition.end.getTime() !== resizingLesson.lesson.end.getTime();
+    const startChanged = tempLessonPosition.start.getTime() !== toMs(resizingLesson.lesson.start);
+    const endChanged = tempLessonPosition.end.getTime() !== toMs(resizingLesson.lesson.end);
     
     // Only update if size actually changed
     if (startChanged || endChanged) {
@@ -414,24 +429,69 @@ export default function RoomScheduleView({
     setTempLessonPosition(null);
   };
 
-  // Add global mouseup handler to handle drag end
+  // Keep refs in sync + provide robust global end handlers.
   useEffect(() => {
-    if (isDragging) {
-      document.addEventListener('mouseup', handleSlotMouseUp);
-      return () => {
-        document.removeEventListener('mouseup', handleSlotMouseUp);
-      };
-    }
-  }, [isDragging, dragStart, dragEnd]);
+    draggingLessonRef.current = draggingLesson;
+  }, [draggingLesson]);
+  useEffect(() => {
+    resizingLessonRef.current = resizingLesson;
+  }, [resizingLesson]);
+  useEffect(() => {
+    pendingDragLessonRef.current = pendingDragLesson;
+  }, [pendingDragLesson]);
+  useEffect(() => {
+    isDraggingRef.current = isDragging;
+  }, [isDragging]);
+  useEffect(() => {
+    handleSlotMouseUpRef.current = handleSlotMouseUp;
+    handleLessonDragEndRef.current = handleLessonDragEnd;
+    handleResizeEndRef.current = handleResizeEnd;
+  });
 
   useEffect(() => {
-    if (draggingLesson) {
-      document.addEventListener('mouseup', handleLessonDragEnd);
-      return () => {
-        document.removeEventListener('mouseup', handleLessonDragEnd);
-      };
-    }
-  }, [draggingLesson, tempLessonPosition]);
+    const endAll = () => {
+      // End slot selection (creating a lesson)
+      if (isDraggingRef.current) {
+        handleSlotMouseUpRef.current();
+      }
+      // End lesson move/resize
+      if (draggingLessonRef.current) {
+        handleLessonDragEndRef.current();
+      }
+      if (resizingLessonRef.current) {
+        handleResizeEndRef.current();
+      }
+      // Clean up pending drag if mouseup happened before threshold
+      if (pendingDragLessonRef.current && !draggingLessonRef.current) {
+        setPendingDragLesson(null);
+        setMouseDownPosition(null);
+        setHasActuallyMoved(false);
+      }
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== "visible") {
+        endAll();
+      }
+    };
+
+    // Use capture so stopPropagation() inside components can't block us.
+    window.addEventListener("mouseup", endAll, { capture: true });
+    window.addEventListener("pointerup", endAll, { capture: true });
+    window.addEventListener("pointercancel", endAll, { capture: true });
+    window.addEventListener("blur", endAll);
+    window.addEventListener("mouseleave", endAll, { capture: true });
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      window.removeEventListener("mouseup", endAll, { capture: true } as any);
+      window.removeEventListener("pointerup", endAll, { capture: true } as any);
+      window.removeEventListener("pointercancel", endAll, { capture: true } as any);
+      window.removeEventListener("blur", endAll);
+      window.removeEventListener("mouseleave", endAll, { capture: true } as any);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, []);
 
   // Check mouse movement distance to start dragging
   useEffect(() => {
@@ -463,32 +523,7 @@ export default function RoomScheduleView({
     }
   }, [pendingDragLesson, draggingLesson, mouseDownPosition, DRAG_THRESHOLD]);
 
-  // Clean up pending drag on mouseup if no actual drag happened
-  useEffect(() => {
-    const handleGlobalMouseUp = () => {
-      if (pendingDragLesson && !draggingLesson) {
-        setPendingDragLesson(null);
-        setMouseDownPosition(null);
-        setHasActuallyMoved(false);
-      }
-    };
-
-    if (pendingDragLesson && !draggingLesson) {
-      document.addEventListener('mouseup', handleGlobalMouseUp);
-      return () => {
-        document.removeEventListener('mouseup', handleGlobalMouseUp);
-      };
-    }
-  }, [pendingDragLesson, draggingLesson]);
-
-  useEffect(() => {
-    if (resizingLesson) {
-      document.addEventListener('mouseup', handleResizeEnd);
-      return () => {
-        document.removeEventListener('mouseup', handleResizeEnd);
-      };
-    }
-  }, [resizingLesson, tempLessonPosition]);
+  // pending-drag cleanup and resize end are handled by the global end listener above
 
   // Track container resize for responsive columns
   useEffect(() => {

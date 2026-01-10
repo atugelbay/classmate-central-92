@@ -7,11 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StudentSelector } from "@/components/StudentSelector";
 import { Teacher, Group, Room, Student, Lesson, CheckConflictsResponse } from "@/types";
-import { AlertTriangle, Loader2, CheckCircle, Plus } from "lucide-react";
-import { useCheckConflicts, useCreateLesson, useCreateBulkLessons, useUpdateLesson, useCreateGroup } from "@/hooks/useData";
+import { AlertTriangle, Loader2, CheckCircle } from "lucide-react";
+import { useCheckConflicts, useCreateLesson, useCreateBulkLessons, useUpdateLesson } from "@/hooks/useData";
 import { toast } from "sonner";
 
 interface LessonFormModalProps {
@@ -29,7 +28,6 @@ interface LessonFormModalProps {
   };
   mode?: "create" | "edit";
   onSuccess?: () => void;
-  allowLessonTypeChange?: boolean; // Если true, показываем переключатель типа урока
 }
 
 const WEEKDAYS = [
@@ -52,24 +50,17 @@ export function LessonFormModal({
   initialData,
   mode = "create",
   onSuccess,
-  allowLessonTypeChange = true,
 }: LessonFormModalProps) {
-  const [lessonType, setLessonType] = useState<"group" | "individual">(
-    initialData?.lessonType || (initialData?.groupId ? "group" : "individual")
-  );
+  // Только индивидуальные уроки, без переключателя
+  const [lessonType] = useState<"group" | "individual">("individual");
   const [seriesMode, setSeriesMode] = useState(false);
   const [selectedWeekdays, setSelectedWeekdays] = useState<number[]>([]);
   const [seriesEndDate, setSeriesEndDate] = useState("");
-
-  // New group creation
-  const [isCreatingNewGroup, setIsCreatingNewGroup] = useState(false);
-  const [newGroupName, setNewGroupName] = useState("");
 
   // Form fields
   const [title, setTitle] = useState(initialData?.title || "");
   const [subject, setSubject] = useState(initialData?.subject || "");
   const [teacherId, setTeacherId] = useState(initialData?.teacherId || "");
-  const [groupId, setGroupId] = useState(initialData?.groupId || "");
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>(initialData?.studentIds || []);
   const [date, setDate] = useState(
     initialData?.date ? moment(initialData.date).format("YYYY-MM-DD") : moment().format("YYYY-MM-DD")
@@ -86,7 +77,6 @@ export function LessonFormModal({
   const createLesson = useCreateLesson();
   const createBulkLessons = useCreateBulkLessons();
   const updateLesson = useUpdateLesson();
-  const createGroup = useCreateGroup();
 
   // Sync form fields with initialData when it changes
   useEffect(() => {
@@ -94,31 +84,14 @@ export function LessonFormModal({
       setTitle(initialData.title || "");
       setSubject(initialData.subject || "");
       setTeacherId(initialData.teacherId || "");
-      setGroupId(initialData.groupId || "");
       setSelectedStudentIds(initialData.studentIds || []);
       setDate(initialData.date ? moment(initialData.date).format("YYYY-MM-DD") : moment().format("YYYY-MM-DD"));
       setStartTime(initialData.startTime || "10:00");
       setEndTime(initialData.endTime || "11:30");
       setRoomId(initialData.roomId || "");
-      if (initialData.lessonType) {
-        setLessonType(initialData.lessonType);
-      }
     }
   }, [initialData]);
 
-  // Auto-fill from group
-  useEffect(() => {
-    if (lessonType === "group" && groupId) {
-      const group = groups.find((g) => g.id === groupId);
-      if (group) {
-        if (!subject) setSubject(group.subject);
-        if (!teacherId) setTeacherId(group.teacherId);
-        if (!roomId && group.roomId) setRoomId(group.roomId);
-        if (group.studentIds) setSelectedStudentIds(group.studentIds);
-        if (!title) setTitle(group.name);
-      }
-    }
-  }, [lessonType, groupId, groups]);
 
   // Check conflicts when relevant fields change
   useEffect(() => {
@@ -179,28 +152,6 @@ export function LessonFormModal({
     }
 
     try {
-      let finalGroupId = groupId;
-
-      // Create new group if needed
-      if (lessonType === "group" && isCreatingNewGroup && newGroupName.trim()) {
-        const weekdayNames = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
-        const scheduleString = selectedWeekdays.length > 0
-          ? `${selectedWeekdays.map(d => weekdayNames[d]).join(", ")} ${startTime}-${endTime}`
-          : "";
-
-        const newGroup = await createGroup.mutateAsync({
-          name: newGroupName,
-          subject,
-          teacherId,
-          schedule: scheduleString,
-          roomId,
-          studentIds: selectedStudentIds,
-        } as any);
-
-        finalGroupId = newGroup.id;
-        toast.success("Группа создана");
-      }
-
       const start = new Date(`${date}T${startTime}`);
       const end = new Date(`${date}T${endTime}`);
       const selectedRoom = rooms.find((r) => r.id === roomId);
@@ -209,14 +160,13 @@ export function LessonFormModal({
         title,
         subject,
         teacherId,
-        groupId: lessonType === "group" ? finalGroupId : undefined,
-        studentIds: lessonType === "individual" ? selectedStudentIds : [],
+        studentIds: selectedStudentIds,
         start,
         end,
         room: selectedRoom?.name || "",
         roomId,
         status: "scheduled" as const,
-        lessonType,
+        lessonType: "individual" as const,
       };
 
       if (mode === "edit" && initialData?.id) {
@@ -248,6 +198,8 @@ export function LessonFormModal({
     const endDate = moment(endDateStr);
 
     let currentDate = startDate.clone();
+    let lessonIndex = 0;
+    const baseTimestamp = Date.now();
 
     while (currentDate.isSameOrBefore(endDate)) {
       if (weekdays.includes(currentDate.day())) {
@@ -260,12 +212,17 @@ export function LessonFormModal({
           minute: parseInt(endTime.split(":")[1]),
         });
 
+        // Генерируем уникальный ID для каждого урока
+        // Используем базовый timestamp + индекс + дату + случайное число для гарантии уникальности
+        const uniqueId = `${baseTimestamp}-${lessonIndex}-${Math.random().toString(36).substring(2, 9)}-${currentDate.format("YYYY-MM-DD")}`;
+
         lessons.push({
           ...baseLesson,
-          id: `${Date.now()}-${currentDate.format("YYYY-MM-DD")}`,
+          id: uniqueId,
           start: lessonStart.toDate(),
           end: lessonEnd.toDate(),
         });
+        lessonIndex++;
       }
       currentDate.add(1, "day");
     }
@@ -277,7 +234,6 @@ export function LessonFormModal({
     setTitle("");
     setSubject("");
     setTeacherId("");
-    setGroupId("");
     setSelectedStudentIds([]);
     setDate(moment().format("YYYY-MM-DD"));
     setStartTime("10:00");
@@ -286,8 +242,6 @@ export function LessonFormModal({
     setSeriesMode(false);
     setSelectedWeekdays([]);
     setConflicts(null);
-    setIsCreatingNewGroup(false);
-    setNewGroupName("");
   };
 
   return (
@@ -298,23 +252,6 @@ export function LessonFormModal({
         </DialogHeader>
 
         <div className="space-y-4 pb-2">
-          {/* Lesson Type Toggle */}
-          {mode === "create" && allowLessonTypeChange && (
-            <div className="space-y-2">
-              <Label>Тип занятия</Label>
-              <Tabs value={lessonType} onValueChange={(v) => setLessonType(v as any)}>
-                <TabsList className="w-full">
-                  <TabsTrigger value="group" className="flex-1">
-                    Групповое
-                  </TabsTrigger>
-                  <TabsTrigger value="individual" className="flex-1">
-                    Индивидуальное
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
-          )}
-
           {/* Series Mode Toggle */}
           {mode === "create" && (
             <div className="flex items-center space-x-2">
@@ -362,72 +299,12 @@ export function LessonFormModal({
             )}
           </div>
 
-          {/* Group or Students */}
-          {lessonType === "group" ? (
-            <div className="space-y-2">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <Label htmlFor="groupId">Группа *</Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setIsCreatingNewGroup(!isCreatingNewGroup);
-                    if (!isCreatingNewGroup) {
-                      setGroupId("");
-                    }
-                  }}
-                  className="w-full sm:w-auto"
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  <span className="hidden sm:inline">{isCreatingNewGroup ? "Выбрать существующую" : "Создать новую"}</span>
-                  <span className="sm:hidden">{isCreatingNewGroup ? "Выбрать" : "Создать"}</span>
-                </Button>
-              </div>
-              
-              {isCreatingNewGroup ? (
-                <div className="space-y-3 p-3 border rounded-lg bg-muted/50">
-                  <div>
-                    <Label htmlFor="newGroupName">Название группы *</Label>
-                    <Input
-                      id="newGroupName"
-                      value={newGroupName}
-                      onChange={(e) => {
-                        setNewGroupName(e.target.value);
-                        if (!title) setTitle(e.target.value);
-                      }}
-                      placeholder="Например: Математика 5 класс"
-                      required
-                    />
-                  </div>
-                  <StudentSelector
-                    students={students}
-                    selectedStudentIds={selectedStudentIds}
-                    onSelectionChange={setSelectedStudentIds}
-                  />
-                </div>
-              ) : (
-                <Select value={groupId} onValueChange={setGroupId} required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Выберите группу" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {groups.map((group) => (
-                      <SelectItem key={group.id} value={group.id}>
-                        {group.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-          ) : (
-            <StudentSelector
-              students={students}
-              selectedStudentIds={selectedStudentIds}
-              onSelectionChange={setSelectedStudentIds}
-            />
-          )}
+          {/* Students - только для индивидуальных уроков */}
+          <StudentSelector
+            students={students}
+            selectedStudentIds={selectedStudentIds}
+            onSelectionChange={setSelectedStudentIds}
+          />
 
           {/* Date */}
           <div>
@@ -567,8 +444,7 @@ export function LessonFormModal({
                 !subject ||
                 !teacherId ||
                 !roomId ||
-                (lessonType === "group" && !groupId) ||
-                (lessonType === "individual" && selectedStudentIds.length === 0) ||
+                selectedStudentIds.length === 0 ||
                 (seriesMode && (selectedWeekdays.length === 0 || !seriesEndDate))
               }
               className="w-full sm:w-auto"

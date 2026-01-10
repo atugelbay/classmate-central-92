@@ -78,7 +78,8 @@ export function StudentLessonCalendar({
 
       // Get lessons for this subscription period
       const subscriptionLessons = lessons.filter((lesson) => {
-        const lessonDate = moment(lesson.start);
+        // lesson.start may be ISO string with offset; keep offset without local shifting
+        const lessonDate = moment.parseZone(lesson.start as any);
         const isInPeriod =
           lessonDate.isSameOrAfter(startDate) &&
           (!endDate || lessonDate.isSameOrBefore(endDate));
@@ -90,7 +91,7 @@ export function StudentLessonCalendar({
       });
 
       subscriptionLessons.forEach((lesson) => {
-        const lessonDate = moment(lesson.start);
+        const lessonDate = moment.parseZone(lesson.start as any);
         const lessonAttendance = attendances.find(
           (att) => att.lessonId === lesson.id && att.studentId === studentId
         );
@@ -120,7 +121,7 @@ export function StudentLessonCalendar({
         }
 
         result.push({
-          date: lesson.start,
+          date: lessonDate.toDate(),
           lesson,
           status,
           attendance: lessonAttendance,

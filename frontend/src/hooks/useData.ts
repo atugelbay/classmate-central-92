@@ -9,7 +9,7 @@ import { leadsApi } from "@/api/leads";
 import * as financeApi from "@/api/finance";
 import * as subscriptionsApi from "@/api/subscriptions";
 import * as dashboardApi from "@/api/dashboard";
-import * as discountsApi from "@/api/discounts";
+import { discountsAPI as discountsApi } from "@/api/discounts";
 import { rolesAPI } from "@/api/roles";
 import { 
   Teacher, 

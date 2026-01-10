@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import moment from "moment";
 import "moment/locale/ru";
@@ -9,6 +9,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -31,7 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Mail, Phone, Plus, Loader2, Calendar, List, Edit, Trash2, Clock, Users, MapPin } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Plus, Loader2, Calendar, List, Edit, Trash2, Clock, Users, MapPin, DollarSign, Calculator } from "lucide-react";
 import { Lesson } from "@/types";
 import { toast } from "sonner";
 import {
@@ -58,9 +59,9 @@ export default function TeacherDetail() {
 
   const teacher = teachers.find((t) => t.id === id);
 
-  // Get lessons for current and next month
-  const startDate = moment().startOf("month").format("YYYY-MM-DD");
-  const endDate = moment().add(1, "month").endOf("month").format("YYYY-MM-DD");
+  // Get lessons for extended period (3 months back, 3 months forward) to support salary calculation
+  const startDate = moment().subtract(3, "month").startOf("month").format("YYYY-MM-DD");
+  const endDate = moment().add(3, "month").endOf("month").format("YYYY-MM-DD");
   const { data: lessons = [], isLoading } = useTeacherLessons(id || "", startDate, endDate);
 
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
@@ -70,9 +71,20 @@ export default function TeacherDetail() {
   const [lessonFormMode, setLessonFormMode] = useState<"create" | "edit">("create");
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isSalaryCalcOpen, setIsSalaryCalcOpen] = useState(false);
+  const [salaryPeriodStart, setSalaryPeriodStart] = useState<string>(moment().startOf("month").format("YYYY-MM-DD"));
+  const [salaryPeriodEnd, setSalaryPeriodEnd] = useState<string>(moment().endOf("month").format("YYYY-MM-DD"));
+  const [editRateType, setEditRateType] = useState<string>("");
 
   const updateTeacher = useUpdateTeacher();
   const deleteTeacher = useDeleteTeacher();
+
+  // Update editRateType when teacher changes or dialog opens
+  useEffect(() => {
+    if (teacher) {
+      setEditRateType(teacher.rateType || "none");
+    }
+  }, [teacher]);
 
   if (!teacher) {
     return (
@@ -135,19 +147,49 @@ export default function TeacherDetail() {
     if (!teacher) return;
 
     const formData = new FormData(e.currentTarget);
-    const teacherData = {
-      name: formData.get("name") as string,
-      subject: formData.get("subject") as string,
-      email: formData.get("email") as string,
-      phone: formData.get("phone") as string,
-      status: formData.get("status") as "active" | "inactive",
-      workload: parseInt(formData.get("workload") as string),
+    const hourlyRateStr = formData.get("hourlyRate") as string;
+    const lessonRateStr = formData.get("lessonRate") as string;
+    
+    // Get all form fields - include required fields
+    const teacherData: any = {
+      name: formData.get("name") as string || teacher.name,
+      subject: formData.get("subject") as string || teacher.subject,
+      email: formData.get("email") as string || teacher.email,
+      phone: formData.get("phone") as string || teacher.phone,
+      status: (formData.get("status") as "active" | "inactive") || teacher.status,
+      workload: parseInt(formData.get("workload") as string) || teacher.workload,
     };
+
+    // Add rate fields based on selected rateType (from state, not form)
+    const rateTypeValue = editRateType === "none" ? "" : editRateType;
+    if (rateTypeValue && rateTypeValue.trim() !== "") {
+      teacherData.rateType = rateTypeValue;
+      if (rateTypeValue === "hourly") {
+        // Set hourly rate if provided
+        if (hourlyRateStr && hourlyRateStr.trim() !== "") {
+          teacherData.hourlyRate = parseFloat(hourlyRateStr);
+        }
+        // Explicitly clear lesson rate when using hourly
+        teacherData.lessonRate = null;
+      } else if (rateTypeValue === "per_lesson") {
+        // Set lesson rate if provided
+        if (lessonRateStr && lessonRateStr.trim() !== "") {
+          teacherData.lessonRate = parseFloat(lessonRateStr);
+        }
+        // Explicitly clear hourly rate when using per_lesson
+        teacherData.hourlyRate = null;
+      }
+    } else {
+      // No rate type selected - clear all rate fields by sending empty string
+      teacherData.rateType = "";
+      teacherData.hourlyRate = null;
+      teacherData.lessonRate = null;
+    }
 
     try {
       await updateTeacher.mutateAsync({ id: teacher.id, data: teacherData });
       setIsEditDialogOpen(false);
-      toast.success("Учитель обновлен");
+      // toast is shown by mutation hook
     } catch (error) {
       // Error handled by mutation
     }
@@ -171,17 +213,18 @@ export default function TeacherDetail() {
   const totalLessons = lessons.length;
   const completionRate = totalLessons > 0 ? ((completedLessons / totalLessons) * 100).toFixed(1) : "0";
 
-  // Calculate workload for current week
-  const currentWeekStart = moment().startOf("isoWeek");
-  const currentWeekEnd = moment().endOf("isoWeek");
-  const currentWeekLessons = lessons.filter((l) => {
+  // Calculate workload for selected week (dynamic based on selectedWeek)
+  const selectedWeekStart = moment(selectedWeek).startOf("isoWeek");
+  const selectedWeekEnd = moment(selectedWeek).endOf("isoWeek");
+  const selectedWeekLessons = lessons.filter((l) => {
     const lessonDate = moment(l.start);
-    return lessonDate.isBetween(currentWeekStart, currentWeekEnd, null, "[]");
+    return lessonDate.isBetween(selectedWeekStart, selectedWeekEnd, null, "[]");
   });
-  const currentWeekHours = currentWeekLessons.reduce((total, lesson) => {
+  const selectedWeekHours = selectedWeekLessons.reduce((total, lesson) => {
     const duration = moment(lesson.end).diff(moment(lesson.start), "hours", true);
     return total + duration;
   }, 0).toFixed(1);
+  const selectedWeekLessonsCount = selectedWeekLessons.length;
 
   // Get lessons for selected week (calendar view)
   const weekStart = moment(selectedWeek).startOf("isoWeek");
@@ -224,6 +267,17 @@ export default function TeacherDetail() {
             <Edit className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Редактировать</span>
           </Button>
+          {teacher && teacher.rateType && (teacher.hourlyRate || teacher.lessonRate) && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setIsSalaryCalcOpen(true)}
+              className="sm:size-default"
+            >
+              <Calculator className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Зарплата</span>
+            </Button>
+          )}
           <Button 
             variant="destructive" 
             size="sm" 
@@ -289,14 +343,18 @@ export default function TeacherDetail() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-primary">
-              {currentWeekHours}
+              {selectedWeekHours}
               <span className="text-sm font-normal text-muted-foreground ml-1">ч/нед</span>
             </div>
-            <p className="text-sm text-muted-foreground mt-1">Текущая неделя</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {weekStart.format("D MMM")} - {weekEnd.format("D MMM YYYY")}
+            </p>
+            <p className="text-sm text-muted-foreground mt-2">
+              {selectedWeekLessonsCount} {selectedWeekLessonsCount === 1 ? 'урок' : selectedWeekLessonsCount < 5 ? 'урока' : 'уроков'}
+            </p>
             <p className="text-sm text-muted-foreground mt-2">
               Плановая: {teacher.workload} ч/нед
             </p>
-            <p className="text-sm text-muted-foreground">Процент выполнения: {completionRate}%</p>
           </CardContent>
         </Card>
       </div>
@@ -532,7 +590,12 @@ export default function TeacherDetail() {
       />
 
       {/* Edit Teacher Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+      <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
+        setIsEditDialogOpen(open);
+        if (open && teacher) {
+          setEditRateType(teacher.rateType || "none");
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Редактировать учителя</DialogTitle>
@@ -588,7 +651,7 @@ export default function TeacherDetail() {
               </Select>
             </div>
             <div>
-              <Label htmlFor="workload">Загруженность (уроков/нед.)</Label>
+              <Label htmlFor="workload">Плановая загруженность (часов/нед.)</Label>
               <Input
                 id="workload"
                 name="workload"
@@ -597,6 +660,48 @@ export default function TeacherDetail() {
                 required
               />
             </div>
+            <div className="space-y-2 border-t pt-4">
+              <Label className="text-sm font-semibold">Настройки зарплаты</Label>
+              <div>
+                <Label htmlFor="rateType">Тип ставки</Label>
+                <Select value={editRateType === "" || !editRateType ? "none" : editRateType} onValueChange={(value) => setEditRateType(value === "none" ? "" : value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Не указано" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Не указано</SelectItem>
+                    <SelectItem value="hourly">Почасовая ставка</SelectItem>
+                    <SelectItem value="per_lesson">Поурочная ставка</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="hourlyRate">Почасовая ставка (₸/час)</Label>
+                <Input
+                  id="hourlyRate"
+                  name="hourlyRate"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  defaultValue={teacher.hourlyRate?.toString() || ""}
+                  disabled={editRateType !== "hourly"}
+                  placeholder="Например, 2000"
+                />
+              </div>
+              <div>
+                <Label htmlFor="lessonRate">Поурочная ставка (₸/урок)</Label>
+                <Input
+                  id="lessonRate"
+                  name="lessonRate"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  defaultValue={teacher.lessonRate?.toString() || ""}
+                  disabled={editRateType !== "per_lesson"}
+                  placeholder="Например, 2500"
+                />
+              </div>
+            </div>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
                 Отмена
@@ -604,6 +709,31 @@ export default function TeacherDetail() {
               <Button type="submit">Сохранить</Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Salary Calculation Dialog */}
+      <Dialog open={isSalaryCalcOpen} onOpenChange={setIsSalaryCalcOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Calculator className="h-5 w-5" />
+              Расчет зарплаты: {teacher.name}
+            </DialogTitle>
+          </DialogHeader>
+          <SalaryCalculationComponent
+            teacher={teacher}
+            lessons={lessons}
+            periodStart={salaryPeriodStart}
+            periodEnd={salaryPeriodEnd}
+            onPeriodStartChange={setSalaryPeriodStart}
+            onPeriodEndChange={setSalaryPeriodEnd}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSalaryCalcOpen(false)}>
+              Закрыть
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -624,6 +754,174 @@ export default function TeacherDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+// Salary Calculation Component
+function SalaryCalculationComponent({
+  teacher,
+  lessons,
+  periodStart,
+  periodEnd,
+  onPeriodStartChange,
+  onPeriodEndChange,
+}: {
+  teacher: any;
+  lessons: Lesson[];
+  periodStart: string;
+  periodEnd: string;
+  onPeriodStartChange: (value: string) => void;
+  onPeriodEndChange: (value: string) => void;
+}) {
+  const calculation = useMemo(() => {
+    if (!teacher?.rateType || (!teacher.hourlyRate && !teacher.lessonRate)) {
+      return null;
+    }
+
+    const start = moment(periodStart).startOf("day");
+    const end = moment(periodEnd).endOf("day");
+
+    // Filter lessons for the selected period - only COMPLETED lessons (not cancelled or scheduled)
+    const periodLessons = lessons.filter((l) => {
+      const lessonDate = moment(l.start);
+      return lessonDate.isBetween(start, end, null, "[]") && l.status === "completed";
+    });
+
+    // Check if period is within loaded range (warn user if not)
+    let lessonsStart: moment.Moment | null = null;
+    let lessonsEnd: moment.Moment | null = null;
+    if (lessons.length > 0) {
+      const sortedLessons = [...lessons].sort((a, b) => moment(a.start).valueOf() - moment(b.start).valueOf());
+      lessonsStart = moment(sortedLessons[0].start);
+      lessonsEnd = moment(sortedLessons[sortedLessons.length - 1].start);
+    }
+    const isPeriodOutOfRange = (lessonsStart && start.isBefore(lessonsStart)) || (lessonsEnd && end.isAfter(lessonsEnd));
+
+    // Calculate total hours and lessons count
+    const totalHours = periodLessons.reduce((total, lesson) => {
+      const duration = moment(lesson.end).diff(moment(lesson.start), "hours", true);
+      return total + duration;
+    }, 0);
+
+    const totalLessons = periodLessons.length;
+
+    // Calculate salary based on rate type
+    let salary = 0;
+    let calculationDetails = "";
+
+    if (teacher.rateType === "hourly" && teacher.hourlyRate) {
+      salary = totalHours * teacher.hourlyRate;
+      calculationDetails = `${totalHours.toFixed(2)} часов × ${teacher.hourlyRate.toLocaleString()} ₸/час`;
+    } else if (teacher.rateType === "per_lesson" && teacher.lessonRate) {
+      salary = totalLessons * teacher.lessonRate;
+      calculationDetails = `${totalLessons} ${totalLessons === 1 ? "урок" : totalLessons < 5 ? "урока" : "уроков"} × ${teacher.lessonRate.toLocaleString()} ₸/урок`;
+    }
+
+    return {
+      totalHours: totalHours.toFixed(2),
+      totalLessons,
+      salary: salary.toFixed(2),
+      calculationDetails,
+      periodLessons,
+      isPeriodOutOfRange: isPeriodOutOfRange || false,
+    };
+  }, [teacher, lessons, periodStart, periodEnd]);
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="periodStart">Начало периода</Label>
+          <Input
+            id="periodStart"
+            type="date"
+            value={periodStart}
+            onChange={(e) => onPeriodStartChange(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label htmlFor="periodEnd">Конец периода</Label>
+          <Input
+            id="periodEnd"
+            type="date"
+            value={periodEnd}
+            onChange={(e) => onPeriodEndChange(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {calculation ? (
+        <Card className="border-2 border-green-200 bg-green-50/50">
+          <CardHeader>
+            <CardTitle className="text-lg">Результат расчета</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-muted-foreground">Период:</span>
+                <p className="font-medium">
+                  {moment(periodStart).format("DD.MM.YYYY")} - {moment(periodEnd).format("DD.MM.YYYY")}
+                </p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Тип ставки:</span>
+                <p className="font-medium">
+                  {teacher.rateType === "hourly" ? "Почасовая" : "Поурочная"}
+                </p>
+              </div>
+              {teacher.rateType === "hourly" ? (
+                <>
+                  <div>
+                    <span className="text-muted-foreground">Всего часов:</span>
+                    <p className="font-medium">{calculation.totalHours} ч</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Ставка:</span>
+                    <p className="font-medium">{teacher.hourlyRate?.toLocaleString()} ₸/час</p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <span className="text-muted-foreground">Всего уроков:</span>
+                    <p className="font-medium">{calculation.totalLessons}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Ставка:</span>
+                    <p className="font-medium">{teacher.lessonRate?.toLocaleString()} ₸/урок</p>
+                  </div>
+                </>
+              )}
+            </div>
+            {calculation.isPeriodOutOfRange && (
+              <div className="border-t pt-2 mb-2">
+                <p className="text-xs text-yellow-700 bg-yellow-100 p-2 rounded">
+                  ⚠️ Внимание: Выбранный период может выходить за пределы загруженных данных. Результат может быть неточным.
+                </p>
+              </div>
+            )}
+            <div className="border-t pt-4">
+              <p className="text-sm text-muted-foreground mb-2">Расчет:</p>
+              <p className="text-sm font-medium mb-2">{calculation.calculationDetails}</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-lg font-semibold text-muted-foreground">Зарплата:</span>
+                <span className="text-3xl font-bold text-green-600">
+                  {parseFloat(calculation.salary).toLocaleString()} ₸
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="border-2 border-yellow-200 bg-yellow-50/50">
+          <CardContent className="p-4">
+            <p className="text-sm text-yellow-800">
+              Для расчета зарплаты необходимо указать тип ставки и значение ставки в настройках учителя.
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

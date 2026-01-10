@@ -624,16 +624,6 @@ export default function Students() {
                 />
               </div>
               <div>
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  defaultValue={editingStudent?.email}
-                  required
-                />
-              </div>
-              <div>
                 <Label htmlFor="phone">Телефон</Label>
                 <Input
                   id="phone"
@@ -643,6 +633,15 @@ export default function Students() {
                     e.currentTarget.value = formatKzPhone(e.currentTarget.value);
                   }}
                   required
+                />
+              </div>
+              <div>
+                <Label htmlFor="email">Email (необязательно)</Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  defaultValue={editingStudent?.email}
                 />
               </div>
               <div>

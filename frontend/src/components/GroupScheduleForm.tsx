@@ -1,19 +1,19 @@
 import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TimePicker } from "@/components/TimePicker";
 
 interface GroupScheduleFormProps {
   initialWeekdays?: number[];
-  initialStartTime?: string;
-  initialEndTime?: string;
+  initialDayTimes?: Record<number, { start: string; end: string }>;
+  initialStartTime?: string; // Для обратной совместимости
+  initialEndTime?: string; // Для обратной совместимости
   initialRoomId?: string;
   rooms: Array<{ id: string; name: string }>;
   onScheduleChange: (schedule: {
     weekdays: number[];
-    startTime: string;
-    endTime: string;
+    dayTimes: Record<number, { start: string; end: string }>;
     roomId: string;
   }) => void;
 }
@@ -30,6 +30,7 @@ const WEEKDAYS = [
 
 export function GroupScheduleForm({
   initialWeekdays = [],
+  initialDayTimes,
   initialStartTime = "10:00",
   initialEndTime = "11:30",
   initialRoomId = "",
@@ -37,23 +38,58 @@ export function GroupScheduleForm({
   onScheduleChange,
 }: GroupScheduleFormProps) {
   const [selectedDays, setSelectedDays] = useState<number[]>(initialWeekdays);
-  const [startTime, setStartTime] = useState(initialStartTime);
-  const [endTime, setEndTime] = useState(initialEndTime);
+  // Если initialDayTimes есть, используем его, иначе создаем из initialStartTime/initialEndTime для обратной совместимости
+  const [dayTimes, setDayTimes] = useState<Record<number, { start: string; end: string }>>(() => {
+    if (initialDayTimes) return initialDayTimes;
+    const times: Record<number, { start: string; end: string }> = {};
+    initialWeekdays.forEach(day => {
+      times[day] = { start: initialStartTime, end: initialEndTime };
+    });
+    return times;
+  });
   const [roomId, setRoomId] = useState(initialRoomId);
 
   useEffect(() => {
     onScheduleChange({
       weekdays: selectedDays,
-      startTime,
-      endTime,
+      dayTimes,
       roomId,
     });
-  }, [selectedDays, startTime, endTime, roomId]);
+  }, [selectedDays, dayTimes, roomId]);
 
   const toggleDay = (day: number) => {
-    setSelectedDays((prev) =>
-      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day].sort()
-    );
+    setSelectedDays((prev) => {
+      const isCurrentlySelected = prev.includes(day);
+      if (isCurrentlySelected) {
+        // Удаляем день и его время
+        setDayTimes((times) => {
+          const newTimes = { ...times };
+          delete newTimes[day];
+          return newTimes;
+        });
+        return prev.filter((d) => d !== day).sort();
+      } else {
+        // Добавляем день с дефолтным временем
+        const defaultTime = prev.length > 0 && dayTimes[prev[0]]
+          ? dayTimes[prev[0]] // Используем время первого выбранного дня если есть
+          : { start: initialStartTime, end: initialEndTime };
+        setDayTimes((times) => ({
+          ...times,
+          [day]: defaultTime,
+        }));
+        return [...prev, day].sort();
+      }
+    });
+  };
+
+  const updateDayTime = (day: number, field: "start" | "end", value: string) => {
+    setDayTimes((times) => ({
+      ...times,
+      [day]: {
+        ...times[day],
+        [field]: value,
+      },
+    }));
   };
 
   return (
@@ -84,28 +120,45 @@ export function GroupScheduleForm({
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="startTime">Время начала *</Label>
-          <Input
-            id="startTime"
-            type="time"
-            value={startTime}
-            onChange={(e) => setStartTime(e.target.value)}
-            required
-          />
+      {/* Time Selection for Each Selected Day */}
+      {selectedDays.length > 0 && (
+        <div className="space-y-3 pt-2 border-t">
+          <Label className="text-sm font-medium">Время занятий по дням *</Label>
+          <div className="space-y-3">
+            {selectedDays.map((day) => {
+              const dayTime = dayTimes[day] || { start: initialStartTime, end: initialEndTime };
+              const dayLabel = WEEKDAYS.find(d => d.value === day)?.label || "";
+              return (
+                <div key={day} className="p-3 border rounded-lg space-y-2 bg-muted/30">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="font-medium text-sm">{dayLabel}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor={`start-${day}`} className="text-xs text-muted-foreground">
+                        Начало
+                      </Label>
+                      <TimePicker
+                        value={dayTime.start}
+                        onChange={(value) => updateDayTime(day, "start", value)}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`end-${day}`} className="text-xs text-muted-foreground">
+                        Окончание
+                      </Label>
+                      <TimePicker
+                        value={dayTime.end}
+                        onChange={(value) => updateDayTime(day, "end", value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
-        <div>
-          <Label htmlFor="endTime">Время окончания *</Label>
-          <Input
-            id="endTime"
-            type="time"
-            value={endTime}
-            onChange={(e) => setEndTime(e.target.value)}
-            required
-          />
-        </div>
-      </div>
+      )}
 
       <div>
         <Label htmlFor="roomId">Аудитория *</Label>
@@ -125,14 +178,22 @@ export function GroupScheduleForm({
 
       <div className="p-3 bg-blue-50 rounded-lg text-sm">
         <p className="font-medium text-blue-900 mb-1">Предпросмотр расписания:</p>
-        <p className="text-blue-800">
-          {selectedDays.length > 0
-            ? selectedDays
-                .map((d) => WEEKDAYS.find((day) => day.value === d)?.label)
-                .join(", ")
-            : "Дни не выбраны"}{" "}
-          {startTime && endTime && `${startTime}-${endTime}`}
-        </p>
+        {selectedDays.length > 0 ? (
+          <div className="text-blue-800 space-y-1">
+            {Object.entries(dayTimes).map(([dayStr, time]) => {
+              const day = parseInt(dayStr);
+              if (!selectedDays.includes(day)) return null;
+              const dayLabel = WEEKDAYS.find(d => d.value === day)?.label || "";
+              return (
+                <p key={day}>
+                  {dayLabel}: {time.start}-{time.end}
+                </p>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-blue-800">Дни не выбраны</p>
+        )}
         {roomId && (
           <p className="text-blue-800 mt-1">
             Аудитория: {rooms.find((r) => r.id === roomId)?.name || roomId}

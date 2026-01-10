@@ -53,16 +53,19 @@ type UserBranch struct {
 
 // Teacher represents a teacher in the system
 type Teacher struct {
-	ID        string `json:"id" db:"id"`
-	Name      string `json:"name" db:"name"`
-	Subject   string `json:"subject" db:"subject"`
-	Email     string `json:"email" db:"email"`
-	Phone     string `json:"phone" db:"phone"`
-	Status    string `json:"status" db:"status"` // active, inactive
-	Avatar    string `json:"avatar,omitempty" db:"avatar"`
-	Workload  int    `json:"workload" db:"workload"`
-	CompanyID string `json:"companyId" db:"company_id"`
-	BranchID  string `json:"branchId" db:"branch_id"`
+	ID         string   `json:"id" db:"id"`
+	Name       string   `json:"name" db:"name"`
+	Subject    string   `json:"subject" db:"subject"`
+	Email      string   `json:"email" db:"email"`
+	Phone      string   `json:"phone" db:"phone"`
+	Status     string   `json:"status" db:"status"` // active, inactive
+	Avatar     string   `json:"avatar,omitempty" db:"avatar"`
+	Workload   int      `json:"workload" db:"workload"`
+	RateType   *string  `json:"rateType,omitempty" db:"rate_type"` // "hourly" or "per_lesson"
+	HourlyRate *float64 `json:"hourlyRate,omitempty" db:"hourly_rate"`
+	LessonRate *float64 `json:"lessonRate,omitempty" db:"lesson_rate"`
+	CompanyID  string   `json:"companyId" db:"company_id"`
+	BranchID   string   `json:"branchId" db:"branch_id"`
 }
 
 // Student represents a student in the system
@@ -337,6 +340,8 @@ type StudentSubscription struct {
 	UsedLessons          int        `json:"usedLessons" db:"used_lessons"`
 	LessonsRemaining     int        `json:"lessonsRemaining" db:"lessons_remaining"` // Computed field
 	TotalPrice           float64    `json:"totalPrice" db:"total_price"`
+	OriginalPrice        *float64   `json:"originalPrice,omitempty" db:"original_price"`   // Original price before discounts
+	DiscountAmount       *float64   `json:"discountAmount,omitempty" db:"discount_amount"` // Discount amount applied
 	PricePerLesson       float64    `json:"pricePerLesson" db:"price_per_lesson"`
 	StartDate            time.Time  `json:"startDate" db:"start_date"`
 	EndDate              *time.Time `json:"endDate,omitempty" db:"end_date"` // NULL if no expiry

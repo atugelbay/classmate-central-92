@@ -1,14 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { SubscriptionType, BillingType, Student, Group, Teacher } from "@/types";
+import { SubscriptionType, BillingType, Student, Group, Teacher, Discount, StudentDiscount } from "@/types";
 import { getSubscriptionTypes, createStudentSubscription } from "@/api/subscriptions";
 import { groupsAPI } from "@/api/groups";
 import { teachersAPI } from "@/api/teachers";
+import { useStudentDiscounts, useDiscounts } from "@/hooks/useData";
 import { Calendar, DollarSign, BookOpen, Clock, User, Users, AlertCircle } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 
@@ -30,6 +31,48 @@ const billingTypeColors: Record<BillingType, string> = {
   monthly: "bg-green-100 text-green-800",
   unlimited: "bg-purple-100 text-purple-800",
 };
+
+// Calculate final price with discounts applied
+function calculatePriceWithDiscounts(basePrice: number, discounts: Discount[]): { finalPrice: number; discountAmount: number } {
+  if (!discounts || discounts.length === 0) {
+    return { finalPrice: basePrice, discountAmount: 0 };
+  }
+
+  let finalPrice = basePrice;
+  let totalDiscount = 0;
+
+  // Filter active discounts and check expiration
+  const now = new Date();
+  const activeDiscounts = discounts.filter(d => {
+    if (!d.isActive) return false;
+    // Check expiration if exists (assuming StudentDiscount has expiresAt)
+    return true; // We'll filter expired discounts when we get student discounts
+  });
+
+  // Separate percentage and fixed discounts
+  const percentageDiscounts = activeDiscounts.filter(d => d.type === "percentage");
+  const fixedDiscounts = activeDiscounts.filter(d => d.type === "fixed");
+
+  // Apply percentage discounts first
+  for (const d of percentageDiscounts) {
+    if (d.value > 0 && d.value <= 100) {
+      const discountAmount = finalPrice * (d.value / 100);
+      finalPrice = Math.max(0, finalPrice - discountAmount);
+      totalDiscount += discountAmount;
+    }
+  }
+
+  // Apply fixed discounts after percentage
+  for (const d of fixedDiscounts) {
+    if (d.value > 0) {
+      const discountAmount = Math.min(finalPrice, d.value);
+      finalPrice = Math.max(0, finalPrice - discountAmount);
+      totalDiscount += discountAmount;
+    }
+  }
+
+  return { finalPrice, discountAmount: totalDiscount };
+}
 
 export default function AssignSubscriptionModal({
   open,
@@ -61,6 +104,32 @@ export default function AssignSubscriptionModal({
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
+
+  // Get student discounts
+  const { data: studentDiscounts = [] } = useStudentDiscounts(student.id);
+  const { data: allDiscounts = [] } = useDiscounts();
+
+  // Get active discounts for the student
+  const activeDiscounts = useMemo(() => {
+    const now = new Date();
+    return studentDiscounts
+      .filter((sd: StudentDiscount) => {
+        if (!sd.isActive) return false;
+        // Check expiration
+        if (sd.expiresAt) {
+          const expiresAt = new Date(sd.expiresAt);
+          if (expiresAt < now) return false;
+        }
+        return true;
+      })
+      .map((sd: StudentDiscount) => allDiscounts.find((d: Discount) => d.id === sd.discountId))
+      .filter((d): d is Discount => d !== undefined && d.isActive);
+  }, [studentDiscounts, allDiscounts]);
+
+  // Calculate final price with discounts
+  const priceCalculation = useMemo(() => {
+    return calculatePriceWithDiscounts(totalPrice, activeDiscounts);
+  }, [totalPrice, activeDiscounts]);
 
   useEffect(() => {
     if (open) {
@@ -148,6 +217,7 @@ export default function AssignSubscriptionModal({
         return `${dateStr}T00:00:00Z`;
       };
 
+      // Send original price - backend will apply discounts
       const data = {
         studentId: student.id,
         subscriptionTypeId: customMode ? undefined : selectedTypeId,
@@ -156,8 +226,8 @@ export default function AssignSubscriptionModal({
         // Note: lessonsRemaining is computed field (total_lessons - used_lessons), don't send it
         totalLessons,
         usedLessons: 0,
-        totalPrice,
-        pricePerLesson,
+        totalPrice, // Send original price, backend will apply discounts
+        pricePerLesson, // Will be recalculated by backend
         startDate: formatDateForBackend(startDate),
         endDate: formatDateForBackend(endDate),
         status: "active" as const,
@@ -409,8 +479,18 @@ export default function AssignSubscriptionModal({
             <h4 className="font-semibold mb-2">Итого:</h4>
             <div className="space-y-1 text-sm">
               <p>• Занятий: <span className="font-semibold">{totalLessons}</span></p>
-              <p>• Стоимость: <span className="font-semibold">{totalPrice.toLocaleString()} ₸</span></p>
-              <p>• За занятие: <span className="font-semibold">{pricePerLesson.toFixed(0)} ₸</span></p>
+              {priceCalculation.discountAmount > 0 ? (
+                <>
+                  <p>• Стоимость: <span className="line-through text-muted-foreground">{totalPrice.toLocaleString()} ₸</span> <span className="font-semibold text-green-600">{priceCalculation.finalPrice.toLocaleString()} ₸</span></p>
+                  <p className="text-xs text-green-700">• Скидка: <span className="font-semibold">-{priceCalculation.discountAmount.toLocaleString()} ₸</span></p>
+                  <p>• За занятие: <span className="font-semibold">{(priceCalculation.finalPrice / (totalLessons || 1)).toFixed(0)} ₸</span></p>
+                </>
+              ) : (
+                <>
+                  <p>• Стоимость: <span className="font-semibold">{totalPrice.toLocaleString()} ₸</span></p>
+                  <p>• За занятие: <span className="font-semibold">{pricePerLesson.toFixed(0)} ₸</span></p>
+                </>
+              )}
               {selectedType && (
                 <p>• Тип: <span className={`px-2 py-0.5 rounded text-xs ${billingTypeColors[selectedType.billingType]}`}>
                   {billingTypeLabels[selectedType.billingType]}

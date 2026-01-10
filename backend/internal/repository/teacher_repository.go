@@ -23,12 +23,37 @@ func (r *TeacherRepository) GetDB() *sql.DB {
 
 func (r *TeacherRepository) Create(teacher *models.Teacher, companyID string, branchID string) error {
 	query := `
-		INSERT INTO teachers (id, name, subject, email, phone, status, avatar, workload, company_id, branch_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		INSERT INTO teachers (id, name, subject, email, phone, status, avatar, workload, rate_type, hourly_rate, lesson_rate, company_id, branch_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 	`
 
+	// Convert rate fields for SQL
+	var rateTypeVal sql.NullString
+	var hourlyRateVal sql.NullFloat64
+	var lessonRateVal sql.NullFloat64
+
+	if teacher.RateType != nil && *teacher.RateType != "" {
+		rateTypeVal = sql.NullString{String: *teacher.RateType, Valid: true}
+		if *teacher.RateType == "hourly" && teacher.HourlyRate != nil {
+			hourlyRateVal = sql.NullFloat64{Float64: *teacher.HourlyRate, Valid: true}
+		} else if *teacher.RateType == "per_lesson" && teacher.LessonRate != nil {
+			lessonRateVal = sql.NullFloat64{Float64: *teacher.LessonRate, Valid: true}
+		}
+	}
+
+	// Convert avatar and phone to nullable
+	var avatarVal sql.NullString
+	if teacher.Avatar != "" {
+		avatarVal = sql.NullString{String: teacher.Avatar, Valid: true}
+	}
+	var phoneVal sql.NullString
+	if teacher.Phone != "" {
+		phoneVal = sql.NullString{String: teacher.Phone, Valid: true}
+	}
+
 	_, err := r.db.Exec(query, teacher.ID, teacher.Name, teacher.Subject,
-		teacher.Email, teacher.Phone, teacher.Status, teacher.Avatar, teacher.Workload, companyID, branchID)
+		teacher.Email, phoneVal, teacher.Status, avatarVal, teacher.Workload,
+		rateTypeVal, hourlyRateVal, lessonRateVal, companyID, branchID)
 	if err != nil {
 		return fmt.Errorf("error creating teacher: %w", err)
 	}
@@ -56,7 +81,7 @@ func (r *TeacherRepository) GetAllByBranches(companyID string, branchIDs []strin
 	
 	if hasFallback && len(branchIDs) == 1 {
 		// Fallback mode: don't filter by branch_id
-		query = `SELECT id, name, subject, email, phone, status, avatar, workload, company_id FROM teachers WHERE company_id = $1 ORDER BY name`
+		query = `SELECT id, name, subject, email, phone, status, avatar, workload, rate_type, hourly_rate, lesson_rate, company_id, branch_id FROM teachers WHERE company_id = $1 ORDER BY name`
 		args = []interface{}{companyID}
 	} else {
 		// Filter by accessible branches only
@@ -64,7 +89,7 @@ func (r *TeacherRepository) GetAllByBranches(companyID string, branchIDs []strin
 		for i := range branchIDs {
 			placeholders[i] = fmt.Sprintf("$%d", i+2)
 		}
-		query = fmt.Sprintf(`SELECT id, name, subject, email, phone, status, avatar, workload, company_id FROM teachers WHERE company_id = $1 AND branch_id IN (%s) ORDER BY name`, strings.Join(placeholders, ","))
+		query = fmt.Sprintf(`SELECT id, name, subject, email, phone, status, avatar, workload, rate_type, hourly_rate, lesson_rate, company_id, branch_id FROM teachers WHERE company_id = $1 AND branch_id IN (%s) ORDER BY name`, strings.Join(placeholders, ","))
 		args = make([]interface{}, len(branchIDs)+1)
 		args[0] = companyID
 		for i, bid := range branchIDs {
@@ -83,9 +108,13 @@ func (r *TeacherRepository) GetAllByBranches(companyID string, branchIDs []strin
 		teacher := &models.Teacher{}
 		var avatar sql.NullString
 		var phone sql.NullString
+		var rateType sql.NullString
+		var hourlyRate sql.NullFloat64
+		var lessonRate sql.NullFloat64
+		var branchID sql.NullString
 
 		err := rows.Scan(&teacher.ID, &teacher.Name, &teacher.Subject, &teacher.Email,
-			&phone, &teacher.Status, &avatar, &teacher.Workload, &teacher.CompanyID)
+			&phone, &teacher.Status, &avatar, &teacher.Workload, &rateType, &hourlyRate, &lessonRate, &teacher.CompanyID, &branchID)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning teacher: %w", err)
 		}
@@ -95,6 +124,18 @@ func (r *TeacherRepository) GetAllByBranches(companyID string, branchIDs []strin
 		}
 		if phone.Valid {
 			teacher.Phone = phone.String
+		}
+		if rateType.Valid {
+			teacher.RateType = &rateType.String
+		}
+		if hourlyRate.Valid {
+			teacher.HourlyRate = &hourlyRate.Float64
+		}
+		if lessonRate.Valid {
+			teacher.LessonRate = &lessonRate.Float64
+		}
+		if branchID.Valid {
+			teacher.BranchID = branchID.String
 		}
 
 		teachers = append(teachers, teacher)
@@ -107,11 +148,15 @@ func (r *TeacherRepository) GetByID(id string, companyID string) (*models.Teache
 	teacher := &models.Teacher{}
 	var avatar sql.NullString
 	var phone sql.NullString
+	var rateType sql.NullString
+	var hourlyRate sql.NullFloat64
+	var lessonRate sql.NullFloat64
+	var branchID sql.NullString
 
-	query := `SELECT id, name, subject, email, phone, status, avatar, workload, company_id FROM teachers WHERE id = $1 AND company_id = $2`
+	query := `SELECT id, name, subject, email, phone, status, avatar, workload, rate_type, hourly_rate, lesson_rate, company_id, branch_id FROM teachers WHERE id = $1 AND company_id = $2`
 
 	err := r.db.QueryRow(query, id, companyID).Scan(&teacher.ID, &teacher.Name, &teacher.Subject,
-		&teacher.Email, &phone, &teacher.Status, &avatar, &teacher.Workload, &teacher.CompanyID)
+		&teacher.Email, &phone, &teacher.Status, &avatar, &teacher.Workload, &rateType, &hourlyRate, &lessonRate, &teacher.CompanyID, &branchID)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -125,19 +170,92 @@ func (r *TeacherRepository) GetByID(id string, companyID string) (*models.Teache
 	if phone.Valid {
 		teacher.Phone = phone.String
 	}
+	if rateType.Valid {
+		teacher.RateType = &rateType.String
+	}
+	if hourlyRate.Valid {
+		teacher.HourlyRate = &hourlyRate.Float64
+	}
+	if lessonRate.Valid {
+		teacher.LessonRate = &lessonRate.Float64
+	}
+	if branchID.Valid {
+		teacher.BranchID = branchID.String
+	}
 
 	return teacher, nil
 }
 
 func (r *TeacherRepository) Update(teacher *models.Teacher, companyID string) error {
+	// Build update query with proper handling of rate fields
 	query := `
 		UPDATE teachers 
-		SET name = $2, subject = $3, email = $4, phone = $5, status = $6, avatar = $7, workload = $8
-		WHERE id = $1 AND company_id = $9
+		SET 
+			name = $2,
+			subject = $3,
+			email = $4,
+			phone = $5,
+			status = $6,
+			avatar = $7,
+			workload = $8,
+			rate_type = $9,
+			hourly_rate = $10,
+			lesson_rate = $11
+		WHERE id = $1 AND company_id = $12
 	`
 
+	// Convert rate fields for SQL
+	var rateTypeVal sql.NullString
+	var hourlyRateVal sql.NullFloat64
+	var lessonRateVal sql.NullFloat64
+
+	// Handle rate type and rates
+	// If rateType is provided and not empty, set it and corresponding rate
+	// If rateType is empty string (""), clear all rate fields
+	if teacher.RateType != nil {
+		if *teacher.RateType != "" {
+			rateTypeVal = sql.NullString{String: *teacher.RateType, Valid: true}
+			
+			if *teacher.RateType == "hourly" {
+				if teacher.HourlyRate != nil && *teacher.HourlyRate > 0 {
+					hourlyRateVal = sql.NullFloat64{Float64: *teacher.HourlyRate, Valid: true}
+				}
+				// Clear lesson rate when using hourly
+				lessonRateVal = sql.NullFloat64{Valid: false}
+			} else if *teacher.RateType == "per_lesson" {
+				if teacher.LessonRate != nil && *teacher.LessonRate > 0 {
+					lessonRateVal = sql.NullFloat64{Float64: *teacher.LessonRate, Valid: true}
+				}
+				// Clear hourly rate when using per_lesson
+				hourlyRateVal = sql.NullFloat64{Valid: false}
+			}
+		} else {
+			// Empty string means clear all rate fields
+			rateTypeVal = sql.NullString{Valid: false}
+			hourlyRateVal = sql.NullFloat64{Valid: false}
+			lessonRateVal = sql.NullFloat64{Valid: false}
+		}
+	} else {
+		// nil means don't update rate fields - get existing values first
+		// For simplicity, if rateType is nil, we'll clear (can be improved with partial update later)
+		rateTypeVal = sql.NullString{Valid: false}
+		hourlyRateVal = sql.NullFloat64{Valid: false}
+		lessonRateVal = sql.NullFloat64{Valid: false}
+	}
+
+	// Convert avatar and phone to nullable
+	var avatarVal sql.NullString
+	if teacher.Avatar != "" {
+		avatarVal = sql.NullString{String: teacher.Avatar, Valid: true}
+	}
+	var phoneVal sql.NullString
+	if teacher.Phone != "" {
+		phoneVal = sql.NullString{String: teacher.Phone, Valid: true}
+	}
+
 	_, err := r.db.Exec(query, teacher.ID, teacher.Name, teacher.Subject,
-		teacher.Email, teacher.Phone, teacher.Status, teacher.Avatar, teacher.Workload, companyID)
+		teacher.Email, phoneVal, teacher.Status, avatarVal, teacher.Workload,
+		rateTypeVal, hourlyRateVal, lessonRateVal, companyID)
 	if err != nil {
 		return fmt.Errorf("error updating teacher: %w", err)
 	}

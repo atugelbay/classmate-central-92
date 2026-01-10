@@ -92,6 +92,9 @@ func (d *Database) RunMigrations() error {
 		"migrations/025_add_unique_idx_deduction.up.sql",
 		"migrations/026_add_email_verification.up.sql",
 		"migrations/027_add_branches.up.sql",
+		"migrations/028_discounts.up.sql",
+		"migrations/029_add_subscription_discount_info.up.sql",
+		"migrations/030_add_teacher_salary_fields.up.sql",
 	}
 
 	log.Printf("📋 Total migrations to process: %d", len(migrations))

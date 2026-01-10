@@ -17,6 +17,26 @@ func NewLessonRepository(db *sql.DB) *LessonRepository {
 	return &LessonRepository{db: db}
 }
 
+func almatyLoc() *time.Location {
+	// Kazakhstan timezone - UTC+5 (no DST)
+	return time.FixedZone("Asia/Almaty", 5*60*60)
+}
+
+// toAlmatyWallClock converts an instant to "Almaty wall-clock" time.
+// DB columns are TIMESTAMP (no tz), so we store wall-clock.
+func toAlmatyWallClock(t time.Time) time.Time {
+	loc := almatyLoc()
+	local := t.In(loc)
+	return time.Date(local.Year(), local.Month(), local.Day(), local.Hour(), local.Minute(), local.Second(), local.Nanosecond(), loc)
+}
+
+// attachAlmatyOffset interprets a TIMESTAMP (no tz) value as Almaty wall-clock
+// and reattaches +05:00 so JSON always shows expected time.
+func attachAlmatyOffset(t time.Time) time.Time {
+	loc := almatyLoc()
+	return time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), loc)
+}
+
 func (r *LessonRepository) Create(lesson *models.Lesson, companyID, branchID string) error {
 	tx, err := r.db.Begin()
 	if err != nil {
@@ -44,6 +64,8 @@ func (r *LessonRepository) Create(lesson *models.Lesson, companyID, branchID str
 		INSERT INTO lessons (id, title, teacher_id, group_id, subject, start_time, end_time, room, room_id, status, company_id, branch_id)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 	`
+	lesson.Start = toAlmatyWallClock(lesson.Start)
+	lesson.End = toAlmatyWallClock(lesson.End)
 	_, err = tx.Exec(query, lesson.ID, lesson.Title, lesson.TeacherID, groupID,
 		lesson.Subject, lesson.Start, lesson.End, lesson.Room, roomID, lesson.Status, companyID, lesson.BranchID)
 	if err != nil {
@@ -69,7 +91,7 @@ func (r *LessonRepository) GetAll(companyID, branchID string) ([]*models.Lesson,
 func (r *LessonRepository) GetAllByBranches(companyID string, branchIDs []string) ([]*models.Lesson, error) {
 	var query string
 	var args []interface{}
-	
+
 	// Check if branchIDs contains companyID (fallback mode)
 	hasFallback := false
 	for _, bid := range branchIDs {
@@ -78,7 +100,7 @@ func (r *LessonRepository) GetAllByBranches(companyID string, branchIDs []string
 			break
 		}
 	}
-	
+
 	baseQuery := `
 		SELECT 
 			l.id, l.title, l.teacher_id, l.group_id, l.subject, 
@@ -91,7 +113,7 @@ func (r *LessonRepository) GetAllByBranches(companyID string, branchIDs []string
 		LEFT JOIN groups g ON l.group_id = g.id
 		LEFT JOIN rooms rm ON l.room_id = rm.id
 	`
-	
+
 	if hasFallback && len(branchIDs) == 1 {
 		// Fallback mode: don't filter by branch_id
 		query = baseQuery + ` WHERE l.company_id = $1 ORDER BY l.start_time`
@@ -170,6 +192,9 @@ func (r *LessonRepository) GetAllByBranches(companyID string, branchIDs []string
 			}
 		}
 
+		// Reattach Almaty offset for TIMESTAMP columns (no tz)
+		lesson.Start = attachAlmatyOffset(lesson.Start)
+		lesson.End = attachAlmatyOffset(lesson.End)
 		lessons = append(lessons, lesson)
 	}
 
@@ -246,6 +271,10 @@ func (r *LessonRepository) GetByID(id string, companyID string) (*models.Lesson,
 		}
 	}
 
+	// Reattach Almaty offset for TIMESTAMP columns (no tz)
+	lesson.Start = attachAlmatyOffset(lesson.Start)
+	lesson.End = attachAlmatyOffset(lesson.End)
+
 	return lesson, nil
 }
 
@@ -278,6 +307,8 @@ func (r *LessonRepository) Update(lesson *models.Lesson, companyID string) error
 		    start_time = $6, end_time = $7, room = $8, room_id = $9, status = $10
 		WHERE id = $1 AND company_id = $11
 	`
+	lesson.Start = toAlmatyWallClock(lesson.Start)
+	lesson.End = toAlmatyWallClock(lesson.End)
 	_, err = tx.Exec(query, lesson.ID, lesson.Title, lesson.TeacherID, groupID,
 		lesson.Subject, lesson.Start, lesson.End, lesson.Room, roomID, lesson.Status, companyID)
 	if err != nil {
@@ -319,6 +350,18 @@ func (r *LessonRepository) DeleteByGroupID(groupID string, companyID string) err
 	_, err := r.db.Exec(query, groupID, companyID)
 	if err != nil {
 		return fmt.Errorf("error deleting lessons for group: %w", err)
+	}
+
+	return nil
+}
+
+// DeleteFutureLessonsByGroupID deletes only future lessons associated with a group
+func (r *LessonRepository) DeleteFutureLessonsByGroupID(groupID string, companyID string) error {
+	query := `DELETE FROM lessons WHERE group_id = $1 AND company_id = $2 AND start_time > CURRENT_TIMESTAMP`
+
+	_, err := r.db.Exec(query, groupID, companyID)
+	if err != nil {
+		return fmt.Errorf("error deleting future lessons for group: %w", err)
 	}
 
 	return nil
@@ -598,6 +641,8 @@ func (r *LessonRepository) CreateBulk(lessons []*models.Lesson, companyID, branc
 			INSERT INTO lessons (id, title, teacher_id, group_id, subject, start_time, end_time, room, room_id, status, company_id, branch_id)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		`
+		lesson.Start = toAlmatyWallClock(lesson.Start)
+		lesson.End = toAlmatyWallClock(lesson.End)
 		_, err = tx.Exec(query, lesson.ID, lesson.Title, lesson.TeacherID, groupID,
 			lesson.Subject, lesson.Start, lesson.End, lesson.Room, roomID, lesson.Status, companyID, lesson.BranchID)
 		if err != nil {

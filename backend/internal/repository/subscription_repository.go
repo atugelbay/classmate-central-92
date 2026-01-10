@@ -72,13 +72,13 @@ func (r *SubscriptionRepository) DeleteType(id string, companyID string) error {
 func (r *SubscriptionRepository) CreateStudentSubscription(sub *models.StudentSubscription, companyID string) error {
 	query := `INSERT INTO student_subscriptions (
 		id, student_id, subscription_type_id, group_id, teacher_id,
-		total_lessons, used_lessons, total_price, price_per_lesson,
+		total_lessons, used_lessons, total_price, original_price, discount_amount, price_per_lesson,
 		start_date, end_date, paid_till, status, freeze_days_remaining, company_id, version
-	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 0) 
+	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, 0)
 	RETURNING created_at, updated_at`
 	return r.db.QueryRow(query,
 		sub.ID, sub.StudentID, sub.SubscriptionTypeID, sub.GroupID, sub.TeacherID,
-		sub.TotalLessons, sub.UsedLessons, sub.TotalPrice, sub.PricePerLesson,
+		sub.TotalLessons, sub.UsedLessons, sub.TotalPrice, sub.OriginalPrice, sub.DiscountAmount, sub.PricePerLesson,
 		sub.StartDate, sub.EndDate, sub.PaidTill, sub.Status, sub.FreezeDaysRemaining, companyID,
 	).Scan(&sub.CreatedAt, &sub.UpdatedAt)
 }
@@ -87,7 +87,7 @@ func (r *SubscriptionRepository) GetStudentSubscriptions(studentID string, compa
 	query := `SELECT 
 		ss.id, ss.student_id, ss.subscription_type_id, st.name as subscription_type_name, st.billing_type,
 		ss.group_id, ss.teacher_id,
-		ss.total_lessons, ss.used_lessons, ss.remaining_lessons, ss.total_price, ss.price_per_lesson,
+		ss.total_lessons, ss.used_lessons, ss.remaining_lessons, ss.total_price, ss.original_price, ss.discount_amount, ss.price_per_lesson,
 		ss.start_date, ss.end_date, ss.paid_till, ss.status, ss.freeze_days_remaining, 
 		ss.created_at, ss.updated_at, ss.company_id, ss.version
 	FROM student_subscriptions ss
@@ -104,10 +104,11 @@ func (r *SubscriptionRepository) GetStudentSubscriptions(studentID string, compa
 	for rows.Next() {
 		var sub models.StudentSubscription
 		var typeName, billingType, groupID, teacherID sql.NullString
+		var originalPrice, discountAmount sql.NullFloat64
 		if err := rows.Scan(
 			&sub.ID, &sub.StudentID, &sub.SubscriptionTypeID, &typeName, &billingType,
 			&groupID, &teacherID,
-			&sub.TotalLessons, &sub.UsedLessons, &sub.LessonsRemaining, &sub.TotalPrice, &sub.PricePerLesson,
+			&sub.TotalLessons, &sub.UsedLessons, &sub.LessonsRemaining, &sub.TotalPrice, &originalPrice, &discountAmount, &sub.PricePerLesson,
 			&sub.StartDate, &sub.EndDate, &sub.PaidTill, &sub.Status, &sub.FreezeDaysRemaining,
 			&sub.CreatedAt, &sub.UpdatedAt, &sub.CompanyID, &sub.Version,
 		); err != nil {
@@ -127,6 +128,12 @@ func (r *SubscriptionRepository) GetStudentSubscriptions(studentID string, compa
 			teacherIDStr := teacherID.String
 			sub.TeacherID = &teacherIDStr
 		}
+		if originalPrice.Valid {
+			sub.OriginalPrice = &originalPrice.Float64
+		}
+		if discountAmount.Valid {
+			sub.DiscountAmount = &discountAmount.Float64
+		}
 		subs = append(subs, sub)
 	}
 	return subs, nil
@@ -136,7 +143,7 @@ func (r *SubscriptionRepository) GetSubscriptionByID(id string, companyID string
 	query := `SELECT 
 		ss.id, ss.student_id, ss.subscription_type_id, st.name as subscription_type_name, st.billing_type,
 		ss.group_id, ss.teacher_id,
-		ss.total_lessons, ss.used_lessons, ss.remaining_lessons, ss.total_price, ss.price_per_lesson,
+		ss.total_lessons, ss.used_lessons, ss.remaining_lessons, ss.total_price, ss.original_price, ss.discount_amount, ss.price_per_lesson,
 		ss.start_date, ss.end_date, ss.paid_till, ss.status, ss.freeze_days_remaining,
 		ss.created_at, ss.updated_at, ss.company_id, ss.version
 	FROM student_subscriptions ss
@@ -144,10 +151,11 @@ func (r *SubscriptionRepository) GetSubscriptionByID(id string, companyID string
 	WHERE ss.id = $1 AND ss.company_id = $2`
 	var sub models.StudentSubscription
 	var typeName, billingType sql.NullString
+	var originalPrice, discountAmount sql.NullFloat64
 	err := r.db.QueryRow(query, id, companyID).Scan(
 		&sub.ID, &sub.StudentID, &sub.SubscriptionTypeID, &typeName, &billingType,
 		&sub.GroupID, &sub.TeacherID,
-		&sub.TotalLessons, &sub.UsedLessons, &sub.LessonsRemaining, &sub.TotalPrice, &sub.PricePerLesson,
+		&sub.TotalLessons, &sub.UsedLessons, &sub.LessonsRemaining, &sub.TotalPrice, &originalPrice, &discountAmount, &sub.PricePerLesson,
 		&sub.StartDate, &sub.EndDate, &sub.PaidTill, &sub.Status, &sub.FreezeDaysRemaining,
 		&sub.CreatedAt, &sub.UpdatedAt, &sub.CompanyID, &sub.Version,
 	)
@@ -159,6 +167,12 @@ func (r *SubscriptionRepository) GetSubscriptionByID(id string, companyID string
 	}
 	if billingType.Valid {
 		sub.BillingType = billingType.String
+	}
+	if originalPrice.Valid {
+		sub.OriginalPrice = &originalPrice.Float64
+	}
+	if discountAmount.Valid {
+		sub.DiscountAmount = &discountAmount.Float64
 	}
 	return &sub, nil
 }
@@ -191,7 +205,7 @@ func (r *SubscriptionRepository) GetAllSubscriptions(companyID string, branchID 
 		query = `SELECT 
 			ss.id, ss.student_id, ss.subscription_type_id, st.name as subscription_type_name, st.billing_type,
 			ss.group_id, ss.teacher_id,
-			ss.total_lessons, ss.used_lessons, ss.remaining_lessons, ss.total_price, ss.price_per_lesson,
+			ss.total_lessons, ss.used_lessons, ss.remaining_lessons, ss.total_price, ss.original_price, ss.discount_amount, ss.price_per_lesson,
 			ss.start_date, ss.end_date, ss.paid_till, ss.status, ss.freeze_days_remaining,
 			ss.created_at, ss.updated_at, ss.company_id, ss.version
 		FROM student_subscriptions ss
@@ -204,7 +218,7 @@ func (r *SubscriptionRepository) GetAllSubscriptions(companyID string, branchID 
 		query = `SELECT 
 			ss.id, ss.student_id, ss.subscription_type_id, st.name as subscription_type_name, st.billing_type,
 			ss.group_id, ss.teacher_id,
-			ss.total_lessons, ss.used_lessons, ss.remaining_lessons, ss.total_price, ss.price_per_lesson,
+			ss.total_lessons, ss.used_lessons, ss.remaining_lessons, ss.total_price, ss.original_price, ss.discount_amount, ss.price_per_lesson,
 			ss.start_date, ss.end_date, ss.paid_till, ss.status, ss.freeze_days_remaining,
 			ss.created_at, ss.updated_at, ss.company_id, ss.version
 		FROM student_subscriptions ss
@@ -225,10 +239,11 @@ func (r *SubscriptionRepository) GetAllSubscriptions(companyID string, branchID 
 	for rows.Next() {
 		var sub models.StudentSubscription
 		var typeName, billingType, groupID, teacherID sql.NullString
+		var originalPrice, discountAmount sql.NullFloat64
 		if err := rows.Scan(
 			&sub.ID, &sub.StudentID, &sub.SubscriptionTypeID, &typeName, &billingType,
 			&groupID, &teacherID,
-			&sub.TotalLessons, &sub.UsedLessons, &sub.LessonsRemaining, &sub.TotalPrice, &sub.PricePerLesson,
+			&sub.TotalLessons, &sub.UsedLessons, &sub.LessonsRemaining, &sub.TotalPrice, &originalPrice, &discountAmount, &sub.PricePerLesson,
 			&sub.StartDate, &sub.EndDate, &sub.PaidTill, &sub.Status, &sub.FreezeDaysRemaining,
 			&sub.CreatedAt, &sub.UpdatedAt, &sub.CompanyID, &sub.Version,
 		); err != nil {
@@ -249,6 +264,12 @@ func (r *SubscriptionRepository) GetAllSubscriptions(companyID string, branchID 
 		if teacherID.Valid {
 			teacherIDStr := teacherID.String
 			sub.TeacherID = &teacherIDStr
+		}
+		if originalPrice.Valid {
+			sub.OriginalPrice = &originalPrice.Float64
+		}
+		if discountAmount.Valid {
+			sub.DiscountAmount = &discountAmount.Float64
 		}
 		subs = append(subs, sub)
 	}
@@ -507,7 +528,7 @@ func (r *SubscriptionRepository) GetActiveSubscription(studentID string) (*model
 		SELECT 
 			ss.id, ss.student_id, ss.subscription_type_id, st.name as subscription_type_name, st.billing_type,
 			ss.group_id, ss.teacher_id,
-			ss.total_lessons, ss.used_lessons, ss.remaining_lessons, ss.total_price, ss.price_per_lesson,
+			ss.total_lessons, ss.used_lessons, ss.remaining_lessons, ss.total_price, ss.original_price, ss.discount_amount, ss.price_per_lesson,
 			ss.start_date, ss.end_date, ss.paid_till, ss.status, ss.freeze_days_remaining,
 			ss.created_at, ss.updated_at, ss.company_id
 		FROM student_subscriptions ss
@@ -518,10 +539,11 @@ func (r *SubscriptionRepository) GetActiveSubscription(studentID string) (*model
 	`
 	var sub models.StudentSubscription
 	var typeName, billingType sql.NullString
+	var originalPrice, discountAmount sql.NullFloat64
 	err := r.db.QueryRow(query, studentID).Scan(
 		&sub.ID, &sub.StudentID, &sub.SubscriptionTypeID, &typeName, &billingType,
 		&sub.GroupID, &sub.TeacherID,
-		&sub.TotalLessons, &sub.UsedLessons, &sub.LessonsRemaining, &sub.TotalPrice, &sub.PricePerLesson,
+		&sub.TotalLessons, &sub.UsedLessons, &sub.LessonsRemaining, &sub.TotalPrice, &originalPrice, &discountAmount, &sub.PricePerLesson,
 		&sub.StartDate, &sub.EndDate, &sub.PaidTill, &sub.Status, &sub.FreezeDaysRemaining,
 		&sub.CreatedAt, &sub.UpdatedAt, &sub.CompanyID,
 	)
@@ -535,6 +557,12 @@ func (r *SubscriptionRepository) GetActiveSubscription(studentID string) (*model
 		sub.SubscriptionTypeName = typeName.String
 	} else {
 		sub.SubscriptionTypeName = "Тип не указан"
+	}
+	if originalPrice.Valid {
+		sub.OriginalPrice = &originalPrice.Float64
+	}
+	if discountAmount.Valid {
+		sub.DiscountAmount = &discountAmount.Float64
 	}
 	return &sub, nil
 }
