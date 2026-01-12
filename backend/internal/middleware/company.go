@@ -69,6 +69,7 @@ func CompanyMiddleware(db *sql.DB) gin.HandlerFunc {
 		// If still no branch_id, try to get first available branch from database
 		// If branches table doesn't exist or no branches available, fallback to company_id
 		var branchRepo *repository.BranchRepository
+		var allBranchIDs []string
 		if branchID == "" {
 			branchRepo = repository.NewBranchRepository(db)
 			userBranches, err := branchRepo.GetUserBranches(userID.(int), companyID.String)
@@ -77,10 +78,20 @@ func CompanyMiddleware(db *sql.DB) gin.HandlerFunc {
 				branchID = userBranches[0].ID
 				logger.Info("Auto-selected first available branch", zap.Any("userId", userID), zap.String("branchId", branchID))
 			} else {
-				// If branches table doesn't exist or user has no branches, use company_id as fallback
-				// This provides backward compatibility before migrations are applied
-				branchID = companyID.String
-				logger.Info("Using company_id as branch_id (fallback mode)", zap.Any("userId", userID), zap.String("branchId", branchID))
+				// Если у пользователя нет закрепленных филиалов, пробуем взять все филиалы компании
+				allBranches, err := branchRepo.GetBranchesByCompany(companyID.String)
+				if err == nil && len(allBranches) > 0 {
+					branchID = allBranches[0].ID
+					allBranchIDs = make([]string, len(allBranches))
+					for i, b := range allBranches {
+						allBranchIDs[i] = b.ID
+					}
+					logger.Info("User has no branches, using first company branch", zap.Any("userId", userID), zap.String("branchId", branchID), zap.Int("branchesCount", len(allBranchIDs)))
+				} else {
+					// If branches table doesn't exist or no branches available, fallback to company_id
+					branchID = companyID.String
+					logger.Info("Using company_id as branch_id (fallback mode)", zap.Any("userId", userID), zap.String("branchId", branchID))
+				}
 			}
 		}
 
@@ -129,6 +140,9 @@ func CompanyMiddleware(db *sql.DB) gin.HandlerFunc {
 					branchIDs[i] = b.ID
 				}
 				c.Set("accessible_branch_ids", branchIDs)
+			} else if len(allBranchIDs) > 0 {
+				// пользователь без привязки — разрешаем все филиалы компании
+				c.Set("accessible_branch_ids", allBranchIDs)
 			} else {
 				// Fallback: use company_id as single "branch"
 				c.Set("accessible_branch_ids", []string{companyID.String})
