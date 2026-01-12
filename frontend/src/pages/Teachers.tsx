@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import moment from "moment";
 import "moment/locale/ru";
@@ -48,21 +48,10 @@ export default function Teachers() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
-  const [createRateType, setCreateRateType] = useState<string>("");
 
   // Lesson Form Modal state
   const [isLessonFormOpen, setIsLessonFormOpen] = useState(false);
   const [lessonFormData, setLessonFormData] = useState<any>(null);
-
-  // Update createRateType when editing teacher changes
-  useEffect(() => {
-    if (editingTeacher) {
-      setCreateRateType(editingTeacher.rateType || "none");
-    } else {
-      // For new teacher, start with empty string (no selection)
-      setCreateRateType("");
-    }
-  }, [editingTeacher]);
 
   const filteredTeachers = teachers.filter((teacher) => {
     const matchesSearch =
@@ -76,8 +65,6 @@ export default function Teachers() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const hourlyRateStr = formData.get("hourlyRate") as string;
-    const lessonRateStr = formData.get("lessonRate") as string;
     
     const teacherData: any = {
       name: formData.get("name") as string,
@@ -88,54 +75,6 @@ export default function Teachers() {
       workload: parseInt(formData.get("workload") as string) || 0,
     };
 
-    // Handle rate type and rates
-    const rateTypeValue = createRateType === "none" ? "" : createRateType;
-    
-    if (editingTeacher) {
-      // For editing, rateType is optional
-      if (rateTypeValue && rateTypeValue.trim() !== "") {
-        teacherData.rateType = rateTypeValue;
-        if (rateTypeValue === "hourly") {
-          if (hourlyRateStr && hourlyRateStr.trim() !== "") {
-            teacherData.hourlyRate = parseFloat(hourlyRateStr);
-          }
-          teacherData.lessonRate = null;
-        } else if (rateTypeValue === "per_lesson") {
-          if (lessonRateStr && lessonRateStr.trim() !== "") {
-            teacherData.lessonRate = parseFloat(lessonRateStr);
-          }
-          teacherData.hourlyRate = null;
-        }
-      } else {
-        teacherData.rateType = "";
-        teacherData.hourlyRate = null;
-        teacherData.lessonRate = null;
-      }
-    } else {
-      // For creation, rateType and rate are REQUIRED
-      if (!createRateType || createRateType.trim() === "" || createRateType === "none") {
-        toast.error("Необходимо выбрать тип ставки для создания учителя");
-        return;
-      }
-      
-      teacherData.rateType = createRateType;
-      if (createRateType === "hourly") {
-        if (!hourlyRateStr || hourlyRateStr.trim() === "" || parseFloat(hourlyRateStr) <= 0) {
-          toast.error("Необходимо указать почасовую ставку (больше 0)");
-          return;
-        }
-        teacherData.hourlyRate = parseFloat(hourlyRateStr);
-        teacherData.lessonRate = null;
-      } else if (createRateType === "per_lesson") {
-        if (!lessonRateStr || lessonRateStr.trim() === "" || parseFloat(lessonRateStr) <= 0) {
-          toast.error("Необходимо указать поурочную ставку (больше 0)");
-          return;
-        }
-        teacherData.lessonRate = parseFloat(lessonRateStr);
-        teacherData.hourlyRate = null;
-      }
-    }
-
     try {
       if (editingTeacher) {
         await updateTeacher.mutateAsync({ id: editingTeacher.id, data: teacherData });
@@ -144,7 +83,6 @@ export default function Teachers() {
       }
       setIsDialogOpen(false);
       setEditingTeacher(null);
-      setCreateRateType("");
     } catch (error) {
       // Error is handled by the mutation
     }
@@ -198,7 +136,6 @@ export default function Teachers() {
               setIsDialogOpen(open);
               if (!open) {
                 setEditingTeacher(null);
-                setCreateRateType("");
               }
             }}
           >
@@ -278,66 +215,6 @@ export default function Teachers() {
                     <SelectItem value="inactive">Неактивный</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-              
-              {/* Salary settings - REQUIRED for new teachers, optional for editing */}
-              <div className="space-y-2 border-t pt-4">
-                <Label className="text-sm font-semibold">
-                  Настройки зарплаты {!editingTeacher && <span className="text-red-500">*</span>}
-                </Label>
-                <div>
-                  <Label htmlFor="rateType">
-                    Тип ставки {!editingTeacher && <span className="text-red-500">*</span>}
-                  </Label>
-                  <Select 
-                    value={createRateType || (editingTeacher ? "none" : "")} 
-                    onValueChange={(value) => setCreateRateType(value === "none" ? "" : value)}
-                    required={!editingTeacher}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={editingTeacher ? "Не указано" : "Выберите тип ставки *"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {editingTeacher && <SelectItem value="none">Не указано</SelectItem>}
-                      <SelectItem value="hourly">Почасовая ставка</SelectItem>
-                      <SelectItem value="per_lesson">Поурочная ставка</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {createRateType === "hourly" && (
-                  <div>
-                    <Label htmlFor="hourlyRate">
-                      Почасовая ставка (₸/час) {!editingTeacher && <span className="text-red-500">*</span>}
-                    </Label>
-                    <Input
-                      id="hourlyRate"
-                      name="hourlyRate"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      defaultValue={editingTeacher?.hourlyRate?.toString() || ""}
-                      required={!editingTeacher}
-                      placeholder="Например, 2000"
-                    />
-                  </div>
-                )}
-                {createRateType === "per_lesson" && (
-                  <div>
-                    <Label htmlFor="lessonRate">
-                      Поурочная ставка (₸/урок) {!editingTeacher && <span className="text-red-500">*</span>}
-                    </Label>
-                    <Input
-                      id="lessonRate"
-                      name="lessonRate"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      defaultValue={editingTeacher?.lessonRate?.toString() || ""}
-                      required={!editingTeacher}
-                      placeholder="Например, 2500"
-                    />
-                  </div>
-                )}
               </div>
               
               <Button type="submit" className="w-full">

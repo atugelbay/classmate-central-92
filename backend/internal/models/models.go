@@ -61,11 +61,24 @@ type Teacher struct {
 	Status     string   `json:"status" db:"status"` // active, inactive
 	Avatar     string   `json:"avatar,omitempty" db:"avatar"`
 	Workload   int      `json:"workload" db:"workload"`
-	RateType   *string  `json:"rateType,omitempty" db:"rate_type"` // "hourly" or "per_lesson"
-	HourlyRate *float64 `json:"hourlyRate,omitempty" db:"hourly_rate"`
-	LessonRate *float64 `json:"lessonRate,omitempty" db:"lesson_rate"`
+	RateType   *string  `json:"rateType,omitempty" db:"rate_type"` // DEPRECATED: Use teacher_rates table instead
+	HourlyRate *float64 `json:"hourlyRate,omitempty" db:"hourly_rate"` // DEPRECATED: Use teacher_rates table instead
+	LessonRate *float64 `json:"lessonRate,omitempty" db:"lesson_rate"` // DEPRECATED: Use teacher_rates table instead
 	CompanyID  string   `json:"companyId" db:"company_id"`
 	BranchID   string   `json:"branchId" db:"branch_id"`
+}
+
+// TeacherRate represents a payment rate for a teacher by lesson type
+type TeacherRate struct {
+	ID         string    `json:"id" db:"id"`
+	TeacherID  string    `json:"teacherId" db:"teacher_id"`
+	LessonType string    `json:"lessonType" db:"lesson_type"` // "group", "individual", "special"
+	RateType   string    `json:"rateType" db:"rate_type"`     // "hourly", "per_lesson"
+	RateValue  float64   `json:"rateValue" db:"rate_value"`
+	IsActive   bool      `json:"isActive" db:"is_active"`
+	CreatedAt  time.Time `json:"createdAt" db:"created_at"`
+	CompanyID  string    `json:"companyId" db:"company_id"`
+	BranchID   string    `json:"branchId,omitempty" db:"branch_id"`
 }
 
 // Student represents a student in the system
@@ -93,6 +106,7 @@ type Lesson struct {
 	GroupID     string    `json:"groupId,omitempty" db:"group_id"`
 	GroupName   string    `json:"groupName,omitempty" db:"group_name"` // Populated via JOIN
 	Subject     string    `json:"subject" db:"subject"`
+	LessonType  string    `json:"lessonType" db:"lesson_type"` // "group", "individual", "special"
 	Start       time.Time `json:"start" db:"start_time"`
 	End         time.Time `json:"end" db:"end_time"`
 	Room        string    `json:"room" db:"room"`

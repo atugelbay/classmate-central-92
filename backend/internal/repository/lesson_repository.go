@@ -59,15 +59,26 @@ func (r *LessonRepository) Create(lesson *models.Lesson, companyID, branchID str
 		roomID = lesson.RoomID
 	}
 
+	// Determine lesson_type if not provided
+	lessonType := lesson.LessonType
+	if lessonType == "" {
+		if groupID == nil {
+			lessonType = "individual"
+		} else {
+			lessonType = "group"
+		}
+		lesson.LessonType = lessonType
+	}
+
 	// Insert lesson
 	query := `
-		INSERT INTO lessons (id, title, teacher_id, group_id, subject, start_time, end_time, room, room_id, status, company_id, branch_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+		INSERT INTO lessons (id, title, teacher_id, group_id, subject, lesson_type, start_time, end_time, room, room_id, status, company_id, branch_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 	`
 	lesson.Start = toAlmatyWallClock(lesson.Start)
 	lesson.End = toAlmatyWallClock(lesson.End)
 	_, err = tx.Exec(query, lesson.ID, lesson.Title, lesson.TeacherID, groupID,
-		lesson.Subject, lesson.Start, lesson.End, lesson.Room, roomID, lesson.Status, companyID, lesson.BranchID)
+		lesson.Subject, lessonType, lesson.Start, lesson.End, lesson.Room, roomID, lesson.Status, companyID, lesson.BranchID)
 	if err != nil {
 		return fmt.Errorf("error creating lesson: %w", err)
 	}
@@ -103,7 +114,7 @@ func (r *LessonRepository) GetAllByBranches(companyID string, branchIDs []string
 
 	baseQuery := `
 		SELECT 
-			l.id, l.title, l.teacher_id, l.group_id, l.subject, 
+			l.id, l.title, l.teacher_id, l.group_id, l.subject, l.lesson_type,
 			l.start_time, l.end_time, l.room, l.room_id, l.status, l.company_id, l.branch_id,
 			t.name as teacher_name,
 			g.name as group_name,
@@ -141,10 +152,10 @@ func (r *LessonRepository) GetAllByBranches(companyID string, branchIDs []string
 	lessons := []*models.Lesson{}
 	for rows.Next() {
 		lesson := &models.Lesson{}
-		var teacherID, teacherName, groupID, groupName, room, roomID, roomName, status sql.NullString
+		var teacherID, teacherName, groupID, groupName, room, roomID, roomName, status, lessonType sql.NullString
 
 		err := rows.Scan(&lesson.ID, &lesson.Title, &teacherID, &groupID,
-			&lesson.Subject, &lesson.Start, &lesson.End, &room, &roomID, &status, &lesson.CompanyID, &lesson.BranchID,
+			&lesson.Subject, &lessonType, &lesson.Start, &lesson.End, &room, &roomID, &status, &lesson.CompanyID, &lesson.BranchID,
 			&teacherName, &groupName, &roomName)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning lesson: %w", err)
@@ -176,6 +187,16 @@ func (r *LessonRepository) GetAllByBranches(companyID string, branchIDs []string
 		} else {
 			lesson.Status = "scheduled" // default
 		}
+		if lessonType.Valid {
+			lesson.LessonType = lessonType.String
+		} else {
+			// Auto-determine based on group_id if lesson_type is NULL
+			if groupID.Valid && groupID.String != "" {
+				lesson.LessonType = "group"
+			} else {
+				lesson.LessonType = "individual"
+			}
+		}
 
 		// Initialize empty array
 		lesson.StudentIds = []string{}
@@ -203,11 +224,11 @@ func (r *LessonRepository) GetAllByBranches(companyID string, branchIDs []string
 
 func (r *LessonRepository) GetByID(id string, companyID string) (*models.Lesson, error) {
 	lesson := &models.Lesson{}
-	var teacherID, teacherName, groupID, groupName, room, roomID, roomName, status sql.NullString
+	var teacherID, teacherName, groupID, groupName, room, roomID, roomName, status, lessonType sql.NullString
 
 	query := `
 		SELECT 
-			l.id, l.title, l.teacher_id, l.group_id, l.subject, 
+			l.id, l.title, l.teacher_id, l.group_id, l.subject, l.lesson_type,
 			l.start_time, l.end_time, l.room, l.room_id, l.status, l.company_id,
 			t.name as teacher_name,
 			g.name as group_name,
@@ -220,7 +241,7 @@ func (r *LessonRepository) GetByID(id string, companyID string) (*models.Lesson,
 	`
 
 	err := r.db.QueryRow(query, id, companyID).Scan(&lesson.ID, &lesson.Title, &teacherID, &groupID,
-		&lesson.Subject, &lesson.Start, &lesson.End, &room, &roomID, &status, &lesson.CompanyID,
+		&lesson.Subject, &lessonType, &lesson.Start, &lesson.End, &room, &roomID, &status, &lesson.CompanyID,
 		&teacherName, &groupName, &roomName)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -254,6 +275,16 @@ func (r *LessonRepository) GetByID(id string, companyID string) (*models.Lesson,
 		lesson.Status = status.String
 	} else {
 		lesson.Status = "scheduled" // default
+	}
+	if lessonType.Valid {
+		lesson.LessonType = lessonType.String
+	} else {
+		// Auto-determine based on group_id if lesson_type is NULL
+		if groupID.Valid && groupID.String != "" {
+			lesson.LessonType = "group"
+		} else {
+			lesson.LessonType = "individual"
+		}
 	}
 
 	// Initialize empty array
@@ -300,17 +331,28 @@ func (r *LessonRepository) Update(lesson *models.Lesson, companyID string) error
 		roomID = lesson.RoomID
 	}
 
+	// Determine lesson_type if not provided or if group_id changed
+	lessonType := lesson.LessonType
+	if lessonType == "" {
+		if groupID == nil {
+			lessonType = "individual"
+		} else {
+			lessonType = "group"
+		}
+		lesson.LessonType = lessonType
+	}
+
 	// Update lesson
 	query := `
 		UPDATE lessons 
-		SET title = $2, teacher_id = $3, group_id = $4, subject = $5, 
-		    start_time = $6, end_time = $7, room = $8, room_id = $9, status = $10
-		WHERE id = $1 AND company_id = $11
+		SET title = $2, teacher_id = $3, group_id = $4, subject = $5, lesson_type = $6,
+		    start_time = $7, end_time = $8, room = $9, room_id = $10, status = $11
+		WHERE id = $1 AND company_id = $12
 	`
 	lesson.Start = toAlmatyWallClock(lesson.Start)
 	lesson.End = toAlmatyWallClock(lesson.End)
 	_, err = tx.Exec(query, lesson.ID, lesson.Title, lesson.TeacherID, groupID,
-		lesson.Subject, lesson.Start, lesson.End, lesson.Room, roomID, lesson.Status, companyID)
+		lesson.Subject, lessonType, lesson.Start, lesson.End, lesson.Room, roomID, lesson.Status, companyID)
 	if err != nil {
 		return fmt.Errorf("error updating lesson: %w", err)
 	}
@@ -370,8 +412,8 @@ func (r *LessonRepository) DeleteFutureLessonsByGroupID(groupID string, companyI
 // GetIndividualLessons returns all lessons without a group (individual lessons)
 func (r *LessonRepository) GetIndividualLessons(companyID string) ([]*models.Lesson, error) {
 	query := `
-		SELECT 
-			l.id, l.title, l.teacher_id, l.group_id, l.subject, 
+		SELECT
+			l.id, l.title, l.teacher_id, l.group_id, l.subject, l.lesson_type,
 			l.start_time, l.end_time, l.room, l.room_id, l.status, l.company_id,
 			t.name as teacher_name,
 			rm.name as room_name
@@ -391,10 +433,10 @@ func (r *LessonRepository) GetIndividualLessons(companyID string) ([]*models.Les
 	lessons := []*models.Lesson{}
 	for rows.Next() {
 		lesson := &models.Lesson{}
-		var teacherID, teacherName, groupID, room, roomID, roomName, status sql.NullString
+		var teacherID, teacherName, groupID, room, roomID, roomName, status, lessonType sql.NullString
 
 		err := rows.Scan(&lesson.ID, &lesson.Title, &teacherID, &groupID,
-			&lesson.Subject, &lesson.Start, &lesson.End, &room, &roomID, &status, &lesson.CompanyID,
+			&lesson.Subject, &lessonType, &lesson.Start, &lesson.End, &room, &roomID, &status, &lesson.CompanyID,
 			&teacherName, &roomName)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning lesson: %w", err)
@@ -422,6 +464,16 @@ func (r *LessonRepository) GetIndividualLessons(companyID string) ([]*models.Les
 			lesson.Status = status.String
 		} else {
 			lesson.Status = "scheduled"
+		}
+		if lessonType.Valid {
+			lesson.LessonType = lessonType.String
+		} else {
+			// Auto-determine based on group_id if lesson_type is NULL
+			if groupID.Valid && groupID.String != "" {
+				lesson.LessonType = "group"
+			} else {
+				lesson.LessonType = "individual"
+			}
 		}
 
 		// Get students for this lesson
@@ -551,8 +603,8 @@ func (r *LessonRepository) CheckConflicts(teacherID, roomID string, start, end t
 // GetByTeacherID retrieves lessons for a specific teacher within a date range
 func (r *LessonRepository) GetByTeacherID(teacherID string, startDate, endDate time.Time, companyID string) ([]*models.Lesson, error) {
 	query := `
-		SELECT id, title, teacher_id, group_id, subject, start_time, end_time, room, room_id, status 
-		FROM lessons 
+		SELECT id, title, teacher_id, group_id, subject, lesson_type, start_time, end_time, room, room_id, status
+		FROM lessons
 		WHERE teacher_id = $1 AND company_id = $2 AND start_time >= $3 AND start_time <= $4
 		ORDER BY start_time
 	`
@@ -566,10 +618,10 @@ func (r *LessonRepository) GetByTeacherID(teacherID string, startDate, endDate t
 	lessons := []*models.Lesson{}
 	for rows.Next() {
 		lesson := &models.Lesson{}
-		var teacherID, groupID, room, roomID, status sql.NullString
+		var teacherID, groupID, room, roomID, status, lessonType sql.NullString
 
 		err := rows.Scan(&lesson.ID, &lesson.Title, &teacherID, &groupID,
-			&lesson.Subject, &lesson.Start, &lesson.End, &room, &roomID, &status)
+			&lesson.Subject, &lessonType, &lesson.Start, &lesson.End, &room, &roomID, &status)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning lesson: %w", err)
 		}
@@ -590,6 +642,16 @@ func (r *LessonRepository) GetByTeacherID(teacherID string, startDate, endDate t
 			lesson.Status = status.String
 		} else {
 			lesson.Status = "scheduled"
+		}
+		if lessonType.Valid {
+			lesson.LessonType = lessonType.String
+		} else {
+			// Auto-determine based on group_id if lesson_type is NULL
+			if groupID.Valid && groupID.String != "" {
+				lesson.LessonType = "group"
+			} else {
+				lesson.LessonType = "individual"
+			}
 		}
 
 		lesson.StudentIds = []string{}
@@ -636,15 +698,26 @@ func (r *LessonRepository) CreateBulk(lessons []*models.Lesson, companyID, branc
 			roomID = lesson.RoomID
 		}
 
+		// Determine lesson_type if not provided
+		lessonType := lesson.LessonType
+		if lessonType == "" {
+			if groupID == nil {
+				lessonType = "individual"
+			} else {
+				lessonType = "group"
+			}
+			lesson.LessonType = lessonType
+		}
+
 		// Insert lesson
 		query := `
-			INSERT INTO lessons (id, title, teacher_id, group_id, subject, start_time, end_time, room, room_id, status, company_id, branch_id)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+			INSERT INTO lessons (id, title, teacher_id, group_id, subject, lesson_type, start_time, end_time, room, room_id, status, company_id, branch_id)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 		`
 		lesson.Start = toAlmatyWallClock(lesson.Start)
 		lesson.End = toAlmatyWallClock(lesson.End)
 		_, err = tx.Exec(query, lesson.ID, lesson.Title, lesson.TeacherID, groupID,
-			lesson.Subject, lesson.Start, lesson.End, lesson.Room, roomID, lesson.Status, companyID, lesson.BranchID)
+			lesson.Subject, lessonType, lesson.Start, lesson.End, lesson.Room, roomID, lesson.Status, companyID, lesson.BranchID)
 		if err != nil {
 			return fmt.Errorf("error creating lesson: %w", err)
 		}

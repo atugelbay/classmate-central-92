@@ -440,6 +440,92 @@ func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendan
 		}
 	}
 
+	// Check if all students in the lesson have attendance marked, and update lesson status to "completed"
+	// Get all students for the lesson (from lesson_students table and from group if group_id exists)
+	var lessonGroupID sql.NullString
+	err = tx.QueryRow(`SELECT group_id FROM lessons WHERE id = $1 AND company_id = $2`, req.LessonID, companyID).Scan(&lessonGroupID)
+	if err == nil {
+		// Get all student IDs for this lesson
+		studentIDs := []string{}
+		
+		// Get students from lesson_students table
+		studentRows, err := tx.Query(`SELECT student_id FROM lesson_students WHERE lesson_id = $1`, req.LessonID)
+		if err == nil {
+			defer studentRows.Close()
+			for studentRows.Next() {
+				var studentID string
+				if err := studentRows.Scan(&studentID); err == nil {
+					studentIDs = append(studentIDs, studentID)
+				}
+			}
+		}
+		
+		// If lesson has a group, also get students from the group (from enrollment table)
+		if lessonGroupID.Valid && lessonGroupID.String != "" {
+			groupStudentRows, err := tx.Query(`SELECT student_id FROM enrollment WHERE group_id = $1 AND company_id = $2 AND left_at IS NULL`, lessonGroupID.String, companyID)
+			if err == nil {
+				defer groupStudentRows.Close()
+				for groupStudentRows.Next() {
+					var studentID string
+					if err := groupStudentRows.Scan(&studentID); err == nil {
+						// Add to list if not already present (avoid duplicates)
+						found := false
+						for _, id := range studentIDs {
+							if id == studentID {
+								found = true
+								break
+							}
+						}
+						if !found {
+							studentIDs = append(studentIDs, studentID)
+						}
+					}
+				}
+			}
+		}
+		
+		// Only proceed if lesson has students
+		if len(studentIDs) > 0 {
+			// Get all students with marked attendance for this lesson
+			attendanceRows, err := tx.Query(`SELECT DISTINCT student_id FROM lesson_attendance WHERE lesson_id = $1`, req.LessonID)
+			if err == nil {
+				defer attendanceRows.Close()
+				markedStudentIDs := []string{}
+				for attendanceRows.Next() {
+					var studentID string
+					if err := attendanceRows.Scan(&studentID); err == nil {
+						markedStudentIDs = append(markedStudentIDs, studentID)
+					}
+				}
+				
+				// Check if all students have attendance marked
+				allMarked := true
+				for _, studentID := range studentIDs {
+					found := false
+					for _, markedID := range markedStudentIDs {
+						if studentID == markedID {
+							found = true
+							break
+						}
+					}
+					if !found {
+						allMarked = false
+						break
+					}
+				}
+				
+				// If all students are marked, update lesson status to "completed"
+				if allMarked {
+					_, err = tx.Exec(`UPDATE lessons SET status = 'completed' WHERE id = $1 AND company_id = $2`, req.LessonID, companyID)
+					if err != nil {
+						// Log error but don't fail the transaction
+						_ = fmt.Errorf("error updating lesson status: %w", err)
+					}
+				}
+			}
+		}
+	}
+
 	// Log attendance activity
 	statusText := map[string]string{
 		"attended":  "Посетил занятие",

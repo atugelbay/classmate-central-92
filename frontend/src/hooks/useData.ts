@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { teachersAPI } from "@/api/teachers";
+import { teacherRatesAPI } from "@/api/teacherRates";
 import { studentsAPI } from "@/api/students";
 import { groupsAPI } from "@/api/groups";
 import { lessonsAPI } from "@/api/lessons";
@@ -12,7 +13,8 @@ import * as dashboardApi from "@/api/dashboard";
 import { discountsAPI as discountsApi } from "@/api/discounts";
 import { rolesAPI } from "@/api/roles";
 import { 
-  Teacher, 
+  Teacher,
+  TeacherRate,
   Student, 
   Group, 
   Lesson, 
@@ -99,6 +101,60 @@ export const useDeleteTeacher = () => {
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.error || "Ошибка при удалении учителя");
+    },
+  });
+};
+
+// Teacher Rates hooks
+export const useTeacherRates = (teacherId: string) => {
+  return useQuery({
+    queryKey: ["teacher-rates", teacherId],
+    queryFn: () => teacherRatesAPI.getByTeacher(teacherId),
+    enabled: !!teacherId,
+  });
+};
+
+export const useCreateTeacherRate = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ teacherId, rate }: { teacherId: string; rate: Omit<TeacherRate, 'id' | 'createdAt' | 'teacherId' | 'companyId'> }) =>
+      teacherRatesAPI.create(teacherId, rate),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["teacher-rates", variables.teacherId] });
+      toast.success("Ставка успешно добавлена");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при добавлении ставки");
+    },
+  });
+};
+
+export const useUpdateTeacherRate = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ teacherId, rateId, rate }: { teacherId: string; rateId: string; rate: Partial<Omit<TeacherRate, 'id' | 'createdAt' | 'teacherId' | 'companyId'>> }) =>
+      teacherRatesAPI.update(teacherId, rateId, rate),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["teacher-rates", variables.teacherId] });
+      toast.success("Ставка успешно обновлена");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при обновлении ставки");
+    },
+  });
+};
+
+export const useDeleteTeacherRate = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ teacherId, rateId }: { teacherId: string; rateId: string }) =>
+      teacherRatesAPI.delete(teacherId, rateId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["teacher-rates", variables.teacherId] });
+      toast.success("Ставка успешно удалена");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Ошибка при удалении ставки");
     },
   });
 };
@@ -228,6 +284,7 @@ export const useGenerateGroupLessons = () => {
     mutationFn: groupsAPI.generateLessons,
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["lessons"] });
+      queryClient.invalidateQueries({ queryKey: ["lessons", "teacher"] }); // Invalidate all teacher lessons queries
       toast.success(`Создано уроков: ${data.count}`);
     },
     onError: (error: any) => {
@@ -242,6 +299,7 @@ export const useExtendGroup = () => {
     mutationFn: groupsAPI.extend,
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["lessons"] });
+      queryClient.invalidateQueries({ queryKey: ["lessons", "teacher"] }); // Invalidate all teacher lessons queries
       queryClient.invalidateQueries({ queryKey: ["groups"] });
       toast.success(`Группа продлена. Создано ${data.count} новых уроков`);
     },
@@ -273,6 +331,7 @@ export const useCreateLesson = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["lessons"] });
       queryClient.invalidateQueries({ queryKey: ["individual-lessons"] });
+      queryClient.invalidateQueries({ queryKey: ["lessons", "teacher"] }); // Invalidate all teacher lessons queries
       toast.success("Урок успешно создан");
     },
     onError: (error: any) => {
@@ -321,6 +380,7 @@ export const useUpdateLesson = () => {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["lessons"] });
       queryClient.invalidateQueries({ queryKey: ["individual-lessons"] });
+      queryClient.invalidateQueries({ queryKey: ["lessons", "teacher"] }); // Invalidate all teacher lessons queries
     },
   });
 };
@@ -332,6 +392,7 @@ export const useDeleteLesson = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["lessons"] });
       queryClient.invalidateQueries({ queryKey: ["individual-lessons"] });
+      queryClient.invalidateQueries({ queryKey: ["lessons", "teacher"] }); // Invalidate all teacher lessons queries
       toast.success("Урок успешно удален");
     },
     onError: (error: any) => {
@@ -364,6 +425,7 @@ export const useCreateBulkLessons = () => {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["lessons"] });
       queryClient.invalidateQueries({ queryKey: ["individual-lessons"] });
+      queryClient.invalidateQueries({ queryKey: ["lessons", "teacher"] }); // Invalidate all teacher lessons queries
       if (data.created > 0) {
         toast.success(`Создано уроков: ${data.created}${data.skipped > 0 ? `, пропущено: ${data.skipped}` : ""}`);
       } else {
@@ -491,7 +553,9 @@ export const useCreateLead = () => {
   return useMutation({
     mutationFn: leadsApi.create,
     onSuccess: () => {
+      // Invalidate all leads queries (including those with filters/undefined)
       queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["leads", "stats"] });
       toast.success("Лид успешно добавлен");
     },
     onError: (error: any) => {
@@ -1115,6 +1179,7 @@ export const useMarkAttendance = () => {
       queryClient.invalidateQueries({ queryKey: ["attendance"] });
       queryClient.invalidateQueries({ queryKey: ["attendances"] });
       queryClient.invalidateQueries({ queryKey: ["lessons"] });
+      queryClient.invalidateQueries({ queryKey: ["lessons", "teacher"] }); // Invalidate all teacher lessons queries
       queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
       queryClient.invalidateQueries({ queryKey: ["students"] });
       queryClient.invalidateQueries({ queryKey: ["transactions"] });

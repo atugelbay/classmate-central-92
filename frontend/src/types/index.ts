@@ -27,9 +27,21 @@ export interface Teacher {
   status: "active" | "inactive";
   avatar?: string;
   workload: number; // lessons per week (planned)
-  rateType?: "hourly" | "per_lesson"; // Payment rate type
-  hourlyRate?: number; // Hourly rate (e.g., 2000 tenge/hour)
-  lessonRate?: number; // Rate per lesson (e.g., 2500 tenge/lesson)
+  rateType?: "hourly" | "per_lesson"; // DEPRECATED: Use teacher_rates table instead
+  hourlyRate?: number; // DEPRECATED: Use teacher_rates table instead
+  lessonRate?: number; // DEPRECATED: Use teacher_rates table instead
+}
+
+export interface TeacherRate {
+  id: string;
+  teacherId: string;
+  lessonType: "group" | "individual" | "special";
+  rateType: "hourly" | "per_lesson";
+  rateValue: number;
+  isActive: boolean;
+  createdAt: string;
+  companyId: string;
+  branchId?: string;
 }
 
 export type StudentStatus = "active" | "inactive" | "frozen" | "graduated";
@@ -63,7 +75,7 @@ export interface Lesson {
   roomName?: string; // Populated via JOIN from backend
   status: "scheduled" | "completed" | "cancelled";
   studentIds: string[];
-  lessonType?: "group" | "individual";
+  lessonType: "group" | "individual" | "special";
   isRecurring?: boolean;
 }
 

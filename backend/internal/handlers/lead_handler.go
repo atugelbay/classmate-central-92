@@ -80,12 +80,18 @@ func (h *LeadHandler) Create(c *gin.Context) {
 	}
 
 	companyID := c.GetString("company_id")
+	branchID := c.GetString("branch_id")
+	// If branch_id is empty, use company_id as fallback (same as GetAll logic)
+	if branchID == "" {
+		branchID = companyID
+	}
+	
 	lead.ID = uuid.New().String()
 	if lead.Status == "" {
 		lead.Status = "new"
 	}
 
-	if err := h.repo.Create(&lead, companyID); err != nil {
+	if err := h.repo.Create(&lead, companyID, branchID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

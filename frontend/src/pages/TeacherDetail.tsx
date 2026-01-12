@@ -2,7 +2,9 @@ import { useState, useMemo, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import moment from "moment";
 import "moment/locale/ru";
-import { useTeachers, useTeacherLessons, useGroups, useRooms, useStudents, useUpdateTeacher, useDeleteTeacher } from "@/hooks/useData";
+import { useTeachers, useTeacherLessons, useGroups, useRooms, useStudents, useUpdateTeacher, useDeleteTeacher, useTeacherRates } from "@/hooks/useData";
+import { teacherRatesAPI } from "@/api/teacherRates";
+import { TeacherRatesModal } from "@/components/TeacherRatesModal";
 import { LessonFormModal } from "@/components/LessonFormModal";
 import {
   Dialog,
@@ -11,6 +13,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
@@ -32,7 +35,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Mail, Phone, Plus, Loader2, Calendar, List, Edit, Trash2, Clock, Users, MapPin, DollarSign, Calculator } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Plus, Loader2, Calendar, List, Edit, Trash2, Clock, Users, MapPin, DollarSign, Calculator, X } from "lucide-react";
 import { Lesson } from "@/types";
 import { toast } from "sonner";
 import {
@@ -72,19 +75,15 @@ export default function TeacherDetail() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isSalaryCalcOpen, setIsSalaryCalcOpen] = useState(false);
+  const [isRatesModalOpen, setIsRatesModalOpen] = useState(false);
   const [salaryPeriodStart, setSalaryPeriodStart] = useState<string>(moment().startOf("month").format("YYYY-MM-DD"));
   const [salaryPeriodEnd, setSalaryPeriodEnd] = useState<string>(moment().endOf("month").format("YYYY-MM-DD"));
-  const [editRateType, setEditRateType] = useState<string>("");
+  const [selectedLessonForInfo, setSelectedLessonForInfo] = useState<Lesson | null>(null);
+  const [popoverOpen, setPopoverOpen] = useState(false);
 
   const updateTeacher = useUpdateTeacher();
   const deleteTeacher = useDeleteTeacher();
 
-  // Update editRateType when teacher changes or dialog opens
-  useEffect(() => {
-    if (teacher) {
-      setEditRateType(teacher.rateType || "none");
-    }
-  }, [teacher]);
 
   if (!teacher) {
     return (
@@ -119,7 +118,13 @@ export default function TeacherDetail() {
     setIsLessonFormOpen(true);
   };
 
+  const handleLessonClick = (lesson: Lesson) => {
+    setSelectedLessonForInfo(lesson);
+    setPopoverOpen(true);
+  };
+
   const handleEditLesson = (lesson: Lesson) => {
+    setPopoverOpen(false);
     setLessonFormData({
       ...lesson,
       date: lesson.start,
@@ -147,8 +152,6 @@ export default function TeacherDetail() {
     if (!teacher) return;
 
     const formData = new FormData(e.currentTarget);
-    const hourlyRateStr = formData.get("hourlyRate") as string;
-    const lessonRateStr = formData.get("lessonRate") as string;
     
     // Get all form fields - include required fields
     const teacherData: any = {
@@ -159,32 +162,6 @@ export default function TeacherDetail() {
       status: (formData.get("status") as "active" | "inactive") || teacher.status,
       workload: parseInt(formData.get("workload") as string) || teacher.workload,
     };
-
-    // Add rate fields based on selected rateType (from state, not form)
-    const rateTypeValue = editRateType === "none" ? "" : editRateType;
-    if (rateTypeValue && rateTypeValue.trim() !== "") {
-      teacherData.rateType = rateTypeValue;
-      if (rateTypeValue === "hourly") {
-        // Set hourly rate if provided
-        if (hourlyRateStr && hourlyRateStr.trim() !== "") {
-          teacherData.hourlyRate = parseFloat(hourlyRateStr);
-        }
-        // Explicitly clear lesson rate when using hourly
-        teacherData.lessonRate = null;
-      } else if (rateTypeValue === "per_lesson") {
-        // Set lesson rate if provided
-        if (lessonRateStr && lessonRateStr.trim() !== "") {
-          teacherData.lessonRate = parseFloat(lessonRateStr);
-        }
-        // Explicitly clear hourly rate when using per_lesson
-        teacherData.hourlyRate = null;
-      }
-    } else {
-      // No rate type selected - clear all rate fields by sending empty string
-      teacherData.rateType = "";
-      teacherData.hourlyRate = null;
-      teacherData.lessonRate = null;
-    }
 
     try {
       await updateTeacher.mutateAsync({ id: teacher.id, data: teacherData });
@@ -267,17 +244,24 @@ export default function TeacherDetail() {
             <Edit className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Редактировать</span>
           </Button>
-          {teacher && teacher.rateType && (teacher.hourlyRate || teacher.lessonRate) && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => setIsSalaryCalcOpen(true)}
-              className="sm:size-default"
-            >
-              <Calculator className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Зарплата</span>
-            </Button>
-          )}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setIsRatesModalOpen(true)}
+            className="sm:size-default"
+          >
+            <Calculator className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Ставки</span>
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setIsSalaryCalcOpen(true)}
+            className="sm:size-default"
+          >
+            <DollarSign className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Зарплата</span>
+          </Button>
           <Button 
             variant="destructive" 
             size="sm" 
@@ -420,19 +404,83 @@ export default function TeacherDetail() {
                       <div className="space-y-1">
                         {dayLessons.slice(0, 3).map((lesson) => {
                           const group = groups.find((g) => g.id === lesson.groupId);
+                          const room = rooms.find((r) => r.id === lesson.roomId);
                           return (
-                            <div
-                              key={lesson.id}
-                              onClick={() => handleEditLesson(lesson)}
-                              className="text-[9px] sm:text-xs p-0.5 sm:p-1 rounded bg-primary/10 hover:bg-primary/20 cursor-pointer transition-colors"
-                            >
-                              <div className="font-medium truncate">
-                                {group?.name || lesson.title}
-                              </div>
-                              <div className="text-muted-foreground truncate">
-                                {moment(lesson.start).format("HH:mm")}
-                              </div>
-                            </div>
+                            <Popover key={lesson.id} open={popoverOpen && selectedLessonForInfo?.id === lesson.id} onOpenChange={(open) => {
+                              if (!open) {
+                                setPopoverOpen(false);
+                                setSelectedLessonForInfo(null);
+                              }
+                            }}>
+                              <PopoverTrigger asChild>
+                                <div
+                                  onClick={() => handleLessonClick(lesson)}
+                                  className="text-[9px] sm:text-xs p-0.5 sm:p-1 rounded bg-primary/10 hover:bg-primary/20 cursor-pointer transition-colors"
+                                >
+                                  <div className="font-medium truncate">
+                                    {group?.name || lesson.title}
+                                  </div>
+                                  <div className="text-muted-foreground truncate">
+                                    {moment(lesson.start).format("HH:mm")}
+                                  </div>
+                                </div>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-80" side="right" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
+                                <div className="space-y-4">
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex-1">
+                                      <h3 className="font-semibold text-lg">{lesson.title}</h3>
+                                      <p className="text-sm text-muted-foreground">{lesson.subject}</p>
+                                    </div>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      onClick={() => {
+                                        setPopoverOpen(false);
+                                        setSelectedLessonForInfo(null);
+                                      }}
+                                    >
+                                      <X className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+
+                                  <div className="space-y-3">
+                                    <div className="flex items-center gap-2 text-sm">
+                                      <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+                                      <span>
+                                        {moment(lesson.start).format("DD.MM.YYYY, dddd, HH:mm")} - {moment(lesson.end).format("HH:mm")}
+                                      </span>
+                                    </div>
+
+                                    {room && (
+                                      <div className="flex items-center gap-2 text-sm">
+                                        <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
+                                        <span>{room.name}</span>
+                                      </div>
+                                    )}
+
+                                    {group && (
+                                      <div className="flex items-center gap-2 text-sm">
+                                        <Users className="h-4 w-4 text-muted-foreground shrink-0" />
+                                        <span>{group.name}</span>
+                                      </div>
+                                    )}
+
+                                    <div className="text-sm">
+                                      <span className="font-medium">Статус:</span>{" "}
+                                      {lesson.status === "completed" ? "Проведен" : lesson.status === "cancelled" ? "Отменен" : "Запланирован"}
+                                    </div>
+                                  </div>
+
+                                  <div className="pt-2">
+                                    <Button onClick={() => handleEditLesson(lesson)} className="w-full">
+                                      <Edit className="h-4 w-4 mr-2" /> Редактировать урок
+                                    </Button>
+                                  </div>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
                           );
                         })}
                         {dayLessons.length > 3 && (
@@ -463,8 +511,15 @@ export default function TeacherDetail() {
                       const room = rooms.find((r) => r.id === lesson.roomId);
 
                       return (
-                        <Card key={lesson.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleEditLesson(lesson)}>
-                          <CardContent className="p-4 space-y-2">
+                        <Popover key={lesson.id} open={popoverOpen && selectedLessonForInfo?.id === lesson.id} onOpenChange={(open) => {
+                          if (!open) {
+                            setPopoverOpen(false);
+                            setSelectedLessonForInfo(null);
+                          }
+                        }}>
+                          <PopoverTrigger asChild>
+                            <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleLessonClick(lesson)}>
+                              <CardContent className="p-4 space-y-2">
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex-1 min-w-0">
                                 <div className="font-semibold text-sm truncate">{lesson.title}</div>
@@ -492,8 +547,65 @@ export default function TeacherDetail() {
                                 </div>
                               )}
                             </div>
-                          </CardContent>
-                        </Card>
+                              </CardContent>
+                            </Card>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-80" side="right" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
+                            <div className="space-y-4">
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <h3 className="font-semibold text-lg">{lesson.title}</h3>
+                                  <p className="text-sm text-muted-foreground">{lesson.subject}</p>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => {
+                                    setPopoverOpen(false);
+                                    setSelectedLessonForInfo(null);
+                                  }}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+
+                              <div className="space-y-3">
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+                                  <span>
+                                    {moment(lesson.start).format("DD.MM.YYYY, dddd, HH:mm")} - {moment(lesson.end).format("HH:mm")}
+                                  </span>
+                                </div>
+
+                                {room && (
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
+                                    <span>{room.name}</span>
+                                  </div>
+                                )}
+
+                                {group && (
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <Users className="h-4 w-4 text-muted-foreground shrink-0" />
+                                    <span>{group.name}</span>
+                                  </div>
+                                )}
+
+                                <div className="text-sm">
+                                  <span className="font-medium">Статус:</span>{" "}
+                                  {lesson.status === "completed" ? "Проведен" : lesson.status === "cancelled" ? "Отменен" : "Запланирован"}
+                                </div>
+                              </div>
+
+                              <div className="pt-2">
+                                <Button onClick={() => handleEditLesson(lesson)} className="w-full">
+                                  <Edit className="h-4 w-4 mr-2" /> Редактировать урок
+                                </Button>
+                              </div>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
                       );
                     })
                 )}
@@ -590,12 +702,7 @@ export default function TeacherDetail() {
       />
 
       {/* Edit Teacher Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
-        setIsEditDialogOpen(open);
-        if (open && teacher) {
-          setEditRateType(teacher.rateType || "none");
-        }
-      }}>
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Редактировать учителя</DialogTitle>
@@ -660,48 +767,6 @@ export default function TeacherDetail() {
                 required
               />
             </div>
-            <div className="space-y-2 border-t pt-4">
-              <Label className="text-sm font-semibold">Настройки зарплаты</Label>
-              <div>
-                <Label htmlFor="rateType">Тип ставки</Label>
-                <Select value={editRateType === "" || !editRateType ? "none" : editRateType} onValueChange={(value) => setEditRateType(value === "none" ? "" : value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Не указано" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Не указано</SelectItem>
-                    <SelectItem value="hourly">Почасовая ставка</SelectItem>
-                    <SelectItem value="per_lesson">Поурочная ставка</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="hourlyRate">Почасовая ставка (₸/час)</Label>
-                <Input
-                  id="hourlyRate"
-                  name="hourlyRate"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  defaultValue={teacher.hourlyRate?.toString() || ""}
-                  disabled={editRateType !== "hourly"}
-                  placeholder="Например, 2000"
-                />
-              </div>
-              <div>
-                <Label htmlFor="lessonRate">Поурочная ставка (₸/урок)</Label>
-                <Input
-                  id="lessonRate"
-                  name="lessonRate"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  defaultValue={teacher.lessonRate?.toString() || ""}
-                  disabled={editRateType !== "per_lesson"}
-                  placeholder="Например, 2500"
-                />
-              </div>
-            </div>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
                 Отмена
@@ -712,18 +777,24 @@ export default function TeacherDetail() {
         </DialogContent>
       </Dialog>
 
+      {/* Teacher Rates Modal */}
+      <TeacherRatesModal
+        open={isRatesModalOpen}
+        onOpenChange={setIsRatesModalOpen}
+        teacherId={teacher.id}
+      />
+
       {/* Salary Calculation Dialog */}
       <Dialog open={isSalaryCalcOpen} onOpenChange={setIsSalaryCalcOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Calculator className="h-5 w-5" />
+              <DollarSign className="h-5 w-5" />
               Расчет зарплаты: {teacher.name}
             </DialogTitle>
           </DialogHeader>
           <SalaryCalculationComponent
             teacher={teacher}
-            lessons={lessons}
             periodStart={salaryPeriodStart}
             periodEnd={salaryPeriodEnd}
             onPeriodStartChange={setSalaryPeriodStart}
@@ -761,72 +832,42 @@ export default function TeacherDetail() {
 // Salary Calculation Component
 function SalaryCalculationComponent({
   teacher,
-  lessons,
   periodStart,
   periodEnd,
   onPeriodStartChange,
   onPeriodEndChange,
 }: {
   teacher: any;
-  lessons: Lesson[];
   periodStart: string;
   periodEnd: string;
   onPeriodStartChange: (value: string) => void;
   onPeriodEndChange: (value: string) => void;
 }) {
-  const calculation = useMemo(() => {
-    if (!teacher?.rateType || (!teacher.hourlyRate && !teacher.lessonRate)) {
-      return null;
+  const [salaryData, setSalaryData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const calculateSalary = async () => {
+    if (!teacher?.id) return;
+    
+    setIsLoading(true);
+    try {
+      const data = await teacherRatesAPI.calculateSalary(teacher.id, periodStart, periodEnd);
+      setSalaryData(data);
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || "Ошибка при расчете зарплаты");
+      setSalaryData(null);
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    const start = moment(periodStart).startOf("day");
-    const end = moment(periodEnd).endOf("day");
-
-    // Filter lessons for the selected period - only COMPLETED lessons (not cancelled or scheduled)
-    const periodLessons = lessons.filter((l) => {
-      const lessonDate = moment(l.start);
-      return lessonDate.isBetween(start, end, null, "[]") && l.status === "completed";
-    });
-
-    // Check if period is within loaded range (warn user if not)
-    let lessonsStart: moment.Moment | null = null;
-    let lessonsEnd: moment.Moment | null = null;
-    if (lessons.length > 0) {
-      const sortedLessons = [...lessons].sort((a, b) => moment(a.start).valueOf() - moment(b.start).valueOf());
-      lessonsStart = moment(sortedLessons[0].start);
-      lessonsEnd = moment(sortedLessons[sortedLessons.length - 1].start);
+  // Auto-calculate when period changes
+  useEffect(() => {
+    if (teacher?.id && periodStart && periodEnd) {
+      calculateSalary();
     }
-    const isPeriodOutOfRange = (lessonsStart && start.isBefore(lessonsStart)) || (lessonsEnd && end.isAfter(lessonsEnd));
-
-    // Calculate total hours and lessons count
-    const totalHours = periodLessons.reduce((total, lesson) => {
-      const duration = moment(lesson.end).diff(moment(lesson.start), "hours", true);
-      return total + duration;
-    }, 0);
-
-    const totalLessons = periodLessons.length;
-
-    // Calculate salary based on rate type
-    let salary = 0;
-    let calculationDetails = "";
-
-    if (teacher.rateType === "hourly" && teacher.hourlyRate) {
-      salary = totalHours * teacher.hourlyRate;
-      calculationDetails = `${totalHours.toFixed(2)} часов × ${teacher.hourlyRate.toLocaleString()} ₸/час`;
-    } else if (teacher.rateType === "per_lesson" && teacher.lessonRate) {
-      salary = totalLessons * teacher.lessonRate;
-      calculationDetails = `${totalLessons} ${totalLessons === 1 ? "урок" : totalLessons < 5 ? "урока" : "уроков"} × ${teacher.lessonRate.toLocaleString()} ₸/урок`;
-    }
-
-    return {
-      totalHours: totalHours.toFixed(2),
-      totalLessons,
-      salary: salary.toFixed(2),
-      calculationDetails,
-      periodLessons,
-      isPeriodOutOfRange: isPeriodOutOfRange || false,
-    };
-  }, [teacher, lessons, periodStart, periodEnd]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teacher?.id, periodStart, periodEnd]);
 
   return (
     <div className="space-y-4">
@@ -851,73 +892,98 @@ function SalaryCalculationComponent({
         </div>
       </div>
 
-      {calculation ? (
+      {isLoading ? (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+            <p className="text-sm text-muted-foreground mt-2">Расчет зарплаты...</p>
+          </CardContent>
+        </Card>
+      ) : salaryData?.breakdown && salaryData.breakdown.length > 0 ? (
         <Card className="border-2 border-green-200 bg-green-50/50">
           <CardHeader>
             <CardTitle className="text-lg">Результат расчета</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-muted-foreground">Период:</span>
-                <p className="font-medium">
-                  {moment(periodStart).format("DD.MM.YYYY")} - {moment(periodEnd).format("DD.MM.YYYY")}
-                </p>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Тип ставки:</span>
-                <p className="font-medium">
-                  {teacher.rateType === "hourly" ? "Почасовая" : "Поурочная"}
-                </p>
-              </div>
-              {teacher.rateType === "hourly" ? (
-                <>
-                  <div>
-                    <span className="text-muted-foreground">Всего часов:</span>
-                    <p className="font-medium">{calculation.totalHours} ч</p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Ставка:</span>
-                    <p className="font-medium">{teacher.hourlyRate?.toLocaleString()} ₸/час</p>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div>
-                    <span className="text-muted-foreground">Всего уроков:</span>
-                    <p className="font-medium">{calculation.totalLessons}</p>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Ставка:</span>
-                    <p className="font-medium">{teacher.lessonRate?.toLocaleString()} ₸/урок</p>
-                  </div>
-                </>
-              )}
+            <div className="text-sm">
+              <span className="text-muted-foreground">Период: </span>
+              <span className="font-medium">
+                {moment(salaryData.period.start).format("DD.MM.YYYY")} - {moment(salaryData.period.end).format("DD.MM.YYYY")}
+              </span>
             </div>
-            {calculation.isPeriodOutOfRange && (
-              <div className="border-t pt-2 mb-2">
-                <p className="text-xs text-yellow-700 bg-yellow-100 p-2 rounded">
-                  ⚠️ Внимание: Выбранный период может выходить за пределы загруженных данных. Результат может быть неточным.
-                </p>
-              </div>
-            )}
+            
+            <div className="space-y-3">
+              {salaryData.breakdown.map((item: any, index: number) => (
+                <div key={index} className="border rounded-lg p-3 bg-white">
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="font-semibold text-sm capitalize">
+                      {item.lessonType === "group" ? "Групповые" : item.lessonType === "individual" ? "Индивидуальные" : "Специальные"} уроки
+                    </span>
+                    <Badge variant="secondary" className="text-xs">
+                      {item.rate.type === "hourly" ? "Почасовая" : "Поурочная"}
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground mb-2">
+                    <div>
+                      {item.rate.type === "hourly" ? (
+                        <>
+                          <span>Часов: </span>
+                          <span className="font-medium">{parseFloat(item.hours).toFixed(2)}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Уроков: </span>
+                          <span className="font-medium">{item.lessons}</span>
+                        </>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <span>Ставка: </span>
+                      <span className="font-medium">{item.rate.value.toLocaleString()} ₸</span>
+                      <span className="text-[10px]">/{item.rate.type === "hourly" ? "час" : "урок"}</span>
+                    </div>
+                  </div>
+                  <div className="border-t pt-2 flex justify-between items-center">
+                    <span className="text-xs text-muted-foreground">Сумма:</span>
+                    <span className="font-bold text-green-600">{item.salary.toLocaleString()} ₸</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
             <div className="border-t pt-4">
-              <p className="text-sm text-muted-foreground mb-2">Расчет:</p>
-              <p className="text-sm font-medium mb-2">{calculation.calculationDetails}</p>
-              <div className="flex items-baseline gap-2">
-                <span className="text-lg font-semibold text-muted-foreground">Зарплата:</span>
+              <div className="flex items-baseline justify-between">
+                <span className="text-lg font-semibold text-muted-foreground">Итого:</span>
                 <span className="text-3xl font-bold text-green-600">
-                  {parseFloat(calculation.salary).toLocaleString()} ₸
+                  {salaryData.total.toLocaleString()} ₸
                 </span>
               </div>
             </div>
+          </CardContent>
+        </Card>
+      ) : salaryData?.message ? (
+        <Card className="border-2 border-yellow-200 bg-yellow-50/50">
+          <CardContent className="p-4">
+            <p className="text-sm text-yellow-800">
+              {salaryData.message === "No active rates found for this teacher" 
+                ? "Для расчета зарплаты необходимо добавить ставки для учителя. Используйте кнопку \"Ставки\" для управления ставками."
+                : salaryData.message}
+            </p>
+          </CardContent>
+        </Card>
+      ) : salaryData && (!salaryData.breakdown || salaryData.breakdown.length === 0) ? (
+        <Card className="border-2 border-yellow-200 bg-yellow-50/50">
+          <CardContent className="p-4">
+            <p className="text-sm text-yellow-800">
+              За выбранный период нет проведенных уроков или нет ставок для типов проведенных уроков.
+            </p>
           </CardContent>
         </Card>
       ) : (
         <Card className="border-2 border-yellow-200 bg-yellow-50/50">
           <CardContent className="p-4">
             <p className="text-sm text-yellow-800">
-              Для расчета зарплаты необходимо указать тип ставки и значение ставки в настройках учителя.
+              Для расчета зарплаты необходимо добавить ставки для учителя. Используйте кнопку "Ставки" для управления ставками.
             </p>
           </CardContent>
         </Card>

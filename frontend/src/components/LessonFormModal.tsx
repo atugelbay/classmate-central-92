@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import moment from "moment";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,8 @@ interface LessonFormModalProps {
     date?: Date;
     startTime?: string;
     endTime?: string;
-    lessonType?: "group" | "individual";
+    lessonType?: "group" | "individual" | "special";
+    groupId?: string;
   };
   mode?: "create" | "edit";
   onSuccess?: () => void;
@@ -51,8 +52,23 @@ export function LessonFormModal({
   mode = "create",
   onSuccess,
 }: LessonFormModalProps) {
-  // Только индивидуальные уроки, без переключателя
-  const [lessonType] = useState<"group" | "individual">("individual");
+  // Lesson type - auto-determined by groupId if provided, or manually selectable
+  const [groupId, setGroupId] = useState(initialData?.groupId || "");
+  const [manualLessonType, setManualLessonType] = useState<"group" | "individual" | "special" | "">(
+    initialData?.lessonType || ""
+  );
+  
+  // Determine lesson type: if groupId is set -> "group", if manualLessonType is "special" -> "special", otherwise -> "individual"
+  const lessonType: "group" | "individual" | "special" = useMemo(() => {
+    if (groupId) {
+      return "group";
+    }
+    if (manualLessonType === "special") {
+      return "special";
+    }
+    return "individual";
+  }, [groupId, manualLessonType]);
+
   const [seriesMode, setSeriesMode] = useState(false);
   const [selectedWeekdays, setSelectedWeekdays] = useState<number[]>([]);
   const [seriesEndDate, setSeriesEndDate] = useState("");
@@ -68,6 +84,9 @@ export function LessonFormModal({
   const [startTime, setStartTime] = useState(initialData?.startTime || "10:00");
   const [endTime, setEndTime] = useState(initialData?.endTime || "11:30");
   const [roomId, setRoomId] = useState(initialData?.roomId || "");
+  const [status, setStatus] = useState<"scheduled" | "completed" | "cancelled">(
+    (initialData?.status as "scheduled" | "completed" | "cancelled") || "scheduled"
+  );
 
   // Conflict checking
   const [conflicts, setConflicts] = useState<CheckConflictsResponse | null>(null);
@@ -89,6 +108,9 @@ export function LessonFormModal({
       setStartTime(initialData.startTime || "10:00");
       setEndTime(initialData.endTime || "11:30");
       setRoomId(initialData.roomId || "");
+      setGroupId(initialData.groupId || "");
+      setManualLessonType(initialData.lessonType || "");
+      setStatus((initialData.status as "scheduled" | "completed" | "cancelled") || "scheduled");
     }
   }, [initialData]);
 
@@ -160,13 +182,14 @@ export function LessonFormModal({
         title,
         subject,
         teacherId,
+        groupId: groupId || undefined,
         studentIds: selectedStudentIds,
         start,
         end,
         room: selectedRoom?.name || "",
         roomId,
-        status: "scheduled" as const,
-        lessonType: "individual" as const,
+        status: mode === "edit" ? status : ("scheduled" as const), // Allow status change when editing
+        lessonType, // Auto-determined: "group" if groupId set, "special" if manually selected, otherwise "individual"
       };
 
       if (mode === "edit" && initialData?.id) {
@@ -239,9 +262,12 @@ export function LessonFormModal({
     setStartTime("10:00");
     setEndTime("11:30");
     setRoomId("");
-    setSeriesMode(false);
-    setSelectedWeekdays([]);
-    setConflicts(null);
+      setGroupId("");
+      setManualLessonType("");
+      setStatus("scheduled");
+      setSeriesMode(false);
+      setSelectedWeekdays([]);
+      setConflicts(null);
   };
 
   return (
@@ -299,12 +325,61 @@ export function LessonFormModal({
             )}
           </div>
 
-          {/* Students - только для индивидуальных уроков */}
-          <StudentSelector
-            students={students}
-            selectedStudentIds={selectedStudentIds}
-            onSelectionChange={setSelectedStudentIds}
-          />
+          {/* Group selection (optional) */}
+          {lessonType !== "special" && (
+            <div>
+              <Label htmlFor="groupId">Группа (опционально)</Label>
+              <Select value={groupId || "none"} onValueChange={(value) => setGroupId(value === "none" ? "" : value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Не выбрана (индивидуальный урок)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Не выбрана (индивидуальный урок)</SelectItem>
+                  {groups.map((group) => (
+                    <SelectItem key={group.id} value={group.id}>
+                      {group.name} - {group.subject}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Если выбрана группа, урок будет считаться групповым
+              </p>
+            </div>
+          )}
+
+          {/* Lesson Type - Special lessons option */}
+          {!groupId && (
+            <div>
+              <Label htmlFor="lessonType">Тип урока</Label>
+              <Select
+                value={manualLessonType || "individual"}
+                onValueChange={(value: "group" | "individual" | "special") =>
+                  setManualLessonType(value)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="individual">Индивидуальный</SelectItem>
+                  <SelectItem value="special">Специальный</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Текущий тип: {lessonType === "group" ? "Групповой" : lessonType === "special" ? "Специальный" : "Индивидуальный"}
+              </p>
+            </div>
+          )}
+
+          {/* Students - только для индивидуальных и специальных уроков */}
+          {(lessonType === "individual" || lessonType === "special") && (
+            <StudentSelector
+              students={students}
+              selectedStudentIds={selectedStudentIds}
+              onSelectionChange={setSelectedStudentIds}
+            />
+          )}
 
           {/* Date */}
           <div>
@@ -340,6 +415,23 @@ export function LessonFormModal({
               </SelectContent>
             </Select>
           </div>
+
+          {/* Status - only for edit mode */}
+          {mode === "edit" && (
+            <div>
+              <Label htmlFor="status">Статус</Label>
+              <Select value={status} onValueChange={(value: "scheduled" | "completed" | "cancelled") => setStatus(value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="scheduled">Запланирован</SelectItem>
+                  <SelectItem value="completed">Проведен</SelectItem>
+                  <SelectItem value="cancelled">Отменен</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Series Options */}
           {seriesMode && (

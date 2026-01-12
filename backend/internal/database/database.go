@@ -136,6 +136,8 @@ func (d *Database) RunMigrations() error {
 		"migrations/028_discounts.up.sql",
 		"migrations/029_add_subscription_discount_info.up.sql",
 		"migrations/030_add_teacher_salary_fields.up.sql",
+		"migrations/031_add_lesson_type.up.sql",
+		"migrations/032_create_teacher_rates.up.sql",
 	}
 
 	log.Printf("📋 Total migrations to process: %d", len(migrations))

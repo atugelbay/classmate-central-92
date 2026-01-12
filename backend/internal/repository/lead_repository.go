@@ -51,8 +51,9 @@ func (r *LeadRepository) GetAllByBranches(companyID string, branchIDs []string) 
 			for i := range branchIDs {
 				placeholders[i] = fmt.Sprintf("$%d", i+2)
 			}
+			// Include NULL branch_id for backward compatibility (old leads without branch_id)
 			query = fmt.Sprintf(`SELECT id, name, phone, email, source, status, notes, assigned_to, created_at, updated_at 
-			          FROM leads WHERE company_id = $1 AND branch_id IN (%s) ORDER BY created_at DESC`, strings.Join(placeholders, ","))
+			          FROM leads WHERE company_id = $1 AND (branch_id IN (%s) OR branch_id IS NULL) ORDER BY created_at DESC`, strings.Join(placeholders, ","))
 			args = make([]interface{}, len(branchIDs)+1)
 			args[0] = companyID
 			for i, bid := range branchIDs {
@@ -116,12 +117,23 @@ func (r *LeadRepository) GetByID(id string, companyID string) (*models.Lead, err
 	return &lead, nil
 }
 
-func (r *LeadRepository) Create(lead *models.Lead, companyID string) error {
-	query := `INSERT INTO leads (id, name, phone, email, source, status, notes, assigned_to, created_at, updated_at, company_id) 
-	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`
-	now := time.Now()
-	_, err := r.db.Exec(query, lead.ID, lead.Name, lead.Phone, lead.Email, lead.Source,
-		lead.Status, lead.Notes, lead.AssignedTo, now, now, companyID)
+func (r *LeadRepository) Create(lead *models.Lead, companyID string, branchID string) error {
+	// Use branch_id only if it's different from company_id (not in fallback mode)
+	var query string
+	var args []interface{}
+	if branchID == companyID {
+		// Fallback mode: don't use branch_id column
+		query = `INSERT INTO leads (id, name, phone, email, source, status, notes, assigned_to, created_at, updated_at, company_id) 
+		          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`
+		args = []interface{}{lead.ID, lead.Name, lead.Phone, lead.Email, lead.Source,
+			lead.Status, lead.Notes, lead.AssignedTo, time.Now(), time.Now(), companyID}
+	} else {
+		query = `INSERT INTO leads (id, name, phone, email, source, status, notes, assigned_to, created_at, updated_at, company_id, branch_id) 
+		          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`
+		args = []interface{}{lead.ID, lead.Name, lead.Phone, lead.Email, lead.Source,
+			lead.Status, lead.Notes, lead.AssignedTo, time.Now(), time.Now(), companyID, branchID}
+	}
+	_, err := r.db.Exec(query, args...)
 	return err
 }
 

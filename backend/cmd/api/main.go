@@ -65,6 +65,7 @@ func main() {
 	paymentRepo := repository.NewPaymentRepository(db.DB)
 	tariffRepo := repository.NewTariffRepository(db.DB)
 	discountRepo := repository.NewDiscountRepository(db.DB)
+	teacherRateRepo := repository.NewTeacherRateRepository(db.DB)
 	debtRepo := repository.NewDebtRepository(db.DB)
 	subscriptionRepo := repository.NewSubscriptionRepository(db.DB)
 	consumptionRepo := repository.NewSubscriptionConsumptionRepository(db.DB)
@@ -84,7 +85,8 @@ func main() {
 	// Initialize handlers
 	branchRepo := repository.NewBranchRepository(db.DB)
 	authHandler := handlers.NewAuthHandler(userRepo, companyRepo, roleRepo, settingsRepo, emailService, branchRepo, db.DB)
-	teacherHandler := handlers.NewTeacherHandler(teacherRepo)
+	teacherHandler := handlers.NewTeacherHandlerWithRates(teacherRepo, teacherRateRepo, lessonRepo)
+	teacherRateHandler := handlers.NewTeacherRateHandler(teacherRateRepo)
 	studentHandler := handlers.NewStudentHandler(studentRepo, activityRepo, notificationRepo, activityService)
 	groupHandler := handlers.NewGroupHandler(groupRepo, lessonRepo)
 	lessonHandler := handlers.NewLessonHandler(lessonRepo, roomRepo)
@@ -175,6 +177,13 @@ func main() {
 		api.POST("/teachers", middleware.RequirePermission("teachers", "create"), teacherHandler.Create)
 		api.PUT("/teachers/:id", middleware.RequirePermission("teachers", "update"), teacherHandler.Update)
 		api.DELETE("/teachers/:id", middleware.RequirePermission("teachers", "delete"), teacherHandler.Delete)
+		api.POST("/teachers/:id/salary/calculate", middleware.RequirePermission("teachers", "view"), teacherHandler.CalculateSalary)
+
+		// Teacher Rates
+		api.GET("/teachers/:id/rates", middleware.RequirePermission("teachers", "view"), teacherRateHandler.GetByTeacher)
+		api.POST("/teachers/:id/rates", middleware.RequirePermission("teachers", "update"), teacherRateHandler.Create)
+		api.PUT("/teachers/:id/rates/:rateId", middleware.RequirePermission("teachers", "update"), teacherRateHandler.Update)
+		api.DELETE("/teachers/:id/rates/:rateId", middleware.RequirePermission("teachers", "update"), teacherRateHandler.Delete)
 
 		// Students
 		api.GET("/students", middleware.RequirePermission("students", "view"), studentHandler.GetAll)
