@@ -496,8 +496,19 @@ async function migrateGroups(branchMapping) {
       try {
         let teacherId = null;
         if (group.teacher_ids && Array.isArray(group.teacher_ids) && group.teacher_ids.length > 0) {
-          const teacherName = group.teacher_ids[0];
-          teacherId = teachersByName[teacherName] || null;
+          const teacherRef = group.teacher_ids[0];
+          // Пытаемся найти учителя по ID (если это число)
+          if (typeof teacherRef === 'number' || (typeof teacherRef === 'string' && /^\d+$/.test(teacherRef))) {
+            const teacherResult = await pool.query('SELECT id FROM teachers WHERE id = $1', [teacherRef.toString()]);
+            if (teacherResult.rows.length > 0) {
+              teacherId = teacherResult.rows[0].id;
+            }
+          }
+          // Если не нашли по ID, ищем по имени
+          if (!teacherId) {
+            const teacherName = typeof teacherRef === 'string' ? teacherRef : teacherRef.toString();
+            teacherId = teachersByName[teacherName] || null;
+          }
         }
         
         await pool.query(`
@@ -783,7 +794,30 @@ async function migrateGroupSchedules(branchMapping) {
       
       let teacherId = null;
       if (lesson.teacher_ids && Array.isArray(lesson.teacher_ids) && lesson.teacher_ids.length > 0) {
-        teacherId = lesson.teacher_ids[0]?.toString();
+        const teacherRef = lesson.teacher_ids[0];
+        // Пытаемся найти учителя по ID (если это число)
+        if (typeof teacherRef === 'number' || (typeof teacherRef === 'string' && /^\d+$/.test(teacherRef))) {
+          // Ищем в нужном филиале
+          if (ourBranchId) {
+            const teacherResult = await pool.query(
+              'SELECT id FROM teachers WHERE id = $1 AND branch_id = $2',
+              [teacherRef.toString(), ourBranchId]
+            );
+            if (teacherResult.rows.length > 0) {
+              teacherId = teacherResult.rows[0].id;
+            }
+          }
+          // Если не нашли в филиале, ищем везде
+          if (!teacherId) {
+            const teacherResult = await pool.query('SELECT id FROM teachers WHERE id = $1', [teacherRef.toString()]);
+            if (teacherResult.rows.length > 0) {
+              teacherId = teacherResult.rows[0].id;
+            }
+          }
+        } else {
+          // Если это не ID, используем как есть (может быть уже наш ID)
+          teacherId = teacherRef?.toString() || null;
+        }
       }
       
       const alfacrmRoomId = lesson.room_id?.toString() || null;
@@ -1659,9 +1693,9 @@ async function migrateLessonHistory(branchMapping) {
             
             await pool.query(`
               INSERT INTO lessons (
-                id, title, subject, teacher_id, group_id, start_time, end_time, 
+                id, title, subject, teacher_id, group_id, lesson_type, start_time, end_time, 
                 status, company_id, branch_id
-              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
               ON CONFLICT (id) DO NOTHING
             `, [
               lessonId,
@@ -1669,6 +1703,7 @@ async function migrateLessonHistory(branchMapping) {
               lesson.subject || 'Общий',
               lesson.teacher_id?.toString() || null,
               lesson.group_id?.toString() || null,
+              lesson.group_id ? 'group' : 'individual', // Определяем lesson_type на основе group_id
               startTime,
               endTime,
               'completed',
@@ -1761,9 +1796,9 @@ async function migrateLessonHistory(branchMapping) {
             // branchId уже получен из студента выше (строка 1641, 1647, 1650)
             await pool.query(`
               INSERT INTO lessons (
-                id, title, subject, teacher_id, group_id, start_time, end_time, 
+                id, title, subject, teacher_id, group_id, lesson_type, start_time, end_time, 
                 status, company_id, branch_id
-              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
               ON CONFLICT (id) DO NOTHING
             `, [
               lessonId,
@@ -1771,6 +1806,7 @@ async function migrateLessonHistory(branchMapping) {
               lesson.subject || 'Общий',
               lesson.teacher_id?.toString() || null,
               lesson.group_id?.toString() || null,
+              lesson.group_id ? 'group' : 'individual', // Определяем lesson_type на основе group_id
               startTime,
               endTime,
               'completed',
@@ -1893,7 +1929,568 @@ async function migrateDebts() {
   console.log(`✅ Создано долгов: ${created}\n`);
 }
 
-// === ГЕНЕРАЦИЯ УРОКОВ ===
+// === ПРЕОБРАЗОВАНИЕ РАСПИСАНИЙ В СТРОКУ SCHEDULE ДЛЯ ГРУПП ===
+
+async function convertSchedulesToGroupScheduleField() {
+  console.log('\n🔄 ПРЕОБРАЗОВАНИЕ РАСПИСАНИЙ В ФОРМАТ SCHEDULE ДЛЯ ГРУПП\n');
+  
+  // Получаем все активные расписания групп
+  const schedules = await pool.query(`
+    SELECT 
+      gs.group_id,
+      gs.day_of_week,
+      gs.time_from,
+      gs.time_to,
+      COALESCE(gs.teacher_id, g.teacher_id) as teacher_id,
+      gs.room_id
+    FROM group_schedule gs
+    JOIN groups g ON gs.group_id = g.id
+    WHERE gs.is_active = true AND gs.company_id = $1
+    ORDER BY gs.group_id, gs.day_of_week, gs.time_from
+  `, [COMPANY_ID]);
+  
+  // Группируем расписания по группам и времени
+  const groupSchedules = {};
+  // Используем строчные буквы, так как парсер в Go использует strings.ToLower
+  const weekdayNames = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+  
+  schedules.rows.forEach(schedule => {
+    const groupId = schedule.group_id;
+    if (!groupSchedules[groupId]) {
+      groupSchedules[groupId] = [];
+    }
+    
+    // Преобразуем day_of_week (1-7, где 1=Пн, 7=Вс) в индекс для weekdayNames (0-6, где 0=Вс, 1=Пн)
+    // В БД: 1=Пн, 2=Вт, 3=Ср, 4=Чт, 5=Пт, 6=Сб, 7=Вс
+    // В weekdayNames: 0=Вс, 1=Пн, 2=Вт, 3=Ср, 4=Чт, 5=Пт, 6=Сб
+    let uiDayIndex = schedule.day_of_week;
+    if (uiDayIndex === 7) uiDayIndex = 0; // Вс: 7 → 0
+    // Пн-Сб: 1-6 остаются как есть (1→1, 2→2, ..., 6→6)
+    
+    // PostgreSQL TIME возвращает строку в формате "HH:MM:SS" или "HH:MM:SS.microseconds"
+    // Убираем секунды и микросекунды для формирования строки расписания
+    // Убеждаемся, что формат всегда "HH:MM"
+    const formatTimeForSchedule = (timeStr) => {
+      if (!timeStr) return timeStr;
+      // Убираем секунды и микросекунды: "10:00:00" -> "10:00", "10:00:00.123456" -> "10:00"
+      let formatted = timeStr.split(':').slice(0, 2).join(':');
+      // Если формат "HH" (только часы), добавляем ":00"
+      if (!formatted.includes(':')) {
+        formatted = `${formatted}:00`;
+      }
+      return formatted;
+    };
+    
+    groupSchedules[groupId].push({
+      day: uiDayIndex,
+      dayName: weekdayNames[uiDayIndex],
+      timeFrom: formatTimeForSchedule(schedule.time_from),
+      timeTo: formatTimeForSchedule(schedule.time_to),
+      teacherId: schedule.teacher_id,
+      roomId: schedule.room_id
+    });
+  });
+  
+  // Формируем строку schedule для каждой группы
+  const progressBar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
+  progressBar.start(Object.keys(groupSchedules).length, 0);
+  
+  let updated = 0;
+  let teacherUpdated = 0;
+  
+  for (const [groupId, schedules] of Object.entries(groupSchedules)) {
+    try {
+      // Группируем дни по времени
+      const timeGroups = new Map();
+      schedules.forEach(s => {
+        const timeKey = `${s.timeFrom}-${s.timeTo}`;
+        if (!timeGroups.has(timeKey)) {
+          timeGroups.set(timeKey, []);
+        }
+        timeGroups.get(timeKey).push(s);
+      });
+      
+      // Формируем строку расписания: "Пн, Ср 10:00-11:30; Пт 14:00-15:30"
+      const scheduleParts = [];
+      let groupTeacherId = null;
+      let groupRoomId = null; // Берем room_id из расписания
+      
+      // Порядок дней для сортировки: Пн, Вт, Ср, Чт, Пт, Сб, Вс
+      const dayOrder = [1, 2, 3, 4, 5, 6, 0]; // Индексы дней в weekdayNames
+      
+      timeGroups.forEach((daySchedules, timeKey) => {
+        const [start, end] = timeKey.split('-');
+        // Форматируем время: убираем секунды и убеждаемся, что есть минуты
+        const formatTime = (timeStr) => {
+          if (!timeStr) return timeStr;
+          // Убираем секунды, если они есть: "10:00:00" -> "10:00"
+          let formatted = timeStr.replace(/:\d{2}$/, '');
+          // Если формат "HH" (только часы), добавляем ":00"
+          if (!formatted.includes(':')) {
+            formatted = `${formatted}:00`;
+          }
+          return formatted;
+        };
+        const startFormatted = formatTime(start);
+        const endFormatted = formatTime(end);
+        // Сортируем дни по порядку
+        daySchedules.sort((a, b) => {
+          const indexA = dayOrder.indexOf(a.day);
+          const indexB = dayOrder.indexOf(b.day);
+          return indexA - indexB;
+        });
+        const dayLabels = daySchedules.map(s => s.dayName).join(', ');
+        scheduleParts.push(`${dayLabels} ${startFormatted}-${endFormatted}`);
+        
+        // Берем teacher_id и room_id из первого расписания с этим временем
+        // ВАЖНО: room_id из group_schedule - это правильный ID комнаты (например, "16_..._branch_4")
+        // а не branch_id, который может быть в groups.room_id
+        if (!groupTeacherId && daySchedules[0].teacherId) {
+          groupTeacherId = daySchedules[0].teacherId;
+        }
+        // Берем room_id из расписания - это правильный ID комнаты
+        if (!groupRoomId && daySchedules[0].roomId) {
+          // Проверяем, что это действительно room_id, а не branch_id
+          // room_id должен содержать префикс с номером (например, "16_...")
+          // branch_id обычно имеет формат "uuid_branch_N" без префикса номера
+          const roomIdValue = daySchedules[0].roomId;
+          // Если room_id начинается с цифры и подчеркивания, это правильный формат
+          if (/^\d+_/.test(roomIdValue)) {
+            groupRoomId = roomIdValue;
+          } else {
+            // Если это не правильный формат, возможно это branch_id, пропускаем
+            console.log(`   ⚠️  Группа ${groupId}: room_id "${roomIdValue}" не похож на ID комнаты, пропускаем`);
+          }
+        }
+      });
+      
+      const scheduleString = scheduleParts.join('; ');
+      
+      // Логируем сгенерированное расписание для отладки
+      if (updated < 3) {
+        console.log(`   📋 Пример расписания для группы ${groupId}: "${scheduleString}"`);
+      }
+      
+      // Обновляем группу: добавляем schedule и teacher_id (если не был назначен)
+      // Сначала проверяем текущий teacher_id и room_id
+      const currentGroup = await pool.query(
+        'SELECT teacher_id, room_id FROM groups WHERE id = $1 AND company_id = $2',
+        [groupId, COMPANY_ID]
+      );
+      
+      const currentTeacherId = currentGroup.rows[0]?.teacher_id;
+      const currentRoomId = currentGroup.rows[0]?.room_id;
+      const needsTeacherUpdate = !currentTeacherId && groupTeacherId;
+      
+      // ВАЖНО: Проверяем, что currentRoomId - это не branch_id
+      // room_id должен начинаться с цифры (например, "16_..."), branch_id - нет
+      const isCurrentRoomIdValid = currentRoomId && /^\d+_/.test(currentRoomId);
+      const needsRoomUpdate = !isCurrentRoomIdValid && groupRoomId;
+      
+      // Формируем UPDATE запрос с учетом всех полей, которые нужно обновить
+      const updateFields = ['schedule = $1'];
+      const updateParams = [scheduleString];
+      let paramIndex = 2;
+      
+      if (needsTeacherUpdate) {
+        updateFields.push(`teacher_id = $${paramIndex}`);
+        updateParams.push(groupTeacherId);
+        paramIndex++;
+      }
+      
+      if (needsRoomUpdate) {
+        updateFields.push(`room_id = $${paramIndex}`);
+        updateParams.push(groupRoomId);
+        paramIndex++;
+      }
+      
+      updateParams.push(groupId, COMPANY_ID);
+      
+      const updateQuery = `
+        UPDATE groups 
+        SET ${updateFields.join(', ')}
+        WHERE id = $${paramIndex} AND company_id = $${paramIndex + 1}
+      `;
+      
+      const result = await pool.query(updateQuery, updateParams);
+      
+      if (result.rowCount > 0) {
+        updated++;
+        if (needsTeacherUpdate) {
+          teacherUpdated++;
+        }
+        if (needsRoomUpdate) {
+          console.log(`   📍 Группа ${groupId}: назначена комната ${groupRoomId} из расписания`);
+        }
+      }
+      
+      progressBar.update(updated);
+    } catch (error) {
+      console.error(`\n   ⚠️  Ошибка для группы ${groupId}: ${error.message}`);
+    }
+  }
+  
+  progressBar.stop();
+  console.log(`✅ Обновлено групп с расписанием: ${updated}`);
+  console.log(`✅ Назначено преподавателей: ${teacherUpdated}`);
+  
+  // После обновления расписаний нужно сгенерировать уроки для всех групп
+  console.log('\n📚 ГЕНЕРАЦИЯ УРОКОВ ДЛЯ ГРУПП С РАСПИСАНИЕМ\n');
+  
+  // Получаем группы с расписанием и правильным room_id из group_schedule
+  // ВАЖНО: groups.room_id может содержать branch_id, поэтому берем room_id из group_schedule
+  const groupsWithSchedule = await pool.query(`
+    SELECT DISTINCT ON (g.id)
+      g.id, 
+      g.name, 
+      g.schedule, 
+      g.teacher_id, 
+      COALESCE(gs.room_id, g.room_id) as room_id,  -- Берем room_id из group_schedule, если есть
+      g.branch_id, 
+      g.subject
+    FROM groups g
+    LEFT JOIN LATERAL (
+      SELECT room_id 
+      FROM group_schedule 
+      WHERE group_id = g.id 
+        AND is_active = true 
+        AND room_id IS NOT NULL
+        AND room_id != ''
+      LIMIT 1
+    ) gs ON true
+    WHERE g.schedule IS NOT NULL AND g.schedule != '' AND g.company_id = $1
+  `, [COMPANY_ID]);
+  
+  console.log(`📊 Найдено групп с расписанием: ${groupsWithSchedule.rows.length}`);
+  
+  // Проверяем, есть ли комнаты в компании
+  const roomsCheck = await pool.query(
+    'SELECT id, name, branch_id FROM rooms WHERE company_id = $1',
+    [COMPANY_ID]
+  );
+  console.log(`📊 Найдено комнат в компании: ${roomsCheck.rows.length}`);
+  if (roomsCheck.rows.length > 0) {
+    console.log(`   Примеры комнат: ${roomsCheck.rows.slice(0, 3).map(r => `${r.name} (${r.id})`).join(', ')}`);
+  } else {
+    console.log(`   ⚠️  ВНИМАНИЕ: В компании нет комнат! Уроки не будут отображаться в расписании.`);
+  }
+  
+  if (groupsWithSchedule.rows.length > 0) {
+    // Генерируем уроки для каждой группы
+    const progressBar = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
+    progressBar.start(groupsWithSchedule.rows.length, 0);
+    
+    let totalLessonsGenerated = 0;
+    let totalGroupsProcessed = 0;
+    
+    for (const group of groupsWithSchedule.rows) {
+      try {
+        // Проверяем, есть ли уже уроки для этой группы
+        const existingLessons = await pool.query(
+          'SELECT COUNT(*) as count FROM lessons WHERE group_id = $1 AND company_id = $2 AND start_time > CURRENT_TIMESTAMP',
+          [group.id, COMPANY_ID]
+        );
+        
+        const existingCount = parseInt(existingLessons.rows[0]?.count || 0);
+        if (existingCount > 0) {
+          progressBar.update(++totalGroupsProcessed);
+          continue;
+        }
+        
+        // Генерируем уроки для группы
+        console.log(`   🔄 Генерируем уроки для группы "${group.name}" (schedule: "${group.schedule}", room_id: ${group.room_id || 'NULL'}, branch_id: ${group.branch_id || 'NULL'})...`);
+        const lessonsCreated = await generateLessonsForGroupFromSchedule(group, COMPANY_ID);
+        if (lessonsCreated > 0) {
+          totalLessonsGenerated += lessonsCreated;
+          console.log(`   ✅ Группа "${group.name}": создано ${lessonsCreated} уроков`);
+          
+          // Проверяем созданные уроки
+          const createdLessons = await pool.query(
+            'SELECT id, room_id, branch_id FROM lessons WHERE group_id = $1 AND company_id = $2 AND start_time > CURRENT_TIMESTAMP LIMIT 3',
+            [group.id, COMPANY_ID]
+          );
+          if (createdLessons.rows.length > 0) {
+            const lessonInfo = createdLessons.rows.map(l => `room_id=${l.room_id || 'NULL'}, branch_id=${l.branch_id || 'NULL'}`).join('; ');
+            console.log(`   📋 Примеры созданных уроков: ${lessonInfo}`);
+          }
+        } else {
+          console.log(`   ⚠️  Группа "${group.name}": уроки не были созданы (возможно, расписание не распарсилось)`);
+        }
+        
+        totalGroupsProcessed++;
+        progressBar.update(totalGroupsProcessed);
+      } catch (error) {
+        console.error(`\n   ⚠️  Ошибка для группы ${group.name}: ${error.message}`);
+        totalGroupsProcessed++;
+        progressBar.update(totalGroupsProcessed);
+      }
+    }
+    
+    progressBar.stop();
+    console.log(`✅ Сгенерировано уроков: ${totalLessonsGenerated} для ${totalGroupsProcessed} групп\n`);
+  } else {
+    console.log();
+  }
+}
+
+// === ГЕНЕРАЦИЯ УРОКОВ ДЛЯ ГРУППЫ ИЗ РАСПИСАНИЯ ===
+
+async function generateLessonsForGroupFromSchedule(group, companyId) {
+  const schedule = group.schedule;
+  if (!schedule || schedule.trim() === '') {
+    return 0;
+  }
+  
+  // ВАЖНО: group.room_id может содержать branch_id вместо реального room_id
+  // Проверяем формат: room_id должен начинаться с цифры (например, "16_...")
+  // branch_id имеет формат "uuid_branch_N" без префикса номера
+  let roomId = group.room_id;
+  
+  // Проверяем, что room_id имеет правильный формат (начинается с цифры)
+  if (roomId && !/^\d+_/.test(roomId)) {
+    // Это не room_id, а скорее всего branch_id, сбрасываем
+    console.log(`   ⚠️  Группа ${group.name}: room_id "${roomId}" не похож на ID комнаты (похож на branch_id), ищем правильный room_id`);
+    roomId = null;
+  }
+  
+  // Если у группы нет правильного room_id, берем из group_schedule
+  if (!roomId) {
+    const scheduleRoom = await pool.query(
+      `SELECT room_id FROM group_schedule 
+       WHERE group_id = $1 AND is_active = true AND room_id IS NOT NULL 
+         AND room_id != '' AND room_id ~ '^\\d+_'
+       LIMIT 1`,
+      [group.id]
+    );
+    if (scheduleRoom.rows.length > 0) {
+      roomId = scheduleRoom.rows[0].room_id;
+      console.log(`   📍 Группа ${group.name}: найден room_id из group_schedule: ${roomId}`);
+    }
+  }
+  
+  // Если все еще нет room_id, берем первую доступную комнату для компании
+  if (!roomId) {
+    let defaultRoom;
+    if (group.branch_id) {
+      // Ищем комнату в том же филиале
+      defaultRoom = await pool.query(
+        'SELECT id FROM rooms WHERE company_id = $1 AND branch_id = $2 LIMIT 1',
+        [companyId, group.branch_id]
+      );
+    }
+    
+    // Если не нашли в филиале, ищем любую комнату в компании
+    if (!defaultRoom || defaultRoom.rows.length === 0) {
+      defaultRoom = await pool.query(
+        'SELECT id FROM rooms WHERE company_id = $1 LIMIT 1',
+        [companyId]
+      );
+    }
+    
+    if (defaultRoom && defaultRoom.rows.length > 0) {
+      roomId = defaultRoom.rows[0].id;
+      console.log(`   📍 Группа ${group.name}: назначена комната по умолчанию: ${roomId}`);
+    } else {
+      console.log(`   ⚠️  Группа ${group.name}: нет доступных комнат, уроки будут созданы без комнаты`);
+      // ВАЖНО: без room_id уроки не будут отображаться в RoomScheduleView!
+      // Проверяем, есть ли вообще комнаты в компании
+      const allRoomsCheck = await pool.query(
+        'SELECT COUNT(*) as count FROM rooms WHERE company_id = $1',
+        [companyId]
+      );
+      const roomsCount = parseInt(allRoomsCheck.rows[0]?.count || 0);
+      if (roomsCount === 0) {
+        console.log(`   ❌ КРИТИЧНО: В компании нет ни одной комнаты! Уроки не будут отображаться в расписании.`);
+      }
+    }
+  }
+  
+  // Логируем финальный room_id для отладки
+  if (roomId) {
+    // Проверяем, что комната существует
+    const roomCheck = await pool.query(
+      'SELECT id, name FROM rooms WHERE id = $1 AND company_id = $2',
+      [roomId, companyId]
+    );
+    if (roomCheck.rows.length > 0) {
+      console.log(`   ✅ Группа ${group.name}: комната ${roomCheck.rows[0].name} (${roomId}) существует`);
+    } else {
+      console.log(`   ⚠️  Группа ${group.name}: комната ${roomId} не найдена в БД!`);
+      roomId = null; // Сбрасываем несуществующий room_id
+    }
+  }
+  
+  // Парсим расписание (формат: "пн, ср 10:00-11:30; пт 15:00-16:00")
+  const weekdayMap = {
+    'пн': 1, 'понедельник': 1,
+    'вт': 2, 'вторник': 2,
+    'ср': 3, 'среда': 3,
+    'чт': 4, 'четверг': 4,
+    'пт': 5, 'пятница': 5,
+    'сб': 6, 'суббота': 6,
+    'вс': 0, 'воскресенье': 0
+  };
+  
+  const weekdayTimes = {}; // dayOfWeek (0-6) -> {startHour, startMin, endHour, endMin}
+  // Регулярное выражение для поиска времени: поддерживает формат "HH:MM" или "HH:MM:SS" или "HH-HH" (без минут)
+  // Сначала пробуем формат с минутами, потом без минут
+  const timeReWithMinutes = /(\d{1,2}):(\d{2})(?::\d{2})?\s*-\s*(\d{1,2}):(\d{2})(?::\d{2})?/i;
+  const timeReWithoutMinutes = /(\d{1,2})\s*-\s*(\d{1,2})/i;
+  
+  const segments = schedule.split(';');
+  for (const seg of segments) {
+    const trimmed = seg.trim();
+    if (!trimmed) continue;
+    
+    const segLower = trimmed.toLowerCase();
+    
+    // Пробуем сначала формат с минутами, потом без минут
+    let timeMatch = trimmed.match(timeReWithMinutes);
+    let startHour, startMin, endHour, endMin;
+    
+    if (timeMatch) {
+      // Формат с минутами: "10:00-11:30"
+      startHour = parseInt(timeMatch[1]);
+      startMin = parseInt(timeMatch[2]);
+      endHour = parseInt(timeMatch[3]);
+      endMin = parseInt(timeMatch[4]);
+    } else {
+      // Пробуем формат без минут: "10-11" (минуты = 0)
+      timeMatch = trimmed.match(timeReWithoutMinutes);
+      if (timeMatch) {
+        startHour = parseInt(timeMatch[1]);
+        startMin = 0;
+        endHour = parseInt(timeMatch[2]);
+        endMin = 0;
+      } else {
+        console.log(`   ⚠️  Не удалось найти время в сегменте: "${trimmed}"`);
+        continue;
+      }
+    }
+    
+    // Проверяем валидность времени
+    if (isNaN(startHour) || isNaN(startMin) || isNaN(endHour) || isNaN(endMin)) {
+      console.log(`   ⚠️  Некорректное время в сегменте: "${trimmed}"`);
+      continue;
+    }
+    
+    if (startHour < 0 || startHour > 23 || startMin < 0 || startMin > 59 ||
+        endHour < 0 || endHour > 23 || endMin < 0 || endMin > 59) {
+      console.log(`   ⚠️  Время вне допустимого диапазона в сегменте: "${trimmed}"`);
+      continue;
+    }
+    
+    // Находим дни недели в этом сегменте
+    for (const [key, dayOfWeek] of Object.entries(weekdayMap)) {
+      if (segLower.includes(key)) {
+        weekdayTimes[dayOfWeek] = { startHour, startMin, endHour, endMin };
+      }
+    }
+  }
+  
+  if (Object.keys(weekdayTimes).length === 0) {
+    console.log(`   ⚠️  Не удалось распарсить расписание для группы ${group.name}: "${schedule}"`);
+    return 0;
+  }
+  
+  // Логируем распарсенные дни и время для отладки
+  const parsedDays = Object.entries(weekdayTimes).map(([day, time]) => {
+    const dayNames = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+    return `${dayNames[parseInt(day)]} ${String(time.startHour).padStart(2, '0')}:${String(time.startMin).padStart(2, '0')}-${String(time.endHour).padStart(2, '0')}:${String(time.endMin).padStart(2, '0')}`;
+  }).join(', ');
+  console.log(`   📅 Группа ${group.name}: распарсено ${Object.keys(weekdayTimes).length} дней недели: ${parsedDays}`);
+  
+  // Получаем студентов группы
+  const studentsResult = await pool.query(`
+    SELECT student_id FROM enrollment 
+    WHERE group_id = $1 AND left_at IS NULL AND company_id = $2
+  `, [group.id, companyId]);
+  const studentIds = studentsResult.rows.map(r => r.student_id);
+  
+  // Генерируем уроки на 12 недель вперед (начиная с сегодняшнего дня)
+  const startDate = new Date();
+  startDate.setHours(0, 0, 0, 0); // Сегодня, 00:00
+  
+  const endDate = new Date(startDate);
+  endDate.setDate(endDate.getDate() + 12 * 7); // 12 недель
+  
+  let lessonsCreated = 0;
+  
+  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+    const dayOfWeek = d.getDay(); // 0=Вс, 1=Пн, ..., 6=Сб
+    
+    if (!weekdayTimes[dayOfWeek]) continue;
+    
+    const time = weekdayTimes[dayOfWeek];
+    
+    // Проверяем, что время валидно
+    if (!time || typeof time.startHour !== 'number' || typeof time.startMin !== 'number' ||
+        typeof time.endHour !== 'number' || typeof time.endMin !== 'number') {
+      console.log(`   ⚠️  Некорректное время для дня недели ${dayOfWeek}:`, time);
+      continue;
+    }
+    
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    
+    const startHourStr = String(time.startHour).padStart(2, '0');
+    const startMinStr = String(time.startMin).padStart(2, '0');
+    const endHourStr = String(time.endHour).padStart(2, '0');
+    const endMinStr = String(time.endMin).padStart(2, '0');
+    
+    // Сохраняем как TIMESTAMP без timezone (wall-clock Almaty время)
+    const startTimeStr = `${year}-${month}-${day} ${startHourStr}:${startMinStr}:00`;
+    const endTimeStr = `${year}-${month}-${day} ${endHourStr}:${endMinStr}:00`;
+    
+    const lessonId = `lesson-${group.id}-${d.getTime()}`;
+    
+    try {
+      // Создаем урок
+      await pool.query(`
+        INSERT INTO lessons (
+          id, title, teacher_id, group_id, subject, lesson_type,
+          start_time, end_time, room_id, status, company_id, branch_id
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7::timestamp, $8::timestamp, $9, $10, $11, $12)
+        ON CONFLICT (id) DO NOTHING
+      `, [
+        lessonId,
+        group.name || 'Занятие',
+        group.teacher_id,
+        group.id,
+        group.subject || 'Английский язык',
+        'group',
+        startTimeStr,
+        endTimeStr,
+        roomId, // Используем roomId (может быть из группы или по умолчанию)
+        'scheduled',
+        companyId,
+        group.branch_id
+      ]);
+      
+      // Связываем со студентами
+      for (const studentId of studentIds) {
+        await pool.query(`
+          INSERT INTO lesson_students (lesson_id, student_id, company_id)
+          VALUES ($1, $2, $3)
+          ON CONFLICT DO NOTHING
+        `, [lessonId, studentId, companyId]);
+      }
+      
+      lessonsCreated++;
+    } catch (error) {
+      // Игнорируем ошибки дубликатов
+      if (!error.message.includes('duplicate') && !error.message.includes('unique')) {
+        console.error(`   ⚠️  Ошибка создания урока для группы ${group.name}: ${error.message}`);
+      }
+    }
+  }
+  
+  return lessonsCreated;
+}
+
+// === ГЕНЕРАЦИЯ УРОКОВ (ОТКЛЮЧЕНО - система сама генерирует) ===
 
 async function generateLessons() {
   console.log('\n📚 ГЕНЕРАЦИЯ УРОКОВ (3 месяца)\n');
@@ -1998,16 +2595,17 @@ async function generateLessons() {
       
       await pool.query(`
         INSERT INTO lessons (
-          id, title, teacher_id, group_id, subject,
+          id, title, teacher_id, group_id, subject, lesson_type,
           start_time, end_time, room, room_id, status, company_id, branch_id
         )
-        VALUES ($1, $2, $3, $4, $5, $6::timestamp, $7::timestamp, $8, $9, $10, $11, $12)
+        VALUES ($1, $2, $3, $4, $5, $6, $7::timestamp, $8::timestamp, $9, $10, $11, $12, $13)
       `, [
         lessonId,
         'Занятие',
         schedule.teacher_id,
         schedule.group_id,
         'Английский язык',
+        'group', // Явно указываем lesson_type для групповых уроков
         startTimeStr,
         endTimeStr,
         schedule.room_name || '', // Fill room field with room name if available
@@ -2215,16 +2813,42 @@ async function migrateIndividualLessons(branchMapping) {
       try {
         const studentId = lesson.studentId;
         const studentName = lesson.studentName;
-        const teacherId = Array.isArray(lesson.teacher_ids) && lesson.teacher_ids.length > 0 
-          ? lesson.teacher_ids[0]?.toString() 
-          : null;
         
-        // Получаем branch_id из студента для разрешения room_id
+        // Получаем branch_id из студента для разрешения room_id и teacher_id
         const studentBranch = await pool.query(
           'SELECT branch_id FROM students WHERE id = $1 AND company_id = $2',
           [studentId, COMPANY_ID]
         );
         const branchId = studentBranch.rows.length > 0 ? studentBranch.rows[0].branch_id : (lesson.branchId || null);
+        
+        // Назначаем преподавателя для индивидуального урока
+        let teacherId = null;
+        if (lesson.teacher_ids && Array.isArray(lesson.teacher_ids) && lesson.teacher_ids.length > 0) {
+          const teacherRef = lesson.teacher_ids[0];
+          // Пытаемся найти учителя по ID (если это число)
+          if (typeof teacherRef === 'number' || (typeof teacherRef === 'string' && /^\d+$/.test(teacherRef))) {
+            // Ищем в нужном филиале
+            if (branchId) {
+              const teacherResult = await pool.query(
+                'SELECT id FROM teachers WHERE id = $1 AND branch_id = $2',
+                [teacherRef.toString(), branchId]
+              );
+              if (teacherResult.rows.length > 0) {
+                teacherId = teacherResult.rows[0].id;
+              }
+            }
+            // Если не нашли в филиале, ищем везде
+            if (!teacherId) {
+              const teacherResult = await pool.query('SELECT id FROM teachers WHERE id = $1', [teacherRef.toString()]);
+              if (teacherResult.rows.length > 0) {
+                teacherId = teacherResult.rows[0].id;
+              }
+            }
+          } else {
+            // Если это не ID, используем как есть (может быть уже наш ID)
+            teacherId = teacherRef?.toString() || null;
+          }
+        }
         
         // Разрешаем room_id к уникальному формату (с суффиксом филиала)
         let roomId = null;
@@ -2271,19 +2895,25 @@ async function migrateIndividualLessons(branchMapping) {
         const [startHour, startMinute] = timeFrom.split(':').map(Number);
         const [endHour, endMinute] = timeTo.split(':').map(Number);
         
-        // Конвертируем Almaty время в UTC (вычитаем 5 часов)
+        // Система работает с Almaty временем (UTC+5)
+        // БД хранит время как TIMESTAMP без timezone, система интерпретирует его как Almaty время
+        // При INSERT через SQL нужно сохранить время как Almaty wall-clock (без конвертации)
+        // Используем локальную дату из цикла (d) - это уже правильная дата
         const year = d.getFullYear();
         const month = String(d.getMonth() + 1).padStart(2, '0');
         const day = String(d.getDate()).padStart(2, '0');
         
-        const startHourUTC = startHour - 5;
-        const endHourUTC = endHour - 5;
-        
-        const startHourStr = String(startHourUTC).padStart(2, '0');
+        // Используем время как есть (Almaty время) - сохраняем как TIMESTAMP без timezone
+        // Система интерпретирует TIMESTAMP без timezone как Almaty время
+        // ВАЖНО: сохраняем время напрямую как строку, без конвертации в UTC
+        const startHourStr = String(startHour).padStart(2, '0');
         const startMinuteStr = String(startMinute).padStart(2, '0');
-        const endHourStr = String(endHourUTC).padStart(2, '0');
+        const endHourStr = String(endHour).padStart(2, '0');
         const endMinuteStr = String(endMinute).padStart(2, '0');
         
+        // Сохраняем как TIMESTAMP без timezone (wall-clock время Almaty)
+        // Используем локальную дату из цикла (d) - это уже правильная дата
+        // ВАЖНО: сохраняем время как есть (Almaty время), без конвертации
         const startTimeStr = `${year}-${month}-${day} ${startHourStr}:${startMinuteStr}:00`;
         const endTimeStr = `${year}-${month}-${day} ${endHourStr}:${endMinuteStr}:00`;
         
@@ -2294,15 +2924,16 @@ async function migrateIndividualLessons(branchMapping) {
         // Создаем ИНДИВИДУАЛЬНЫЙ урок (БЕЗ group_id!)
         await pool.query(`
           INSERT INTO lessons (
-            id, title, teacher_id, group_id, subject,
+            id, title, teacher_id, group_id, subject, lesson_type,
             start_time, end_time, room_id, status, company_id, branch_id
           )
-          VALUES ($1, $2, $3, NULL, $4, $5::timestamp, $6::timestamp, $7, $8, $9, $10)
+          VALUES ($1, $2, $3, NULL, $4, $5, $6::timestamp, $7::timestamp, $8, $9, $10, $11)
         `, [
           lessonId,
           `Индивидуальное: ${studentName}`,
           teacherId,
           'Английский язык',
+          'individual', // Явно указываем lesson_type для индивидуальных уроков
           startTimeStr,
           endTimeStr,
           roomId,
@@ -2562,7 +3193,10 @@ async function main() {
     await migrateTransactions(studentDeductions, branchMapping);
     
     await migrateDebts();
-    await generateLessons(); // Генерация будущих уроков
+    // Преобразуем расписания в формат schedule для групп
+    await convertSchedulesToGroupScheduleField();
+    // НЕ генерируем уроки - система сама сгенерирует их на основе schedule
+    // await generateLessons(); // ОТКЛЮЧЕНО - система автоматически генерирует уроки
     
     console.log('\n╔═══════════════════════════════════════════════════════════╗');
     console.log('║              ✅ МИГРАЦИЯ ЗАВЕРШЕНА!                       ║');
