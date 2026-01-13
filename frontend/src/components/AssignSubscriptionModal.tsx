@@ -262,14 +262,14 @@ export default function AssignSubscriptionModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl">
-        <DialogHeader>
-          <DialogTitle className="text-2xl">
+      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
+          <DialogTitle className="text-xl sm:text-2xl">
             Назначить абонемент: {student.name}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6 overflow-y-auto flex-1 pr-2 -mr-2">
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
@@ -335,7 +335,7 @@ export default function AssignSubscriptionModal({
           )}
 
           {/* Customization Section */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             {/* Total Lessons */}
             <div className="space-y-2">
               <Label htmlFor="total-lessons">
@@ -399,7 +399,7 @@ export default function AssignSubscriptionModal({
           </div>
 
           {/* Assignment */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             {/* Group */}
             <div className="space-y-2">
               <Label htmlFor="group">
@@ -444,7 +444,7 @@ export default function AssignSubscriptionModal({
           </div>
 
           {/* Dates */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             {/* Start Date */}
             <div className="space-y-2">
               <Label htmlFor="start-date">
@@ -500,11 +500,11 @@ export default function AssignSubscriptionModal({
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={loading}>
+        <DialogFooter className="flex-shrink-0 border-t pt-4 mt-4">
+          <Button variant="outline" onClick={onClose} disabled={loading} className="w-full sm:w-auto">
             Отмена
           </Button>
-          <Button onClick={handleSubmit} disabled={loading}>
+          <Button onClick={handleSubmit} disabled={loading} className="w-full sm:w-auto">
             {loading ? "Создание..." : "Создать абонемент"}
           </Button>
         </DialogFooter>

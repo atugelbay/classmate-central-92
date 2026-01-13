@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authAPI, AuthResponse } from '@/api/auth';
+import { authAPI, AuthResponse, OnboardingAction } from '@/api/auth';
 import { User } from '@/types';
 
 interface AuthContextType {
@@ -13,6 +13,7 @@ interface AuthContextType {
   hasPermission: (permissionName: string) => boolean;
   hasRole: (roleName: string) => boolean;
   hasAnyRole: (roleNames: string[]) => boolean;
+  updateOnboardingStatus: (action: "complete" | "skip" | "reset") => Promise<User>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -20,6 +21,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const persistUser = (nextUser: User) => {
+    setUser(nextUser);
+    localStorage.setItem('user', JSON.stringify(nextUser));
+  };
 
   useEffect(() => {
     // Check if user is already logged in
@@ -29,11 +35,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (token && savedUser) {
       try {
         const parsedUser = JSON.parse(savedUser);
-        setUser(parsedUser);
+        persistUser(parsedUser);
         // Refresh user data from server to get latest roles and permissions
         authAPI.me().then((freshUser) => {
-          setUser(freshUser);
-          localStorage.setItem('user', JSON.stringify(freshUser));
+          persistUser(freshUser);
         }).catch(() => {
           // If refresh fails, keep cached user
         });
@@ -49,8 +54,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const handleAuthResponse = (response: AuthResponse) => {
     localStorage.setItem('token', response.token);
     localStorage.setItem('refreshToken', response.refreshToken);
-    localStorage.setItem('user', JSON.stringify(response.user));
-    setUser(response.user);
+    persistUser(response.user);
   };
 
   const login = async (email: string, password: string) => {
@@ -89,6 +93,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return user.roles.some(role => roleNames.includes(role.name));
   };
 
+  const updateOnboardingStatus = async (action: OnboardingAction): Promise<User> => {
+    try {
+      const updatedUser = await authAPI.updateOnboarding(action);
+      persistUser(updatedUser);
+      return updatedUser;
+    } catch (error) {
+      console.error("Failed to update onboarding status", error);
+      throw error;
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -102,6 +117,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         hasPermission,
         hasRole,
         hasAnyRole,
+        updateOnboardingStatus,
       }}
     >
       {children}

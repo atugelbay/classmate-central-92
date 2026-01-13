@@ -36,13 +36,25 @@ func (r *StudentRepository) Create(student *models.Student, companyID string, br
 			INSERT INTO students (id, name, age, email, phone, status, avatar, company_id)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		`
-		args = []interface{}{student.ID, student.Name, student.Age, student.Email, student.Phone, status, student.Avatar, companyID}
+		var email interface{}
+		if student.Email != nil {
+			email = *student.Email
+		} else {
+			email = nil
+		}
+		args = []interface{}{student.ID, student.Name, student.Age, email, student.Phone, status, student.Avatar, companyID}
 	} else {
 		query = `
 			INSERT INTO students (id, name, age, email, phone, status, avatar, company_id, branch_id)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		`
-		args = []interface{}{student.ID, student.Name, student.Age, student.Email, student.Phone, status, student.Avatar, companyID, branchID}
+		var email interface{}
+		if student.Email != nil {
+			email = *student.Email
+		} else {
+			email = nil
+		}
+		args = []interface{}{student.ID, student.Name, student.Age, email, student.Phone, status, student.Avatar, companyID, branchID}
 	}
 	_, err = tx.Exec(query, args...)
 	if err != nil {
@@ -157,14 +169,21 @@ func (r *StudentRepository) getAllWithQuery(query string, args []interface{}) ([
 		var age sql.NullInt32
 		var status sql.NullString
 		var createdAt sql.NullString
+		var email sql.NullString
 
-		err := rows.Scan(&student.ID, &student.Name, &age, &student.Email, &student.Phone, &status, &avatar, &createdAt)
+		err := rows.Scan(&student.ID, &student.Name, &age, &email, &student.Phone, &status, &avatar, &createdAt)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning student: %w", err)
 		}
 
 		if age.Valid {
 			student.Age = int(age.Int32)
+		}
+
+		if email.Valid {
+			student.Email = &email.String
+		} else {
+			student.Email = nil
 		}
 
 		if status.Valid {
@@ -285,12 +304,18 @@ func (r *StudentRepository) GetPagedByBranches(companyID string, branchIDs []str
 		var age sql.NullInt32
 		var status sql.NullString
 		var createdAt sql.NullString
+		var email sql.NullString
 
-		if err := rows.Scan(&student.ID, &student.Name, &age, &student.Email, &student.Phone, &status, &avatar, &createdAt); err != nil {
+		if err := rows.Scan(&student.ID, &student.Name, &age, &email, &student.Phone, &status, &avatar, &createdAt); err != nil {
 			return nil, 0, fmt.Errorf("error scanning student: %w", err)
 		}
 		if age.Valid {
 			student.Age = int(age.Int32)
+		}
+		if email.Valid {
+			student.Email = &email.String
+		} else {
+			student.Email = nil
 		}
 		if status.Valid {
 			student.Status = status.String
@@ -368,10 +393,11 @@ func (r *StudentRepository) GetByID(id string, companyID string) (*models.Studen
 	var avatar sql.NullString
 	var age sql.NullInt32
 	var status sql.NullString
+	var email sql.NullString
 
 	query := `SELECT id, name, age, email, phone, status, avatar FROM students WHERE id = $1 AND company_id = $2`
 
-	err := r.db.QueryRow(query, id, companyID).Scan(&student.ID, &student.Name, &age, &student.Email, &student.Phone, &status, &avatar)
+	err := r.db.QueryRow(query, id, companyID).Scan(&student.ID, &student.Name, &age, &email, &student.Phone, &status, &avatar)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -381,6 +407,12 @@ func (r *StudentRepository) GetByID(id string, companyID string) (*models.Studen
 
 	if age.Valid {
 		student.Age = int(age.Int32)
+	}
+
+	if email.Valid {
+		student.Email = &email.String
+	} else {
+		student.Email = nil
 	}
 
 	if status.Valid {
@@ -441,7 +473,13 @@ func (r *StudentRepository) Update(student *models.Student, companyID string) er
 	if status == "" {
 		status = "active"
 	}
-	_, err = tx.Exec(query, student.ID, student.Name, student.Age, student.Email, student.Phone, status, student.Avatar, companyID)
+	var email interface{}
+	if student.Email != nil {
+		email = *student.Email
+	} else {
+		email = nil
+	}
+	_, err = tx.Exec(query, student.ID, student.Name, student.Age, email, student.Phone, status, student.Avatar, companyID)
 	if err != nil {
 		return fmt.Errorf("error updating student: %w", err)
 	}

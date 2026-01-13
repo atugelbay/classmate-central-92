@@ -145,8 +145,8 @@ func (h *StudentHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if student.Email != "" {
-		if err := validation.ValidateEmail(student.Email); err != nil {
+	if student.Email != nil && *student.Email != "" {
+		if err := validation.ValidateEmail(*student.Email); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
@@ -191,8 +191,8 @@ func (h *StudentHandler) Update(c *gin.Context) {
 			return
 		}
 	}
-	if student.Email != "" {
-		if err := validation.ValidateEmail(student.Email); err != nil {
+	if student.Email != nil && *student.Email != "" {
+		if err := validation.ValidateEmail(*student.Email); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}

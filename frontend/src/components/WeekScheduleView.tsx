@@ -512,7 +512,9 @@ export default function WeekScheduleView({
                             <PopoverContent 
                               className="w-80"
                               side="right"
-                              align="start"
+                              align="center"
+                              sideOffset={8}
+                              collisionPadding={16}
                               onOpenAutoFocus={(e) => e.preventDefault()}
                             >
                               <div className="space-y-4">

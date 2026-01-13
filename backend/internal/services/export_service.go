@@ -233,9 +233,13 @@ func (s *ExportService) ExportStudentsPDF(students []*models.Student) ([]byte, e
 		if student.Age > 0 {
 			age = fmt.Sprintf("%d", student.Age)
 		}
+		email := ""
+		if student.Email != nil {
+			email = *student.Email
+		}
 		pdf.CellFormat(60, 6, student.Name, "1", 0, "L", false, 0, "")
 		pdf.CellFormat(30, 6, age, "1", 0, "C", false, 0, "")
-		pdf.CellFormat(60, 6, student.Email, "1", 0, "L", false, 0, "")
+		pdf.CellFormat(60, 6, email, "1", 0, "L", false, 0, "")
 		pdf.CellFormat(40, 6, student.Phone, "1", 0, "L", false, 0, "")
 		pdf.Ln(-1)
 	}
@@ -290,9 +294,13 @@ func (s *ExportService) ExportStudentsExcel(students []*models.Student) ([]byte,
 		if student.Age > 0 {
 			age = student.Age
 		}
+		email := ""
+		if student.Email != nil {
+			email = *student.Email
+		}
 		f.SetCellValue(sheetName, fmt.Sprintf("A%d", row), student.Name)
 		f.SetCellValue(sheetName, fmt.Sprintf("B%d", row), age)
-		f.SetCellValue(sheetName, fmt.Sprintf("C%d", row), student.Email)
+		f.SetCellValue(sheetName, fmt.Sprintf("C%d", row), email)
 		f.SetCellValue(sheetName, fmt.Sprintf("D%d", row), student.Phone)
 		f.SetCellValue(sheetName, fmt.Sprintf("E%d", row), student.Status)
 	}

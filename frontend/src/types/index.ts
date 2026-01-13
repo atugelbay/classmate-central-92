@@ -50,7 +50,7 @@ export interface Student {
   id: string;
   name: string;
   age: number;
-  email: string;
+  email: string | null;
   phone: string;
   status: StudentStatus;
   subjects: string[];
@@ -469,6 +469,8 @@ export interface User {
   branches?: Branch[];
   currentBranchId?: string;
   isEmailVerified?: boolean;
+  onboardingCompleted?: boolean;
+  onboardingCompletedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }

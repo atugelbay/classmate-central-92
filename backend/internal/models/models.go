@@ -4,20 +4,22 @@ import "time"
 
 // User represents authentication user
 type User struct {
-	ID                     int       `json:"id" db:"id"`
-	Email                  string    `json:"email" db:"email"`
-	Password               string    `json:"-" db:"password"`
-	Name                   string    `json:"name" db:"name"`
-	CompanyID              string    `json:"companyId" db:"company_id"`
-	RoleID                 *string   `json:"roleId,omitempty" db:"role_id"`
-	Roles                  []*Role   `json:"roles,omitempty"`           // Populated via JOIN
-	Permissions            []string  `json:"permissions,omitempty"`     // Populated from roles
-	Branches               []*Branch `json:"branches,omitempty"`        // User's accessible branches
-	CurrentBranchID        *string   `json:"currentBranchId,omitempty"` // Currently active branch
-	IsEmailVerified        bool      `json:"isEmailVerified" db:"is_email_verified"`
-	EmailVerificationToken *string   `json:"-" db:"email_verification_token"`
-	CreatedAt              time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt              time.Time `json:"updated_at" db:"updated_at"`
+	ID                     int        `json:"id" db:"id"`
+	Email                  string     `json:"email" db:"email"`
+	Password               string     `json:"-" db:"password"`
+	Name                   string     `json:"name" db:"name"`
+	CompanyID              string     `json:"companyId" db:"company_id"`
+	RoleID                 *string    `json:"roleId,omitempty" db:"role_id"`
+	Roles                  []*Role    `json:"roles,omitempty"`           // Populated via JOIN
+	Permissions            []string   `json:"permissions,omitempty"`     // Populated from roles
+	Branches               []*Branch  `json:"branches,omitempty"`        // User's accessible branches
+	CurrentBranchID        *string    `json:"currentBranchId,omitempty"` // Currently active branch
+	IsEmailVerified        bool       `json:"isEmailVerified" db:"is_email_verified"`
+	EmailVerificationToken *string    `json:"-" db:"email_verification_token"`
+	OnboardingCompleted    bool       `json:"onboardingCompleted" db:"onboarding_completed"`
+	OnboardingCompletedAt  *time.Time `json:"onboardingCompletedAt,omitempty" db:"onboarding_completed_at"`
+	CreatedAt              time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt              time.Time  `json:"updated_at" db:"updated_at"`
 }
 
 // Company represents a company/tenant in the system
@@ -61,7 +63,7 @@ type Teacher struct {
 	Status     string   `json:"status" db:"status"` // active, inactive
 	Avatar     string   `json:"avatar,omitempty" db:"avatar"`
 	Workload   int      `json:"workload" db:"workload"`
-	RateType   *string  `json:"rateType,omitempty" db:"rate_type"` // DEPRECATED: Use teacher_rates table instead
+	RateType   *string  `json:"rateType,omitempty" db:"rate_type"`     // DEPRECATED: Use teacher_rates table instead
 	HourlyRate *float64 `json:"hourlyRate,omitempty" db:"hourly_rate"` // DEPRECATED: Use teacher_rates table instead
 	LessonRate *float64 `json:"lessonRate,omitempty" db:"lesson_rate"` // DEPRECATED: Use teacher_rates table instead
 	CompanyID  string   `json:"companyId" db:"company_id"`
@@ -86,7 +88,7 @@ type Student struct {
 	ID        string   `json:"id" db:"id"`
 	Name      string   `json:"name" db:"name"`
 	Age       int      `json:"age" db:"age"`
-	Email     string   `json:"email" db:"email"`
+	Email     *string  `json:"email,omitempty" db:"email"`
 	Phone     string   `json:"phone" db:"phone"`
 	Status    string   `json:"status" db:"status"` // active, inactive, frozen, graduated
 	Subjects  []string `json:"subjects"`

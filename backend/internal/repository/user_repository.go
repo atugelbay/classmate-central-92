@@ -33,11 +33,20 @@ func (r *UserRepository) Create(user *models.User) error {
 
 func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
 	user := &models.User{}
-	query := `SELECT id, email, password, name, company_id, role_id, is_email_verified, created_at, updated_at FROM users WHERE email = $1`
+	query := `
+		SELECT id, email, password, name, company_id, role_id, is_email_verified,
+		       onboarding_completed, onboarding_completed_at,
+		       created_at, updated_at
+		FROM users
+		WHERE email = $1
+	`
 
 	var roleID sql.NullString
+	var onboardingCompletedAt sql.NullTime
 	err := r.db.QueryRow(query, email).Scan(
-		&user.ID, &user.Email, &user.Password, &user.Name, &user.CompanyID, &roleID, &user.IsEmailVerified, &user.CreatedAt, &user.UpdatedAt,
+		&user.ID, &user.Email, &user.Password, &user.Name, &user.CompanyID, &roleID, &user.IsEmailVerified,
+		&user.OnboardingCompleted, &onboardingCompletedAt,
+		&user.CreatedAt, &user.UpdatedAt,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -49,17 +58,30 @@ func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
 	if roleID.Valid {
 		user.RoleID = &roleID.String
 	}
+	if onboardingCompletedAt.Valid {
+		t := onboardingCompletedAt.Time
+		user.OnboardingCompletedAt = &t
+	}
 
 	return user, nil
 }
 
 func (r *UserRepository) GetByID(id int) (*models.User, error) {
 	user := &models.User{}
-	query := `SELECT id, email, password, name, company_id, role_id, is_email_verified, created_at, updated_at FROM users WHERE id = $1`
+	query := `
+		SELECT id, email, password, name, company_id, role_id, is_email_verified,
+		       onboarding_completed, onboarding_completed_at,
+		       created_at, updated_at
+		FROM users
+		WHERE id = $1
+	`
 
 	var roleID sql.NullString
+	var onboardingCompletedAt sql.NullTime
 	err := r.db.QueryRow(query, id).Scan(
-		&user.ID, &user.Email, &user.Password, &user.Name, &user.CompanyID, &roleID, &user.IsEmailVerified, &user.CreatedAt, &user.UpdatedAt,
+		&user.ID, &user.Email, &user.Password, &user.Name, &user.CompanyID, &roleID, &user.IsEmailVerified,
+		&user.OnboardingCompleted, &onboardingCompletedAt,
+		&user.CreatedAt, &user.UpdatedAt,
 	)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -70,6 +92,10 @@ func (r *UserRepository) GetByID(id int) (*models.User, error) {
 
 	if roleID.Valid {
 		user.RoleID = &roleID.String
+	}
+	if onboardingCompletedAt.Valid {
+		t := onboardingCompletedAt.Time
+		user.OnboardingCompletedAt = &t
 	}
 
 	return user, nil
@@ -106,6 +132,21 @@ func (r *UserRepository) UpdateRoleID(userID int, roleID *string) error {
 	_, err := r.db.Exec(query, roleID, userID)
 	if err != nil {
 		return fmt.Errorf("error updating user role: %w", err)
+	}
+	return nil
+}
+
+// UpdateOnboardingStatus marks onboarding completion and timestamp
+func (r *UserRepository) UpdateOnboardingStatus(userID int, completed bool) error {
+	query := `
+		UPDATE users
+		SET onboarding_completed = $1,
+		    onboarding_completed_at = CASE WHEN $1 THEN NOW() ELSE NULL END,
+		    updated_at = NOW()
+		WHERE id = $2
+	`
+	if _, err := r.db.Exec(query, completed, userID); err != nil {
+		return fmt.Errorf("error updating onboarding status: %w", err)
 	}
 	return nil
 }
@@ -174,7 +215,9 @@ func (r *UserRepository) RemoveRoleFromUser(userID int, roleID string, companyID
 // GetAll gets all users for a company with their roles
 func (r *UserRepository) GetAll(companyID string) ([]*models.User, error) {
 	query := `
-		SELECT id, email, name, company_id, role_id, is_email_verified, created_at, updated_at
+		SELECT id, email, name, company_id, role_id, is_email_verified,
+		       onboarding_completed, onboarding_completed_at,
+		       created_at, updated_at
 		FROM users
 		WHERE company_id = $1
 		ORDER BY created_at DESC
@@ -190,9 +233,11 @@ func (r *UserRepository) GetAll(companyID string) ([]*models.User, error) {
 	for rows.Next() {
 		user := &models.User{}
 		var roleID sql.NullString
+		var onboardingCompletedAt sql.NullTime
 		err := rows.Scan(
 			&user.ID, &user.Email, &user.Name, &user.CompanyID, &roleID,
-			&user.IsEmailVerified, &user.CreatedAt, &user.UpdatedAt,
+			&user.IsEmailVerified, &user.OnboardingCompleted, &onboardingCompletedAt,
+			&user.CreatedAt, &user.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning user: %w", err)
@@ -200,6 +245,10 @@ func (r *UserRepository) GetAll(companyID string) ([]*models.User, error) {
 
 		if roleID.Valid {
 			user.RoleID = &roleID.String
+		}
+		if onboardingCompletedAt.Valid {
+			t := onboardingCompletedAt.Time
+			user.OnboardingCompletedAt = &t
 		}
 
 		// Load roles for the user

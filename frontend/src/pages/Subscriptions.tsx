@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Plus, Calendar, Snowflake, CheckCircle2, XCircle } from "lucide-react";
+import { Loader2, Plus, Calendar, Snowflake, CheckCircle2, XCircle, Trash2 } from "lucide-react";
 import { 
   Pagination,
   PaginationContent,
@@ -26,6 +26,7 @@ import {
   useAllSubscriptions,
   useCreateStudentSubscription,
   useUpdateSubscription,
+  useDeleteSubscription,
   useStudents,
   useLessons,
 } from "@/hooks/useData";
@@ -49,6 +50,7 @@ export default function Subscriptions() {
   const deleteType = useDeleteSubscriptionType();
   const createSubscription = useCreateStudentSubscription();
   const updateSubscription = useUpdateSubscription();
+  const deleteSubscription = useDeleteSubscription();
 
   const [isTypeDialogOpen, setIsTypeDialogOpen] = useState(false);
   const [isSubscriptionDialogOpen, setIsSubscriptionDialogOpen] = useState(false);
@@ -185,6 +187,17 @@ export default function Subscriptions() {
 
     setIsSubscriptionDialogOpen(false);
     setSelectedSubscription(null);
+  };
+
+  const handleDeleteSubscription = async (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation(); // Prevent row click if called from table
+    if (window.confirm("Вы уверены, что хотите удалить этот абонемент?")) {
+      await deleteSubscription.mutateAsync(id);
+      if (selectedSubscription?.id === id) {
+        setIsSubscriptionDialogOpen(false);
+        setSelectedSubscription(null);
+      }
+    }
   };
 
   const getStudentName = (studentId: string) => {
@@ -397,7 +410,20 @@ export default function Subscriptions() {
                     <Label htmlFor="freezeDaysRemaining">Осталось дней заморозки</Label>
                     <Input id="freezeDaysRemaining" name="freezeDaysRemaining" type="number" defaultValue={selectedSubscription?.freezeDaysRemaining || 0} />
                   </div>
-                  <Button type="submit" className="w-full">{selectedSubscription ? "Сохранить" : "Создать"}</Button>
+                  <div className="flex gap-2">
+                    <Button type="submit" className="flex-1">{selectedSubscription ? "Сохранить" : "Создать"}</Button>
+                    {selectedSubscription && (
+                      <Button 
+                        type="button"
+                        variant="destructive"
+                        onClick={() => handleDeleteSubscription(selectedSubscription.id)}
+                        className="flex items-center gap-2"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Удалить
+                      </Button>
+                    )}
+                  </div>
                 </form>
               </DialogContent>
             </Dialog>
@@ -415,12 +441,13 @@ export default function Subscriptions() {
                     <TableHead>Период</TableHead>
                     <TableHead>Статус</TableHead>
                     <TableHead>Заморозка</TableHead>
+                    <TableHead>Действия</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {paginatedSubscriptions.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center text-muted-foreground">
+                        <TableCell colSpan={8} className="text-center text-muted-foreground">
                           Нет абонементов
                         </TableCell>
                       </TableRow>
@@ -456,6 +483,16 @@ export default function Subscriptions() {
                           ) : (
                             <span className="text-sm text-muted-foreground">—</span>
                           )}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => handleDeleteSubscription(subscription.id, e)}
+                            className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))

@@ -497,6 +497,64 @@ func (h *AuthHandler) Me(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
+// UpdateOnboardingStatus marks onboarding as complete/skip or resets for restart
+func (h *AuthHandler) UpdateOnboardingStatus(c *gin.Context) {
+	userIDVal, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	companyIDVal, exists := c.Get("company_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Company context required"})
+		return
+	}
+
+	var req struct {
+		Action string `json:"action" binding:"required,oneof=complete skip reset"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": validation.FormatValidationErrors(err)})
+		return
+	}
+
+	completed := req.Action != "reset"
+	if err := h.userRepo.UpdateOnboardingStatus(userIDVal.(int), completed); err != nil {
+		logger.Error("Failed to update onboarding status", logger.ErrorField(err), zap.Int("userId", userIDVal.(int)))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update onboarding status"})
+		return
+	}
+
+	// Reload user with roles/permissions
+	user, err := h.userRepo.GetUserWithRoles(userIDVal.(int), companyIDVal.(string))
+	if err != nil || user == nil {
+		logger.Error("Failed to reload user after onboarding update", logger.ErrorField(err), zap.Int("userId", userIDVal.(int)))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load user"})
+		return
+	}
+
+	// Reload branches to keep shape consistent with login/register
+	branches, err := h.branchRepo.GetUserBranches(user.ID, companyIDVal.(string))
+	if err != nil {
+		logger.Warn("Failed to load user branches after onboarding update", logger.ErrorField(err), zap.Int("userId", user.ID), zap.String("companyId", companyIDVal.(string)))
+		branches = []*models.Branch{}
+	}
+	var currentBranchID *string
+	if len(branches) > 0 {
+		currentBranchID = &branches[0].ID
+	}
+	user.Branches = branches
+	user.CurrentBranchID = currentBranchID
+
+	logger.Info("Onboarding status updated", zap.Int("userId", user.ID), zap.String("companyId", companyIDVal.(string)), zap.String("action", req.Action))
+
+	c.JSON(http.StatusOK, gin.H{
+		"user": user,
+	})
+}
+
 // InviteUser allows an admin/manager to add a user by email and assign a role within the same company
 func (h *AuthHandler) InviteUser(c *gin.Context) {
 	companyID, exists := c.Get("company_id")

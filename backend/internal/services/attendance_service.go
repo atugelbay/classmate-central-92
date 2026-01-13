@@ -562,7 +562,7 @@ func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendan
 		go func() {
 			// Get student info
 			student, err := s.studentRepo.GetByID(attendance.StudentID, companyID)
-			if err != nil || student == nil || student.Email == "" {
+			if err != nil || student == nil || student.Email == nil || *student.Email == "" {
 				return
 			}
 
@@ -574,7 +574,7 @@ func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendan
 
 			// Send email notification
 			_ = s.emailService.SendAbsenceNotification(
-				student.Email,
+				*student.Email,
 				student.Name,
 				lesson.Subject,
 				attendance.Reason,

@@ -32,6 +32,7 @@ export interface AuthResponse {
   refreshToken: string;
   user: User;
 }
+export type OnboardingAction = "complete" | "skip" | "reset";
 
 export const authAPI = {
   login: async (data: LoginRequest): Promise<AuthResponse> => {
@@ -83,6 +84,11 @@ export const authAPI = {
   getUsers: async (): Promise<User[]> => {
     const response = await apiClient.get('/auth/users');
     return response.data;
+  },
+
+  updateOnboarding: async (action: OnboardingAction): Promise<User> => {
+    const response = await apiClient.post('/auth/onboarding', { action });
+    return response.data.user as User;
   },
 };
 

@@ -501,7 +501,10 @@ func (h *ExportHandler) filterStudents(students []*models.Student, c *gin.Contex
 		if query != "" {
 			queryLower := strings.ToLower(query)
 			nameMatch := strings.Contains(strings.ToLower(student.Name), queryLower)
-			emailMatch := strings.Contains(strings.ToLower(student.Email), queryLower)
+			emailMatch := false
+			if student.Email != nil {
+				emailMatch = strings.Contains(strings.ToLower(*student.Email), queryLower)
+			}
 			phoneMatch := strings.Contains(strings.ToLower(student.Phone), queryLower)
 			if !nameMatch && !emailMatch && !phoneMatch {
 				continue

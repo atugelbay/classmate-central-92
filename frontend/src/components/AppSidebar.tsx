@@ -13,6 +13,7 @@ import {
   Ticket,
   UserCheck,
   Shield,
+  RefreshCcw,
 } from "lucide-react";
 import {
   Sidebar,
@@ -110,7 +111,11 @@ const navItems: NavItem[] = [
   },
 ];
 
-export function AppSidebar() {
+interface AppSidebarProps {
+  onRestartOnboarding?: () => void;
+}
+
+export function AppSidebar({ onRestartOnboarding }: AppSidebarProps) {
   const { state, setOpenMobile, isMobile } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
@@ -208,6 +213,16 @@ export function AppSidebar() {
             <p className="text-sm font-medium text-sidebar-foreground">{user.name}</p>
             <p className="text-xs text-sidebar-foreground/60">{user.email}</p>
           </div>
+        )}
+        {onRestartOnboarding && (
+          <Button
+            variant="ghost"
+            className={`${isCollapsed ? "w-full justify-center" : "w-full justify-start gap-3 mb-2"}`}
+            onClick={onRestartOnboarding}
+          >
+            <RefreshCcw className="h-5 w-5" />
+            {!isCollapsed && <span>Пройти онбординг заново</span>}
+          </Button>
         )}
         <Button
           variant="ghost"

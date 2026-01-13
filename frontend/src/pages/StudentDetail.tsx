@@ -21,6 +21,7 @@ import {
   useCreateTransaction,
   useUpdateTransaction,
   useFreezeSubscription,
+  useDeleteSubscription,
   useUpdateGroup,
   useDiscounts,
   useCreateDiscount,
@@ -65,6 +66,7 @@ import {
   Download,
   TrendingUp,
   GraduationCap,
+  Trash2,
 } from "lucide-react";
 import { Discount, PaymentTransaction } from "@/types";
 import moment from "moment";
@@ -134,6 +136,7 @@ export default function StudentDetail() {
   const createTransaction = useCreateTransaction();
   const updateTransaction = useUpdateTransaction();
   const freezeSubscription = useFreezeSubscription();
+  const deleteSubscription = useDeleteSubscription();
   const updateGroup = useUpdateGroup();
   const applyDiscount = useApplyDiscountToStudent();
   const removeDiscount = useRemoveStudentDiscount();
@@ -634,20 +637,35 @@ export default function StudentDetail() {
                           <Badge variant={sub.status === "active" ? "default" : "secondary"} className="text-xs">
                             {sub.status === "active" ? "Активен" : "Неактивен"}
                           </Badge>
-                          {sub.status === "active" && (
+                          <div className="flex items-center gap-1">
+                            {sub.status === "active" && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-xs"
+                                onClick={() => {
+                                  setSelectedSubscriptionForFreeze(sub);
+                                  setIsFreezeModalOpen(true);
+                                }}
+                              >
+                                <Clock className="h-3 w-3 mr-1" />
+                                Заморозить
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-7 px-2 text-xs"
-                              onClick={() => {
-                                setSelectedSubscriptionForFreeze(sub);
-                                setIsFreezeModalOpen(true);
+                              className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={async () => {
+                                if (window.confirm("Вы уверены, что хотите удалить этот абонемент?")) {
+                                  await deleteSubscription.mutateAsync(sub.id);
+                                }
                               }}
                             >
-                              <Clock className="h-3 w-3 mr-1" />
-                              Заморозить
+                              <Trash2 className="h-3 w-3 mr-1" />
+                              Удалить
                             </Button>
-                          )}
+                          </div>
                         </div>
                       </div>
                     </div>

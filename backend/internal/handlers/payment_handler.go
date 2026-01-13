@@ -69,22 +69,22 @@ func (h *PaymentHandler) CreateTransaction(c *gin.Context) {
 	// Log payment activity (non-critical, can fail without affecting transaction)
 	_ = h.activityService.LogPayment(&tx)
 
-	// Send email notification for payments and refunds (non-critical)
-	if tx.Type == "payment" || tx.Type == "refund" {
-		go func() {
-			student, err := h.studentRepo.GetByID(tx.StudentID, companyID)
-			if err == nil && student != nil && student.Email != "" {
-				_ = h.emailService.SendPaymentNotification(
-					student.Email,
-					student.Name,
-					tx.Amount,
-					tx.Type,
-					tx.PaymentMethod,
-					tx.Description,
-				)
-			}
-		}()
-	}
+		// Send email notification for payments and refunds (non-critical)
+		if tx.Type == "payment" || tx.Type == "refund" {
+			go func() {
+				student, err := h.studentRepo.GetByID(tx.StudentID, companyID)
+				if err == nil && student != nil && student.Email != nil && *student.Email != "" {
+					_ = h.emailService.SendPaymentNotification(
+						*student.Email,
+						student.Name,
+						tx.Amount,
+						tx.Type,
+						tx.PaymentMethod,
+						tx.Description,
+					)
+				}
+			}()
+		}
 
 	c.JSON(http.StatusCreated, tx)
 }
