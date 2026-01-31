@@ -43,10 +43,31 @@ func (r *PaymentRepository) GetTransactionsByStudent(studentID string, companyID
 	return transactions, nil
 }
 
-func (r *PaymentRepository) GetAllTransactions(companyID string) ([]models.PaymentTransaction, error) {
-	query := `SELECT id, student_id, amount, type, payment_method, description, created_at, created_by 
-	          FROM payment_transactions WHERE company_id = $1 ORDER BY created_at DESC`
-	rows, err := r.db.Query(query, companyID)
+func (r *PaymentRepository) GetAllTransactions(companyID string, branchID string) ([]models.PaymentTransaction, error) {
+	var query string
+	var rows *sql.Rows
+	var err error
+
+	if branchID == "" || branchID == companyID {
+		// No branch filter - get all transactions for company
+		query = `SELECT pt.id, pt.student_id, COALESCE(s.name, pt.student_id) as student_name, 
+		                pt.amount, pt.type, pt.payment_method, pt.description, pt.created_at, pt.created_by 
+		         FROM payment_transactions pt
+		         LEFT JOIN students s ON pt.student_id = s.id
+		         WHERE pt.company_id = $1 
+		         ORDER BY pt.created_at DESC`
+		rows, err = r.db.Query(query, companyID)
+	} else {
+		// Filter by branch - join with students to filter by student's branch
+		query = `SELECT pt.id, pt.student_id, COALESCE(s.name, pt.student_id) as student_name, 
+		                pt.amount, pt.type, pt.payment_method, pt.description, pt.created_at, pt.created_by 
+		         FROM payment_transactions pt
+		         JOIN students s ON pt.student_id = s.id
+		         WHERE pt.company_id = $1 AND s.branch_id = $2
+		         ORDER BY pt.created_at DESC`
+		rows, err = r.db.Query(query, companyID, branchID)
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +76,7 @@ func (r *PaymentRepository) GetAllTransactions(companyID string) ([]models.Payme
 	transactions := []models.PaymentTransaction{}
 	for rows.Next() {
 		var tx models.PaymentTransaction
-		if err := rows.Scan(&tx.ID, &tx.StudentID, &tx.Amount, &tx.Type, &tx.PaymentMethod, &tx.Description, &tx.CreatedAt, &tx.CreatedBy); err != nil {
+		if err := rows.Scan(&tx.ID, &tx.StudentID, &tx.StudentName, &tx.Amount, &tx.Type, &tx.PaymentMethod, &tx.Description, &tx.CreatedAt, &tx.CreatedBy); err != nil {
 			return nil, err
 		}
 		transactions = append(transactions, tx)
@@ -276,13 +297,29 @@ func (r *PaymentRepository) UpdateTransactionWithBalance(txID int, companyID str
 	return &existing, nil
 }
 
-func (r *PaymentRepository) GetAllBalances(companyID string) ([]models.StudentBalance, error) {
-	query := `SELECT sb.student_id, sb.balance, sb.last_payment_date 
-	          FROM student_balance sb
-	          JOIN students s ON sb.student_id = s.id
-	          WHERE s.company_id = $1
-	          ORDER BY sb.balance DESC`
-	rows, err := r.db.Query(query, companyID)
+func (r *PaymentRepository) GetAllBalances(companyID string, branchID string) ([]models.StudentBalance, error) {
+	var query string
+	var rows *sql.Rows
+	var err error
+
+	if branchID == "" || branchID == companyID {
+		// No branch filter - get all balances for company
+		query = `SELECT sb.student_id, s.name as student_name, sb.balance, sb.last_payment_date 
+		         FROM student_balance sb
+		         JOIN students s ON sb.student_id = s.id
+		         WHERE s.company_id = $1
+		         ORDER BY sb.balance DESC`
+		rows, err = r.db.Query(query, companyID)
+	} else {
+		// Filter by branch
+		query = `SELECT sb.student_id, s.name as student_name, sb.balance, sb.last_payment_date 
+		         FROM student_balance sb
+		         JOIN students s ON sb.student_id = s.id
+		         WHERE s.company_id = $1 AND s.branch_id = $2
+		         ORDER BY sb.balance DESC`
+		rows, err = r.db.Query(query, companyID, branchID)
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -291,7 +328,7 @@ func (r *PaymentRepository) GetAllBalances(companyID string) ([]models.StudentBa
 	balances := []models.StudentBalance{}
 	for rows.Next() {
 		var balance models.StudentBalance
-		if err := rows.Scan(&balance.StudentID, &balance.Balance, &balance.LastPaymentDate); err != nil {
+		if err := rows.Scan(&balance.StudentID, &balance.StudentName, &balance.Balance, &balance.LastPaymentDate); err != nil {
 			return nil, err
 		}
 		balances = append(balances, balance)

@@ -97,7 +97,8 @@ func (h *DashboardHandler) GetStats(c *gin.Context) {
 	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 
 	// Revenue statistics
-	allTransactions, _ := h.paymentRepo.GetAllTransactions(companyID)
+	branchID := c.GetString("branch_id")
+	allTransactions, _ := h.paymentRepo.GetAllTransactions(companyID, branchID)
 	for _, tx := range allTransactions {
 		if tx.Type == "payment" {
 			if tx.CreatedAt.After(todayStart) && tx.CreatedAt.Before(todayEnd) {
@@ -185,7 +186,6 @@ func (h *DashboardHandler) GetStats(c *gin.Context) {
 	}
 
 	// Student statistics
-	branchID := c.GetString("branch_id")
 	allStudents, _ := h.studentRepo.GetAll(companyID, branchID)
 	for _, student := range allStudents {
 		switch student.Status {
@@ -227,7 +227,7 @@ func (h *DashboardHandler) GetStats(c *gin.Context) {
 	}
 
 	// Financial statistics
-	allBalances, _ := h.paymentRepo.GetAllBalances(companyID)
+	allBalances, _ := h.paymentRepo.GetAllBalances(companyID, branchID)
 	for _, balance := range allBalances {
 		stats.Financial.TotalBalance += balance.Balance
 	}
@@ -301,9 +301,10 @@ func (h *DashboardHandler) GetTodayLessons(c *gin.Context) {
 // GetRevenueChart returns revenue data for charting
 func (h *DashboardHandler) GetRevenueChart(c *gin.Context) {
 	companyID := c.GetString("company_id")
+	branchID := c.GetString("branch_id")
 	period := c.DefaultQuery("period", "week") // week, month, year
 
-	allTransactions, err := h.paymentRepo.GetAllTransactions(companyID)
+	allTransactions, err := h.paymentRepo.GetAllTransactions(companyID, branchID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

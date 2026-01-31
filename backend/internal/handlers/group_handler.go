@@ -67,6 +67,20 @@ func (h *GroupHandler) Create(c *gin.Context) {
 		return
 	}
 
+	// Validate required fields
+	if group.Name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "name is required"})
+		return
+	}
+	if group.Subject == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "subject is required"})
+		return
+	}
+	if group.TeacherID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "teacherId is required"})
+		return
+	}
+
 	companyID := c.GetString("company_id")
 	branchID := c.GetString("branch_id")
 	if err := h.repo.Create(&group, companyID, branchID); err != nil {

@@ -48,7 +48,7 @@ func (h *ExportHandler) ExportTransactionsPDF(c *gin.Context) {
 		return
 	}
 
-	transactions, err := h.paymentRepo.GetAllTransactions(companyID)
+	transactions, err := h.paymentRepo.GetAllTransactions(companyID, branchID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch transactions"})
 		return
@@ -94,7 +94,7 @@ func (h *ExportHandler) ExportTransactionsExcel(c *gin.Context) {
 		return
 	}
 
-	transactions, err := h.paymentRepo.GetAllTransactions(companyID)
+	transactions, err := h.paymentRepo.GetAllTransactions(companyID, branchID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch transactions"})
 		return
@@ -414,8 +414,9 @@ func (h *ExportHandler) filterStudents(students []*models.Student, c *gin.Contex
 	var balanceMap map[string]float64
 	if hasBalanceStr == "true" {
 		companyID := c.GetString("company_id")
+		branchID := c.GetString("branch_id")
 		if companyID != "" {
-			balances, err := h.paymentRepo.GetAllBalances(companyID)
+			balances, err := h.paymentRepo.GetAllBalances(companyID, branchID)
 			if err == nil {
 				balanceMap = make(map[string]float64)
 				for _, balance := range balances {

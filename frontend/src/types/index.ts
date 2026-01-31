@@ -205,6 +205,7 @@ export interface LeadConversionStats {
 export interface PaymentTransaction {
   id: number;
   studentId: string;
+  studentName?: string; // Populated via JOIN on backend
   amount: number;
   type: "payment" | "refund" | "debt";
   paymentMethod: "cash" | "card" | "transfer" | "other";
@@ -215,6 +216,7 @@ export interface PaymentTransaction {
 
 export interface StudentBalance {
   studentId: string;
+  studentName?: string; // Populated via JOIN on backend
   balance: number;
   lastPaymentDate?: string;
 }

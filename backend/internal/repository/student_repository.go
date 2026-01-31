@@ -535,9 +535,18 @@ func (r *StudentRepository) Update(student *models.Student, companyID string) er
 func (r *StudentRepository) Delete(id string, companyID string) error {
 	query := `DELETE FROM students WHERE id = $1 AND company_id = $2`
 
-	_, err := r.db.Exec(query, id, companyID)
+	result, err := r.db.Exec(query, id, companyID)
 	if err != nil {
 		return fmt.Errorf("error deleting student: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("error checking rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("student not found")
 	}
 
 	return nil

@@ -172,6 +172,13 @@ func (h *StudentHandler) Update(c *gin.Context) {
 	id := c.Param("id")
 	companyID := c.GetString("company_id")
 
+	// First check if student exists and belongs to this company
+	existing, err := h.repo.GetByID(id, companyID)
+	if err != nil || existing == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Student not found"})
+		return
+	}
+
 	var student models.Student
 	if err := c.ShouldBindJSON(&student); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": validation.FormatValidationErrors(err)})
@@ -219,6 +226,10 @@ func (h *StudentHandler) Delete(c *gin.Context) {
 	companyID := c.GetString("company_id")
 
 	if err := h.repo.Delete(id, companyID); err != nil {
+		if err.Error() == "student not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Student not found"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

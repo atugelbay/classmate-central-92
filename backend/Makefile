@@ -1,43 +1,59 @@
-.PHONY: test test-unit test-integration test-coverage build run
+.PHONY: test test-report test-coverage test-all install-tools test-pdf report-pdf
 
-# Run all tests
-# Note: Integration tests require database connection
-# Set DB_NAME, DB_HOST, DB_USER, DB_PASSWORD if different from defaults
+# Install test tools
+install-tools:
+	go install gotest.tools/gotestsum@latest
+
+# Run all tests with verbose output
 test:
-	@echo "Running all tests..."
-	@echo "Using DB: ${DB_NAME:-classmate_central}"
-	@echo "Note: If using different DB, set DB_NAME env var"
-	go test ./... -v
+	go test ./internal/... -v
 
-# Run unit tests only
-test-unit:
-	go test ./internal/services/... -v
+# Run tests with HTML/JSON reports (sequential to avoid DB conflicts)
+test-report:
+	-mkdir reports 2>nul
+	gotestsum --format testname --jsonfile reports/test-results.json --junitfile reports/test-results.xml -- ./internal/... -v -p 1
 
-# Run integration tests only (requires test database)
-test-integration:
-	@echo "Note: Integration tests require database 'classmate_central' (or set DB_NAME env var)"
-	@echo "Using DB: ${DB_NAME:-classmate_central}"
+# Run tests with coverage report
+test-coverage:
+	-mkdir reports 2>nul
+	go test ./internal/... -coverprofile=reports/coverage.out
+	go tool cover -html=reports/coverage.out -o reports/coverage.html
+
+# Run all tests with reports and coverage
+test-all: test-report test-coverage
+	@echo ""
+	@echo "All test reports generated in reports/"
+
+# Run tests and generate PDF report
+test-pdf: test-report
+	go run ./cmd/testreport reports/test-results.json reports/test-report.pdf
+	@echo "PDF report generated: reports/test-report.pdf"
+
+# Generate PDF from existing results (no re-run)
+report-pdf:
+	go run ./cmd/testreport reports/test-results.json reports/test-report.pdf
+	@echo "PDF report generated: reports/test-report.pdf"
+
+# Run specific test package
+test-handlers:
 	go test ./internal/handlers/... -v
 
-# Run tests with coverage
-test-coverage:
-	go test ./... -coverprofile=coverage.out
-	go tool cover -html=coverage.out -o coverage.html
+test-services:
+	go test ./internal/services/... -v
 
-# Build the application
-build:
-	go build -o bin/api ./cmd/api
+# Run tests matching pattern
+test-attendance:
+	go test ./internal/... -v -run "Attendance"
 
-# Run the application
-run:
-	go run ./cmd/api/main.go
+test-payment:
+	go test ./internal/... -v -run "Payment"
 
-# Lint the code
-lint:
-	golangci-lint run
+test-subscription:
+	go test ./internal/... -v -run "Subscription"
 
-# Clean build artifacts
+test-group:
+	go test ./internal/... -v -run "Group"
+
+# Clean reports
 clean:
-	rm -rf bin/
-	rm -f coverage.out coverage.html
-
+	rm -rf reports/

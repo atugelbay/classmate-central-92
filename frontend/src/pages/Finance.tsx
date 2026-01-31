@@ -164,7 +164,10 @@ export default function Finance() {
     setSelectedDebt(null);
   };
 
-  const getStudentName = (studentId: string) => {
+  const getStudentName = (studentId: string, studentName?: string) => {
+    // If studentName is already provided from API, use it
+    if (studentName) return studentName;
+    // Fallback to local lookup
     const student = students.find(s => s.id === studentId);
     return student?.name || studentId;
   };
@@ -366,7 +369,7 @@ export default function Finance() {
                     paginatedTransactions.map(transaction => (
                       <TableRow key={transaction.id}>
                         <TableCell>{moment(transaction.createdAt).format("DD.MM.YYYY HH:mm")}</TableCell>
-                        <TableCell>{getStudentName(transaction.studentId)}</TableCell>
+                        <TableCell>{getStudentName(transaction.studentId, transaction.studentName)}</TableCell>
                         <TableCell>
                           <Badge variant={transaction.type === "payment" ? "default" : transaction.type === "refund" ? "destructive" : transaction.type === "deduction" ? "secondary" : "destructive"}>
                             {transaction.type === "payment" ? "Платеж" : transaction.type === "refund" ? "Возврат" : transaction.type === "deduction" ? "Списание" : "Долг"}
@@ -461,7 +464,7 @@ export default function Finance() {
                     ) : (
                     paginatedBalances.map(balance => (
                       <TableRow key={balance.studentId}>
-                        <TableCell>{getStudentName(balance.studentId)}</TableCell>
+                        <TableCell>{getStudentName(balance.studentId, balance.studentName)}</TableCell>
                         <TableCell>
                           <span className={balance.balance >= 0 ? "text-green-600 font-medium" : "text-red-600 font-medium"}>
                             {balance.balance.toLocaleString()} ₸

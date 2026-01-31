@@ -106,7 +106,8 @@ func (h *PaymentHandler) GetTransactionsByStudent(c *gin.Context) {
 // GetAllTransactions returns all transactions
 func (h *PaymentHandler) GetAllTransactions(c *gin.Context) {
 	companyID := c.GetString("company_id")
-	transactions, err := h.repo.GetAllTransactions(companyID)
+	branchID := c.GetString("branch_id")
+	transactions, err := h.repo.GetAllTransactions(companyID, branchID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -131,7 +132,8 @@ func (h *PaymentHandler) GetStudentBalance(c *gin.Context) {
 // GetAllBalances returns all student balances
 func (h *PaymentHandler) GetAllBalances(c *gin.Context) {
 	companyID := c.GetString("company_id")
-	balances, err := h.repo.GetAllBalances(companyID)
+	branchID := c.GetString("branch_id")
+	balances, err := h.repo.GetAllBalances(companyID, branchID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

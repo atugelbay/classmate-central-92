@@ -251,6 +251,7 @@ type LeadConversionStats struct {
 type PaymentTransaction struct {
 	ID            int       `json:"id" db:"id"`
 	StudentID     string    `json:"studentId" db:"student_id"`
+	StudentName   string    `json:"studentName,omitempty" db:"student_name"` // Populated via JOIN
 	Amount        float64   `json:"amount" db:"amount"`
 	Type          string    `json:"type" db:"type"`                    // payment, refund, debt
 	PaymentMethod string    `json:"paymentMethod" db:"payment_method"` // cash, card, transfer, other
@@ -271,6 +272,7 @@ type PaymentTransactionUpdate struct {
 // StudentBalance represents a student's financial balance
 type StudentBalance struct {
 	StudentID       string     `json:"studentId" db:"student_id"`
+	StudentName     string     `json:"studentName,omitempty" db:"student_name"` // Populated via JOIN
 	Balance         float64    `json:"balance" db:"balance"`
 	LastPaymentDate *time.Time `json:"lastPaymentDate,omitempty" db:"last_payment_date"`
 	Version         int        `json:"version" db:"version"` // For optimistic locking

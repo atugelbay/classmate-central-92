@@ -7,6 +7,11 @@ import (
 	"classmate-central/internal/models"
 )
 
+// stringPtr is a helper to create string pointers
+func stringPtr(s string) *string {
+	return &s
+}
+
 func TestExportService_ExportStudentsPDF(t *testing.T) {
 	service := NewExportService()
 	
@@ -15,14 +20,14 @@ func TestExportService_ExportStudentsPDF(t *testing.T) {
 			ID:    "1",
 			Name:  "Иван Иванов",
 			Age:   15,
-			Email: "ivan@example.com",
+			Email: stringPtr("ivan@example.com"),
 			Phone: "+77001234567",
 		},
 		{
 			ID:    "2",
 			Name:  "Петр Петров",
 			Age:   16,
-			Email: "petr@example.com",
+			Email: stringPtr("petr@example.com"),
 			Phone: "+77001234568",
 		},
 	}
@@ -46,7 +51,7 @@ func TestExportService_ExportStudentsExcel(t *testing.T) {
 			ID:    "1",
 			Name:  "Иван Иванов",
 			Age:   15,
-			Email: "ivan@example.com",
+			Email: stringPtr("ivan@example.com"),
 			Phone: "+77001234567",
 		},
 	}
