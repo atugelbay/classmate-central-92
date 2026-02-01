@@ -111,14 +111,14 @@ export default function Companies() {
   const totalPages = data?.totalPages || 1;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 lg:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Companies</h1>
-        <p className="text-muted-foreground">Manage all registered companies</p>
+        <h1 className="text-2xl lg:text-3xl font-bold">Companies</h1>
+        <p className="text-sm lg:text-base text-muted-foreground">Manage all registered companies</p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className={selectedCompany ? 'lg:col-span-1' : 'lg:col-span-3'}>
+      <div className="grid gap-4 lg:gap-6 lg:grid-cols-3">
+        <div className={selectedCompany ? 'lg:col-span-1 hidden lg:block' : 'lg:col-span-3'}>
           <Card>
             <CardHeader>
               <CardTitle>All Companies</CardTitle>
@@ -139,15 +139,16 @@ export default function Companies() {
                 )}
               </div>
 
+              <div className="overflow-x-auto -mx-4 lg:mx-0">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
                     {!selectedCompany && (
                       <>
-                        <TableHead>Users</TableHead>
-                        <TableHead>Students</TableHead>
-                        <TableHead>Created</TableHead>
+                        <TableHead className="hidden sm:table-cell">Users</TableHead>
+                        <TableHead className="hidden sm:table-cell">Students</TableHead>
+                        <TableHead className="hidden md:table-cell">Created</TableHead>
                       </>
                     )}
                     <TableHead></TableHead>
@@ -173,16 +174,16 @@ export default function Companies() {
                         setTransactionsPage(1);
                       }}
                     >
-                      <TableCell className="font-medium">{company.name}</TableCell>
+                      <TableCell className="font-medium text-sm">{company.name}</TableCell>
                       {!selectedCompany && (
                         <>
-                          <TableCell>
+                          <TableCell className="hidden sm:table-cell">
                             <Badge variant="secondary">{company.usersCount}</Badge>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="hidden sm:table-cell">
                             <Badge variant="secondary">{company.studentsCount}</Badge>
                           </TableCell>
-                          <TableCell className="text-muted-foreground text-sm">
+                          <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
                             {format(new Date(company.created_at), 'MMM d, yyyy')}
                           </TableCell>
                         </>
@@ -198,6 +199,7 @@ export default function Companies() {
                   ))}
                 </TableBody>
               </Table>
+              </div>
 
               {/* Pagination */}
               <div className="flex items-center justify-between mt-4">
@@ -231,37 +233,50 @@ export default function Companies() {
         {selectedCompany && (
           <div className="lg:col-span-2">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>
-                    {companyDetails?.data?.company?.name || 'Company Details'}
-                  </CardTitle>
-                  <CardDescription>
-                    ID: {selectedCompany}
-                  </CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between gap-2 p-4 lg:p-6">
+                <div className="flex items-center gap-3">
+                  {/* Back button for mobile */}
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    className="lg:hidden shrink-0"
+                    onClick={() => setSelectedCompany(null)}
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </Button>
+                  <div className="min-w-0">
+                    <CardTitle className="text-lg lg:text-xl truncate">
+                      {companyDetails?.data?.company?.name || 'Company Details'}
+                    </CardTitle>
+                    <CardDescription className="text-xs lg:text-sm truncate">
+                      ID: {selectedCompany.slice(0, 8)}...
+                    </CardDescription>
+                  </div>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => setSelectedCompany(null)}>
+                <Button variant="ghost" size="sm" className="hidden lg:flex" onClick={() => setSelectedCompany(null)}>
                   <X className="h-4 w-4" />
                 </Button>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4 lg:p-6 pt-0 lg:pt-0">
                 {detailsLoading ? (
                   <div className="flex items-center justify-center h-32">
                     <Loader2 className="h-6 w-6 animate-spin" />
                   </div>
                 ) : companyDetails?.data ? (
                   <Tabs value={detailTab} onValueChange={setDetailTab}>
-                    <TabsList className="grid w-full grid-cols-5">
-                      <TabsTrigger value="overview">Overview</TabsTrigger>
-                      <TabsTrigger value="users">Users</TabsTrigger>
-                      <TabsTrigger value="students">Students</TabsTrigger>
-                      <TabsTrigger value="groups">Groups</TabsTrigger>
-                      <TabsTrigger value="transactions">Transactions</TabsTrigger>
-                    </TabsList>
+                    <div className="overflow-x-auto -mx-4 px-4 lg:mx-0 lg:px-0">
+                      <TabsList className="inline-flex w-auto min-w-full lg:grid lg:w-full lg:grid-cols-5">
+                        <TabsTrigger value="overview" className="text-xs lg:text-sm">Overview</TabsTrigger>
+                        <TabsTrigger value="users" className="text-xs lg:text-sm">Users</TabsTrigger>
+                        <TabsTrigger value="students" className="text-xs lg:text-sm">Students</TabsTrigger>
+                        <TabsTrigger value="groups" className="text-xs lg:text-sm">Groups</TabsTrigger>
+                        <TabsTrigger value="transactions" className="text-xs lg:text-sm whitespace-nowrap">Transactions</TabsTrigger>
+                      </TabsList>
+                    </div>
 
                     {/* Overview Tab */}
                     <TabsContent value="overview" className="space-y-4 mt-4">
-                      <div className="grid grid-cols-4 gap-4">
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
                         <div className="flex items-center gap-2 p-3 rounded-lg bg-muted">
                           <Users className="h-4 w-4" />
                           <div>
@@ -352,14 +367,15 @@ export default function Companies() {
                         </div>
                       ) : (
                         <>
+                          <div className="overflow-x-auto -mx-4 lg:mx-0">
                           <Table>
                             <TableHeader>
                               <TableRow>
                                 <TableHead>Name</TableHead>
                                 <TableHead>Phone</TableHead>
-                                <TableHead>Email</TableHead>
+                                <TableHead className="hidden md:table-cell">Email</TableHead>
                                 <TableHead>Status</TableHead>
-                                <TableHead>Created</TableHead>
+                                <TableHead className="hidden sm:table-cell">Created</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -373,15 +389,15 @@ export default function Companies() {
                                 total_count: number;
                               }) => (
                                 <TableRow key={student.id}>
-                                  <TableCell className="font-medium">{student.name}</TableCell>
-                                  <TableCell>{student.phone || '-'}</TableCell>
-                                  <TableCell className="max-w-[200px] truncate">{student.email || '-'}</TableCell>
+                                  <TableCell className="font-medium text-sm">{student.name}</TableCell>
+                                  <TableCell className="text-sm">{student.phone || '-'}</TableCell>
+                                  <TableCell className="hidden md:table-cell max-w-[200px] truncate text-sm">{student.email || '-'}</TableCell>
                                   <TableCell>
                                     <Badge variant={student.status === 'active' ? 'default' : 'secondary'}>
                                       {student.status || 'active'}
                                     </Badge>
                                   </TableCell>
-                                  <TableCell className="text-sm text-muted-foreground">
+                                  <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
                                     {student.created_at ? format(new Date(student.created_at), 'MMM d, yyyy') : '-'}
                                   </TableCell>
                                 </TableRow>
@@ -395,6 +411,7 @@ export default function Companies() {
                               )}
                             </TableBody>
                           </Table>
+                          </div>
                           {/* Pagination */}
                           {companyStudents?.data?.rows?.[0]?.total_count > detailLimit && (
                             <div className="flex items-center justify-between mt-4">
