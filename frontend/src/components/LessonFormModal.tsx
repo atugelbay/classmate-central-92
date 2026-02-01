@@ -277,12 +277,12 @@ export function LessonFormModal({
           <DialogTitle>{mode === "edit" ? "Редактировать урок" : "Новый урок"}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 pb-2">
+        <div className="space-y-5 pb-2">
           {/* Series Mode Toggle */}
           {mode === "create" && (
-            <div className="flex items-center space-x-2">
-              <Checkbox id="seriesMode" checked={seriesMode} onCheckedChange={(checked) => setSeriesMode(!!checked)} />
-              <Label htmlFor="seriesMode" className="cursor-pointer">
+            <div className="flex items-center space-x-3 p-3 rounded-2xl bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-950 dark:to-purple-950">
+              <Checkbox id="seriesMode" checked={seriesMode} onCheckedChange={(checked) => setSeriesMode(!!checked)} className="rounded-lg" />
+              <Label htmlFor="seriesMode" className="cursor-pointer text-violet-700 dark:text-violet-300 font-medium">
                 Создать серию уроков (повторяющиеся)
               </Label>
             </div>
@@ -388,14 +388,17 @@ export function LessonFormModal({
           </div>
 
           {/* Time */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="startTime">Время начала *</Label>
-              <Input id="startTime" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} required />
-            </div>
-            <div>
-              <Label htmlFor="endTime">Время окончания *</Label>
-              <Input id="endTime" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} required />
+          <div className="p-4 rounded-2xl bg-muted/30 space-y-3">
+            <Label className="text-sm font-medium">Время урока *</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="startTime" className="text-xs text-muted-foreground">Начало</Label>
+                <Input id="startTime" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} required className="mt-1" />
+              </div>
+              <div>
+                <Label htmlFor="endTime" className="text-xs text-muted-foreground">Окончание</Label>
+                <Input id="endTime" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} required className="mt-1" />
+              </div>
             </div>
           </div>
 
@@ -435,30 +438,29 @@ export function LessonFormModal({
 
           {/* Series Options */}
           {seriesMode && (
-            <>
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-violet-50 to-purple-100 dark:from-violet-950 dark:to-purple-900 space-y-4">
               <div>
-                <Label className="mb-3 block">Дни недели *</Label>
-                <div className="grid grid-cols-3 sm:flex sm:flex-wrap gap-2">
+                <Label className="mb-3 block text-violet-800 dark:text-violet-200">Дни недели *</Label>
+                <div className="flex flex-wrap gap-2">
                   {WEEKDAYS.map((day) => (
-                    <div key={day.value} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`day-${day.value}`}
-                        checked={selectedWeekdays.includes(day.value)}
-                        onCheckedChange={() => toggleWeekday(day.value)}
-                      />
-                      <label
-                        htmlFor={`day-${day.value}`}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                      >
-                        {day.label}
-                      </label>
-                    </div>
+                    <button
+                      key={day.value}
+                      type="button"
+                      onClick={() => toggleWeekday(day.value)}
+                      className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                        selectedWeekdays.includes(day.value)
+                          ? "bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-md"
+                          : "bg-white/60 dark:bg-white/10 text-violet-700 dark:text-violet-300 hover:bg-white dark:hover:bg-white/20"
+                      }`}
+                    >
+                      {day.label}
+                    </button>
                   ))}
                 </div>
               </div>
 
               <div>
-                <Label htmlFor="seriesEndDate">Дата окончания серии *</Label>
+                <Label htmlFor="seriesEndDate" className="text-violet-800 dark:text-violet-200">Дата окончания серии *</Label>
                 <Input
                   id="seriesEndDate"
                   type="date"
@@ -466,9 +468,10 @@ export function LessonFormModal({
                   onChange={(e) => setSeriesEndDate(e.target.value)}
                   min={date}
                   required={seriesMode}
+                  className="mt-1"
                 />
               </div>
-            </>
+            </div>
           )}
 
           {/* Conflict Warning */}
@@ -513,19 +516,19 @@ export function LessonFormModal({
           )}
 
           {!conflicts?.hasConflicts && !checkingConflicts && teacherId && roomId && (
-            <Alert>
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-600">Конфликтов не обнаружено</AlertDescription>
+            <Alert variant="success">
+              <CheckCircle className="h-4 w-4" />
+              <AlertDescription>Конфликтов не обнаружено</AlertDescription>
             </Alert>
           )}
 
           {/* Actions */}
-          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4 border-t border-border/50">
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto rounded-xl">
               Отмена
             </Button>
             {conflicts?.hasConflicts && (
-              <Button variant="secondary" onClick={() => handleSubmit(true)} className="w-full sm:w-auto">
+              <Button variant="secondary" onClick={() => handleSubmit(true)} className="w-full sm:w-auto rounded-xl">
                 Создать несмотря на конфликты
               </Button>
             )}
@@ -539,7 +542,7 @@ export function LessonFormModal({
                 selectedStudentIds.length === 0 ||
                 (seriesMode && (selectedWeekdays.length === 0 || !seriesEndDate))
               }
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto rounded-xl"
             >
               {mode === "edit" ? "Сохранить" : "Создать"}
             </Button>

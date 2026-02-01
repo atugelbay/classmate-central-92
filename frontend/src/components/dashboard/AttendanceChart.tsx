@@ -44,18 +44,20 @@ export function AttendanceChart() {
     <Card className="h-full flex flex-col overflow-hidden">
       <CardHeader>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <ClipboardCheck className="h-5 w-5" style={{ color: 'hsl(var(--dashboard-icon-muted))' }} />
-            <CardTitle>Посещаемость</CardTitle>
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10">
+              <ClipboardCheck className="h-5 w-5 text-primary" />
+            </div>
+            <CardTitle className="text-lg">Посещаемость</CardTitle>
           </div>
-          <div className="flex gap-1 rounded-lg border p-1">
+          <div className="flex gap-1 rounded-xl bg-muted/50 p-1">
             {(["week", "month"] as Period[]).map((p) => (
               <Button
                 key={p}
                 variant={period === p ? "default" : "ghost"}
                 size="sm"
                 onClick={() => setPeriod(p)}
-                className="h-7 px-3"
+                className={`h-7 px-3 rounded-lg ${period === p ? "" : "hover:bg-transparent hover:text-primary"}`}
               >
                 {periodLabels[p]}
               </Button>
@@ -75,18 +77,18 @@ export function AttendanceChart() {
         ) : (
           <div className="space-y-4 flex-1 flex flex-col overflow-hidden min-h-0">
             {/* Summary Stats */}
-            <div className="grid grid-cols-3 gap-2.5">
-              <div className="text-center rounded-lg border p-2.5" style={{ backgroundColor: 'hsl(var(--dashboard-stat-neutral-bg))' }}>
-                <div className="text-lg font-bold" style={{ color: 'hsl(var(--dashboard-stat-positive))' }}>{totalAttended}</div>
-                <div className="text-xs text-muted-foreground mt-0.5">Присутствовали</div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="text-center rounded-xl p-3 bg-gradient-to-br from-[hsl(158,40%,96%)] to-[hsl(158,30%,94%)] shadow-sm">
+                <div className="text-xl font-bold text-success">{totalAttended}</div>
+                <div className="text-xs text-muted-foreground mt-1">Присутствовали</div>
               </div>
-              <div className="text-center rounded-lg border p-2.5" style={{ backgroundColor: 'hsl(var(--dashboard-stat-neutral-bg))' }}>
-                <div className="text-lg font-bold" style={{ color: 'hsl(var(--dashboard-stat-negative))' }}>{totalMissed}</div>
-                <div className="text-xs text-muted-foreground mt-0.5">Отсутствовали</div>
+              <div className="text-center rounded-xl p-3 bg-gradient-to-br from-[hsl(0,40%,97%)] to-[hsl(0,30%,95%)] shadow-sm">
+                <div className="text-xl font-bold text-destructive">{totalMissed}</div>
+                <div className="text-xs text-muted-foreground mt-1">Отсутствовали</div>
               </div>
-              <div className="text-center rounded-lg border p-2.5" style={{ backgroundColor: 'hsl(var(--dashboard-accent-subtle))' }}>
-                <div className="text-lg font-bold text-primary">{attendanceRate}%</div>
-                <div className="text-xs text-muted-foreground mt-0.5">Посещаемость</div>
+              <div className="text-center rounded-xl p-3 bg-gradient-to-br from-primary/10 to-primary/5 shadow-sm">
+                <div className="text-xl font-bold bg-gradient-to-r from-primary to-primary-dark bg-clip-text text-transparent">{attendanceRate}%</div>
+                <div className="text-xs text-muted-foreground mt-1">Посещаемость</div>
               </div>
             </div>
 

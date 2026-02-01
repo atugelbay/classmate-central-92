@@ -140,7 +140,7 @@ const StudentsGrid = React.memo(function StudentsGrid({
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent/10 text-lg font-semibold text-accent">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 text-lg font-bold text-white shadow-soft">
                     {student.name.charAt(0)}
                   </div>
                   <div>
@@ -189,12 +189,12 @@ const StudentsGrid = React.memo(function StudentsGrid({
                 {/* Next Lesson Info and Actions */}
                 <div className="flex flex-col gap-3">
                   {nextLesson ? (
-                    <div className="p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
+                    <div className="p-3 rounded-2xl bg-gradient-to-br from-emerald-50 to-green-100 dark:from-emerald-950 dark:to-green-900">
                       <div className="flex items-center gap-2 mb-1">
-                        <Clock className="h-4 w-4 text-green-700 dark:text-green-400" />
-                        <p className="text-sm font-medium text-green-900 dark:text-green-100">Ближайшее занятие:</p>
+                        <Clock className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                        <p className="text-sm font-medium text-emerald-800 dark:text-emerald-200">Ближайшее занятие:</p>
                       </div>
-                      <p className="text-sm text-green-800 dark:text-green-200">
+                      <p className="text-sm text-emerald-700 dark:text-emerald-300 font-medium">
                         {moment(nextLesson.start).locale("ru").format("DD MMMM, dddd")} в {moment(nextLesson.start).locale("ru").format("HH:mm")}
                       </p>
                       {nextLesson?.teacherName && (

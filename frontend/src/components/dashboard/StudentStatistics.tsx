@@ -24,15 +24,17 @@ export function StudentStatistics() {
   return (
     <Card className="h-full flex flex-col overflow-hidden">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <div className="flex items-center gap-2">
-          <Users className="h-5 w-5" style={{ color: 'hsl(var(--dashboard-icon-muted))' }} />
-          <CardTitle>Статистика учеников</CardTitle>
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10">
+            <Users className="h-5 w-5 text-primary" />
+          </div>
+          <CardTitle className="text-lg">Статистика учеников</CardTitle>
         </div>
         <Button
           variant="ghost"
           size="sm"
           onClick={() => navigate("/students")}
-          className="gap-1"
+          className="gap-1 rounded-xl"
         >
           Все ученики
           <ArrowRight className="h-4 w-4" />
@@ -41,54 +43,65 @@ export function StudentStatistics() {
       <CardContent className="flex-1 overflow-hidden min-h-0 flex flex-col">
         <div className="space-y-3 flex-1 overflow-hidden min-h-0">
           {/* Total Count - Prominent */}
-          <div className="rounded-lg border p-4" style={{ backgroundColor: 'hsl(var(--dashboard-accent-subtle))' }}>
-            <div className="flex items-center justify-between">
+          <div className="rounded-xl p-5 bg-gradient-to-br from-primary/5 via-[hsl(var(--dashboard-accent-subtle))] to-accent/5 shadow-sm relative overflow-hidden">
+            <div className="absolute -right-4 -top-4 w-24 h-24 bg-primary/5 rounded-full blur-2xl" />
+            <div className="flex items-center justify-between relative">
               <div>
-                <div className="text-xs font-medium text-muted-foreground mb-1.5">
+                <div className="text-xs font-medium text-muted-foreground mb-2">
                   Всего учеников
                 </div>
-                <div className="text-2xl font-bold text-primary">
+                <div className="text-3xl font-bold bg-gradient-to-r from-primary to-primary-dark bg-clip-text text-transparent">
                   {total}
                 </div>
               </div>
-              <Users className="h-10 w-10 text-primary opacity-20" />
+              <div className="p-3 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5">
+                <Users className="h-8 w-8 text-primary/60" />
+              </div>
             </div>
           </div>
 
           {/* Summary Cards */}
-          <div className="grid grid-cols-3 gap-2.5">
-            <div className="rounded-lg border p-2.5 text-center" style={{ backgroundColor: 'hsl(var(--dashboard-stat-neutral-bg))' }}>
-              <UserCheck className="h-3.5 w-3.5 mx-auto mb-1.5" style={{ color: 'hsl(var(--dashboard-icon-muted))' }} />
-              <div className="text-lg font-bold">
+          <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-xl p-3 text-center bg-gradient-to-br from-[hsl(158,40%,96%)] to-[hsl(158,30%,94%)] shadow-sm transition-all hover:shadow-soft">
+              <div className="mx-auto mb-2 w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center">
+                <UserCheck className="h-4 w-4 text-success" />
+              </div>
+              <div className="text-xl font-bold text-foreground">
                 {students.active}
               </div>
-              <div className="text-xs text-muted-foreground mt-0.5">Активные</div>
+              <div className="text-xs text-muted-foreground mt-1">Активные</div>
             </div>
 
-            <div className="rounded-lg border p-2.5 text-center" style={{ backgroundColor: 'hsl(var(--dashboard-stat-neutral-bg))' }}>
-              <UserPlus className="h-3.5 w-3.5 mx-auto mb-1.5" style={{ color: 'hsl(var(--dashboard-icon-muted))' }} />
-              <div className="text-lg font-bold">
+            <div className="rounded-xl p-3 text-center bg-gradient-to-br from-[hsl(262,40%,96%)] to-[hsl(262,30%,94%)] shadow-sm transition-all hover:shadow-soft">
+              <div className="mx-auto mb-2 w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <UserPlus className="h-4 w-4 text-primary" />
+              </div>
+              <div className="text-xl font-bold text-foreground">
                 {students.new}
               </div>
-              <div className="text-xs text-muted-foreground mt-0.5">Новые</div>
+              <div className="text-xs text-muted-foreground mt-1">Новые</div>
             </div>
 
-            <div className="rounded-lg border p-2.5 text-center" style={{ backgroundColor: 'hsl(var(--dashboard-stat-neutral-bg))' }}>
-              <Snowflake className="h-3.5 w-3.5 mx-auto mb-1.5" style={{ color: 'hsl(var(--dashboard-icon-muted))' }} />
-              <div className="text-lg font-bold">
+            <div className="rounded-xl p-3 text-center bg-gradient-to-br from-[hsl(200,40%,96%)] to-[hsl(200,30%,94%)] shadow-sm transition-all hover:shadow-soft">
+              <div className="mx-auto mb-2 w-8 h-8 rounded-lg bg-info/10 flex items-center justify-center">
+                <Snowflake className="h-4 w-4 text-info" />
+              </div>
+              <div className="text-xl font-bold text-foreground">
                 {students.frozen}
               </div>
-              <div className="text-xs text-muted-foreground mt-0.5">Заморожены</div>
+              <div className="text-xs text-muted-foreground mt-1">Заморожены</div>
             </div>
           </div>
 
           {/* New Students Notice - only if significant */}
           {students.new > 0 && students.new >= 5 && (
-            <div className="rounded-lg border p-2.5" style={{ backgroundColor: 'hsl(var(--dashboard-stat-neutral-bg))' }}>
+            <div className="rounded-xl p-3 bg-gradient-to-r from-primary/5 to-accent/5 shadow-sm">
               <div className="flex items-center gap-2">
-                <UserPlus className="h-3.5 w-3.5 shrink-0" style={{ color: 'hsl(var(--dashboard-icon-muted))' }} />
+                <div className="p-1.5 rounded-lg bg-primary/10">
+                  <UserPlus className="h-3.5 w-3.5 text-primary" />
+                </div>
                 <div className="text-xs">
-                  <span className="font-semibold">
+                  <span className="font-semibold text-primary">
                     {students.new} новых
                   </span>
                   <span className="text-muted-foreground"> за месяц</span>

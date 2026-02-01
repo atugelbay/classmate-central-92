@@ -405,47 +405,46 @@ export function CreateGroupModal({
           </div>
 
           {/* Weekdays Selection with Individual Times */}
-          <div className="space-y-4">
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-sky-50 to-blue-100 dark:from-sky-950 dark:to-blue-900 space-y-4">
             <div>
-              <Label className="mb-3 block">Дни недели *</Label>
-              <div className="grid grid-cols-3 sm:flex sm:flex-wrap gap-2">
+              <Label className="mb-3 block text-sky-800 dark:text-sky-200">Дни недели *</Label>
+              <div className="flex flex-wrap gap-2">
                 {WEEKDAYS.map((day) => (
-                  <div key={day.value} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`day-${day.value}`}
-                      checked={selectedWeekdays.includes(day.value)}
-                      onCheckedChange={() => toggleWeekday(day.value)}
-                    />
-                    <label
-                      htmlFor={`day-${day.value}`}
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                    >
-                      {day.label}
-                    </label>
-                  </div>
+                  <button
+                    key={day.value}
+                    type="button"
+                    onClick={() => toggleWeekday(day.value)}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                      selectedWeekdays.includes(day.value)
+                        ? "bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-md"
+                        : "bg-white/60 dark:bg-white/10 text-sky-700 dark:text-sky-300 hover:bg-white dark:hover:bg-white/20"
+                    }`}
+                  >
+                    {day.label}
+                  </button>
                 ))}
               </div>
               {selectedWeekdays.length === 0 && (
-                <p className="text-sm text-destructive mt-2">Выберите хотя бы один день недели</p>
+                <p className="text-sm text-rose-600 dark:text-rose-400 mt-2">Выберите хотя бы один день недели</p>
               )}
             </div>
 
             {/* Time Selection for Each Selected Day */}
             {selectedWeekdays.length > 0 && (
-              <div className="space-y-3 pt-2 border-t">
-                <Label className="text-sm font-medium">Время занятий по дням *</Label>
-                <div className="space-y-3">
+              <div className="space-y-3 pt-3 border-t border-sky-200 dark:border-sky-800">
+                <Label className="text-sm font-medium text-sky-800 dark:text-sky-200">Время занятий по дням *</Label>
+                <div className="space-y-2">
                   {selectedWeekdays.map((day) => {
                     const dayTime = dayTimes[day] || { start: "10:00", end: "11:30" };
                     const dayLabel = WEEKDAYS.find(d => d.value === day)?.label || "";
                     return (
-                      <div key={day} className="p-3 border rounded-lg space-y-2 bg-muted/30">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="font-medium text-sm">{dayLabel}</span>
+                      <div key={day} className="p-3 rounded-xl bg-white/60 dark:bg-white/10 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-sm text-sky-900 dark:text-sky-100 w-6">{dayLabel}</span>
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <Label htmlFor={`start-${day}`} className="text-xs text-muted-foreground">
+                            <Label htmlFor={`start-${day}`} className="text-xs text-sky-600 dark:text-sky-400">
                               Начало
                             </Label>
                             <TimePicker
@@ -454,7 +453,7 @@ export function CreateGroupModal({
                             />
                           </div>
                           <div>
-                            <Label htmlFor={`end-${day}`} className="text-xs text-muted-foreground">
+                            <Label htmlFor={`end-${day}`} className="text-xs text-sky-600 dark:text-sky-400">
                               Окончание
                             </Label>
                             <TimePicker
@@ -545,19 +544,19 @@ export function CreateGroupModal({
 
           {!conflicts?.hasConflicts && !checkingConflicts && teacherId && roomId && selectedWeekdays.length > 0 && 
             selectedWeekdays.every(day => dayTimes[day]?.start && dayTimes[day]?.end) && (
-            <Alert>
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-600">Конфликтов не обнаружено</AlertDescription>
+            <Alert variant="success">
+              <CheckCircle className="h-4 w-4" />
+              <AlertDescription>Конфликтов не обнаружено</AlertDescription>
             </Alert>
           )}
 
           {/* Actions */}
-          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4 border-t border-border/50">
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto rounded-xl">
               Отмена
             </Button>
             {conflicts?.hasConflicts && (
-              <Button variant="secondary" onClick={() => handleSubmit(true)} className="w-full sm:w-auto">
+              <Button variant="secondary" onClick={() => handleSubmit(true)} className="w-full sm:w-auto rounded-xl">
                 Создать несмотря на конфликты
               </Button>
             )}
@@ -573,7 +572,7 @@ export function CreateGroupModal({
                 !seriesEndDate ||
                 !selectedWeekdays.every(day => dayTimes[day]?.start && dayTimes[day]?.end)
               }
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto rounded-xl"
             >
               Создать
             </Button>

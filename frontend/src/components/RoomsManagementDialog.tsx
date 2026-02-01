@@ -134,7 +134,7 @@ export function RoomsManagementDialog({ open, onOpenChange }: RoomsManagementDia
             {!isFormOpen && (
               <Button
                 onClick={() => setIsFormOpen(true)}
-                className="w-full"
+                className="w-full rounded-xl"
               >
                 <Plus className="mr-2 h-4 w-4" />
                 Добавить аудиторию
@@ -143,8 +143,7 @@ export function RoomsManagementDialog({ open, onOpenChange }: RoomsManagementDia
 
             {/* Room Form */}
             {isFormOpen && (
-              <Card className="border-2 border-primary">
-                <CardContent className="pt-6">
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-violet-50 to-purple-100 dark:from-violet-950 dark:to-purple-900">
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                       <Label htmlFor="name">Название *</Label>
@@ -171,16 +170,16 @@ export function RoomsManagementDialog({ open, onOpenChange }: RoomsManagementDia
 
                     <div>
                       <Label>Цвет</Label>
-                      <div className="grid grid-cols-4 gap-2 mt-2">
+                      <div className="grid grid-cols-4 gap-3 mt-2">
                         {colorOptions.map((option) => (
                           <button
                             key={option.value}
                             type="button"
                             onClick={() => setFormData({ ...formData, color: option.value })}
-                            className={`h-10 rounded-md border-2 transition-all ${
+                            className={`h-12 rounded-xl transition-all ${
                               formData.color === option.value
-                                ? "border-primary scale-110"
-                                : "border-gray-300 hover:scale-105"
+                                ? "ring-2 ring-offset-2 ring-primary scale-110 shadow-lg"
+                                : "hover:scale-105 shadow-soft"
                             }`}
                             style={{ backgroundColor: option.value }}
                             title={option.label}
@@ -194,14 +193,14 @@ export function RoomsManagementDialog({ open, onOpenChange }: RoomsManagementDia
                         type="button"
                         variant="outline"
                         onClick={resetForm}
-                        className="flex-1"
+                        className="flex-1 rounded-xl"
                         disabled={createRoom.isPending || updateRoom.isPending}
                       >
                         Отмена
                       </Button>
                       <Button
                         type="submit"
-                        className="flex-1"
+                        className="flex-1 rounded-xl"
                         disabled={createRoom.isPending || updateRoom.isPending}
                       >
                         {createRoom.isPending || updateRoom.isPending ? (
@@ -215,8 +214,7 @@ export function RoomsManagementDialog({ open, onOpenChange }: RoomsManagementDia
                       </Button>
                     </div>
                   </form>
-                </CardContent>
-              </Card>
+              </div>
             )}
 
             {/* Rooms List */}
@@ -233,46 +231,55 @@ export function RoomsManagementDialog({ open, onOpenChange }: RoomsManagementDia
               ) : (
                 <div className="space-y-2">
                   {rooms.map((room) => (
-                    <Card key={room.id} className="hover:shadow-md transition-shadow">
-                      <CardContent className="py-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className="w-4 h-4 rounded-full border-2"
-                              style={{ backgroundColor: room.color }}
-                            />
-                            <div>
-                              <p className="font-medium">{room.name}</p>
-                              <p className="text-sm text-muted-foreground">
-                                Вместимость: {room.capacity} чел.
-                              </p>
-                            </div>
+                    <div 
+                      key={room.id} 
+                      className="p-4 rounded-2xl transition-all hover:shadow-soft"
+                      style={{ 
+                        backgroundColor: `${room.color}15`,
+                        borderLeft: `4px solid ${room.color}`
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-10 h-10 rounded-xl shadow-soft flex items-center justify-center"
+                            style={{ backgroundColor: room.color }}
+                          >
+                            <Building2 className="h-5 w-5 text-white" />
                           </div>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEdit(room)}
-                              disabled={isFormOpen}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => handleDeleteClick(room)}
-                              disabled={deleteRoom.isPending}
-                            >
-                              {deleteRoom.isPending ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <Trash2 className="h-4 w-4" />
-                              )}
-                            </Button>
+                          <div>
+                            <p className="font-semibold">{room.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              Вместимость: {room.capacity} чел.
+                            </p>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(room)}
+                            disabled={isFormOpen}
+                            className="rounded-xl"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteClick(room)}
+                            disabled={deleteRoom.isPending}
+                            className="rounded-xl text-rose-500 hover:text-rose-600 hover:bg-rose-50"
+                          >
+                            {deleteRoom.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}

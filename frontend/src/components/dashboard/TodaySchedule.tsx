@@ -77,15 +77,17 @@ export function TodaySchedule() {
   return (
     <Card className="h-full flex flex-col overflow-hidden">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <div className="flex items-center gap-2">
-          <Calendar className="h-5 w-5" style={{ color: 'hsl(var(--dashboard-icon-muted))' }} />
-          <CardTitle>Уроки на сегодня</CardTitle>
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10">
+            <Calendar className="h-5 w-5 text-primary" />
+          </div>
+          <CardTitle className="text-lg">Уроки на сегодня</CardTitle>
         </div>
         <Button
           variant="ghost"
           size="sm"
           onClick={() => navigate("/schedule")}
-          className="gap-1"
+          className="gap-1 rounded-xl"
         >
           Все уроки
           <ArrowRight className="h-4 w-4" />
@@ -126,8 +128,8 @@ export function TodaySchedule() {
               return (
                 <div
                   key={lesson.id}
-                  className={`rounded-lg border p-2.5 transition-all hover:shadow-md cursor-pointer ${
-                    isNow ? "border-primary bg-primary/5 shadow-sm" : ""
+                  className={`rounded-xl p-3 transition-all hover:shadow-soft cursor-pointer ${
+                    isNow ? "bg-gradient-to-r from-primary/10 to-primary/5 shadow-sm ring-1 ring-primary/20" : "bg-muted/30 hover:bg-muted/50"
                   } ${isPast ? "opacity-60" : ""}`}
                   onClick={() => navigate("/schedule")}
                 >

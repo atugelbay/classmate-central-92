@@ -1,71 +1,21 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, StatCard } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, DollarSign, TrendingUp, TrendingDown, Users, Trash2, Edit, Download, FileText, FileSpreadsheet } from "lucide-react";
-import { 
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-  PaginationEllipsis,
-} from "@/components/ui/pagination";
+import { Loader2, Plus, DollarSign, TrendingUp, TrendingDown, Users, Trash2, Edit, FileText, ArrowRight, CreditCard, Wallet, AlertCircle } from "lucide-react";
 import { useTransactions, useCreateTransaction, useAllBalances, useDiscounts, useCreateDiscount, useUpdateDiscount, useDeleteDiscount, useDebts, useCreateDebt, useUpdateDebt, useStudents, useTeachers, useGroups } from "@/hooks/useData";
 import { Discount, DebtRecord } from "@/types";
 import moment from "moment";
 import { PageHeader } from "@/components/PageHeader";
 import "moment/locale/ru";
 import { ExportDialog } from "@/components/ExportDialog";
-import { toast } from "sonner";
 
 moment.locale("ru");
-
-const ITEMS_PER_PAGE = 39;
-
-// Helper function to generate pagination page numbers with ellipsis
-function generatePageNumbers(currentPage: number, totalPages: number): (number | 'ellipsis')[] {
-  if (totalPages <= 7) {
-    // Show all pages if 7 or fewer
-    return Array.from({ length: totalPages }, (_, i) => i + 1);
-  }
-
-  const pages: (number | 'ellipsis')[] = [];
-
-  if (currentPage <= 3) {
-    // Show first 5 pages, ellipsis, last page
-    for (let i = 1; i <= 5; i++) {
-      pages.push(i);
-    }
-    pages.push('ellipsis');
-    pages.push(totalPages);
-  } else if (currentPage >= totalPages - 2) {
-    // Show first page, ellipsis, last 5 pages
-    pages.push(1);
-    pages.push('ellipsis');
-    for (let i = totalPages - 4; i <= totalPages; i++) {
-      pages.push(i);
-    }
-  } else {
-    // Show first page, ellipsis, current-1, current, current+1, ellipsis, last page
-    pages.push(1);
-    pages.push('ellipsis');
-    pages.push(currentPage - 1);
-    pages.push(currentPage);
-    pages.push(currentPage + 1);
-    pages.push('ellipsis');
-    pages.push(totalPages);
-  }
-
-  return pages;
-}
 
 export default function Finance() {
   const { data: transactions = [], isLoading: transactionsLoading } = useTransactions();
@@ -89,9 +39,6 @@ export default function Finance() {
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [selectedDiscount, setSelectedDiscount] = useState<Discount | null>(null);
   const [selectedDebt, setSelectedDebt] = useState<DebtRecord | null>(null);
-  const [currentPageTransactions, setCurrentPageTransactions] = useState(1);
-  const [currentPageBalances, setCurrentPageBalances] = useState(1);
-  const [currentPageDebts, setCurrentPageDebts] = useState(1);
 
   // Statistics
   const totalIncome = transactions
@@ -165,30 +112,24 @@ export default function Finance() {
   };
 
   const getStudentName = (studentId: string, studentName?: string) => {
-    // If studentName is already provided from API, use it
     if (studentName) return studentName;
-    // Fallback to local lookup
     const student = students.find(s => s.id === studentId);
     return student?.name || studentId;
   };
 
-  // Pagination for transactions
-  const totalPagesTransactions = Math.ceil(transactions.length / ITEMS_PER_PAGE);
-  const startIndexTransactions = (currentPageTransactions - 1) * ITEMS_PER_PAGE;
-  const endIndexTransactions = startIndexTransactions + ITEMS_PER_PAGE;
-  const paginatedTransactions = transactions.slice(startIndexTransactions, endIndexTransactions);
+  // Group transactions by date
+  const groupedTransactions = transactions.reduce((groups: Record<string, typeof transactions>, transaction) => {
+    const date = moment(transaction.createdAt).format("YYYY-MM-DD");
+    if (!groups[date]) {
+      groups[date] = [];
+    }
+    groups[date].push(transaction);
+    return groups;
+  }, {});
 
-  // Pagination for balances
-  const totalPagesBalances = Math.ceil(balances.length / ITEMS_PER_PAGE);
-  const startIndexBalances = (currentPageBalances - 1) * ITEMS_PER_PAGE;
-  const endIndexBalances = startIndexBalances + ITEMS_PER_PAGE;
-  const paginatedBalances = balances.slice(startIndexBalances, endIndexBalances);
-
-  // Pagination for debts
-  const totalPagesDebts = Math.ceil(debts.length / ITEMS_PER_PAGE);
-  const startIndexDebts = (currentPageDebts - 1) * ITEMS_PER_PAGE;
-  const endIndexDebts = startIndexDebts + ITEMS_PER_PAGE;
-  const paginatedDebts = debts.slice(startIndexDebts, endIndexDebts);
+  const sortedDates = Object.keys(groupedTransactions).sort((a, b) => 
+    new Date(b).getTime() - new Date(a).getTime()
+  );
 
   if (transactionsLoading || balancesLoading || debtsLoading || discountsLoading) {
     return (
@@ -205,364 +146,281 @@ export default function Finance() {
         description="Управление финансами и платежами"
       />
 
-      {/* Statistics */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Общий доход</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalIncome.toLocaleString()} ₸</div>
-            <p className="text-xs text-muted-foreground">За все время</p>
-          </CardContent>
-        </Card>
+      {/* Bento Statistics */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="rounded-3xl bg-gradient-to-br from-emerald-50 to-green-100 dark:from-emerald-950 dark:to-green-900 p-5">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2 rounded-xl bg-emerald-500/20">
+              <TrendingUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <span className="text-sm text-emerald-700 dark:text-emerald-300">Общий доход</span>
+          </div>
+          <div className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">
+            {totalIncome.toLocaleString()} ₸
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Возвраты</CardTitle>
-            <TrendingDown className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalRefunds.toLocaleString()} ₸</div>
-            <p className="text-xs text-muted-foreground">За все время</p>
-          </CardContent>
-        </Card>
+        <div className="rounded-3xl bg-gradient-to-br from-rose-50 to-red-100 dark:from-rose-950 dark:to-red-900 p-5">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2 rounded-xl bg-rose-500/20">
+              <TrendingDown className="h-5 w-5 text-rose-600 dark:text-rose-400" />
+            </div>
+            <span className="text-sm text-rose-700 dark:text-rose-300">Возвраты</span>
+          </div>
+          <div className="text-2xl font-bold text-rose-900 dark:text-rose-100">
+            {totalRefunds.toLocaleString()} ₸
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Общий баланс</CardTitle>
-            <DollarSign className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalBalance.toLocaleString()} ₸</div>
-            <p className="text-xs text-muted-foreground">{balances.length} студентов</p>
-          </CardContent>
-        </Card>
+        <div className="rounded-3xl bg-gradient-to-br from-sky-50 to-blue-100 dark:from-sky-950 dark:to-blue-900 p-5">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2 rounded-xl bg-sky-500/20">
+              <Wallet className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+            </div>
+            <span className="text-sm text-sky-700 dark:text-sky-300">Общий баланс</span>
+          </div>
+          <div className="text-2xl font-bold text-sky-900 dark:text-sky-100">
+            {totalBalance.toLocaleString()} ₸
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Долги</CardTitle>
-            <Users className="h-4 w-4 text-orange-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{pendingDebts.toLocaleString()} ₸</div>
-            <p className="text-xs text-muted-foreground">{debts.filter(d => d.status === "pending").length} должников</p>
-          </CardContent>
-        </Card>
+        <div className="rounded-3xl bg-gradient-to-br from-amber-50 to-orange-100 dark:from-amber-950 dark:to-orange-900 p-5">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2 rounded-xl bg-amber-500/20">
+              <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            </div>
+            <span className="text-sm text-amber-700 dark:text-amber-300">Долги</span>
+          </div>
+          <div className="text-2xl font-bold text-amber-900 dark:text-amber-100">
+            {pendingDebts.toLocaleString()} ₸
+          </div>
+        </div>
       </div>
 
       {/* Tabs */}
       <Tabs defaultValue="transactions">
-        <TabsList>
-          <TabsTrigger value="transactions">Транзакции</TabsTrigger>
-          <TabsTrigger value="balances">Балансы</TabsTrigger>
-          <TabsTrigger value="discounts">Скидки</TabsTrigger>
-          <TabsTrigger value="debts">Долги</TabsTrigger>
+        <TabsList className="rounded-2xl p-1 bg-muted/50">
+          <TabsTrigger value="transactions" className="rounded-xl">Транзакции</TabsTrigger>
+          <TabsTrigger value="balances" className="rounded-xl">Балансы</TabsTrigger>
+          <TabsTrigger value="discounts" className="rounded-xl">Скидки</TabsTrigger>
+          <TabsTrigger value="debts" className="rounded-xl">Долги</TabsTrigger>
         </TabsList>
 
-        {/* Transactions Tab */}
-        <TabsContent value="transactions" className="space-y-4">
+        {/* Transactions Tab - Card Based */}
+        <TabsContent value="transactions" className="space-y-4 mt-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <h2 className="text-xl font-semibold">История транзакций</h2>
             <div className="flex gap-2 flex-wrap">
               <Button
                 variant="outline"
                 onClick={() => setIsExportDialogOpen(true)}
-                size="sm"
-                className="sm:size-default"
+                className="rounded-xl"
               >
-                <FileText className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Экспорт</span>
+                <FileText className="h-4 w-4 mr-2" />
+                Экспорт
               </Button>
               <Dialog open={isTransactionDialogOpen} onOpenChange={setIsTransactionDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button size="sm" className="sm:size-default">
-                    <Plus className="h-4 w-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Добавить транзакцию</span>
-                    <span className="sm:hidden">Добавить</span>
+                  <Button className="rounded-xl">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Добавить
                   </Button>
                 </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Новая транзакция</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleTransactionSubmit} className="space-y-4">
-                  <div>
-                    <Label htmlFor="studentId">Студент</Label>
-                    <Select name="studentId" required>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Выберите студента" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {students.map(student => (
-                          <SelectItem key={student.id} value={student.id}>
-                            {student.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="amount">Сумма (₸)</Label>
-                    <Input id="amount" name="amount" type="number" step="0.01" required />
-                  </div>
-                  <div>
-                    <Label htmlFor="type">Тип</Label>
-                    <Select name="type" required>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Выберите тип" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="payment">Платеж</SelectItem>
-                        <SelectItem value="refund">Возврат</SelectItem>
-                        <SelectItem value="debt">Долг</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="paymentMethod">Способ оплаты</Label>
-                    <Select name="paymentMethod" required>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Выберите способ" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="cash">Наличные</SelectItem>
-                        <SelectItem value="card">Карта</SelectItem>
-                        <SelectItem value="transfer">Перевод</SelectItem>
-                        <SelectItem value="other">Другое</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="description">Описание</Label>
-                    <Input id="description" name="description" />
-                  </div>
-                  <Button type="submit" className="w-full">Создать</Button>
-                </form>
-              </DialogContent>
-            </Dialog>
+                <DialogContent className="rounded-3xl">
+                  <DialogHeader>
+                    <DialogTitle>Новая транзакция</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleTransactionSubmit} className="space-y-4">
+                    <div>
+                      <Label htmlFor="studentId">Студент</Label>
+                      <Select name="studentId" required>
+                        <SelectTrigger className="rounded-xl">
+                          <SelectValue placeholder="Выберите студента" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {students.map(student => (
+                            <SelectItem key={student.id} value={student.id}>
+                              {student.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="amount">Сумма (₸)</Label>
+                      <Input id="amount" name="amount" type="number" step="0.01" required className="rounded-xl" />
+                    </div>
+                    <div>
+                      <Label htmlFor="type">Тип</Label>
+                      <Select name="type" required>
+                        <SelectTrigger className="rounded-xl">
+                          <SelectValue placeholder="Выберите тип" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="payment">Платеж</SelectItem>
+                          <SelectItem value="refund">Возврат</SelectItem>
+                          <SelectItem value="debt">Долг</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="paymentMethod">Способ оплаты</Label>
+                      <Select name="paymentMethod" required>
+                        <SelectTrigger className="rounded-xl">
+                          <SelectValue placeholder="Выберите способ" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="cash">Наличные</SelectItem>
+                          <SelectItem value="card">Карта</SelectItem>
+                          <SelectItem value="transfer">Перевод</SelectItem>
+                          <SelectItem value="other">Другое</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="description">Описание</Label>
+                      <Input id="description" name="description" className="rounded-xl" />
+                    </div>
+                    <Button type="submit" className="w-full rounded-xl">Создать</Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
 
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Дата</TableHead>
-                    <TableHead>Студент</TableHead>
-                    <TableHead>Тип</TableHead>
-                    <TableHead>Способ</TableHead>
-                    <TableHead>Описание</TableHead>
-                    <TableHead className="text-right">Сумма</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedTransactions.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center text-muted-foreground">
-                          Нет транзакций
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                    paginatedTransactions.map(transaction => (
-                      <TableRow key={transaction.id}>
-                        <TableCell>{moment(transaction.createdAt).format("DD.MM.YYYY HH:mm")}</TableCell>
-                        <TableCell>{getStudentName(transaction.studentId, transaction.studentName)}</TableCell>
-                        <TableCell>
-                          <Badge variant={transaction.type === "payment" ? "default" : transaction.type === "refund" ? "destructive" : transaction.type === "deduction" ? "secondary" : "destructive"}>
-                            {transaction.type === "payment" ? "Платеж" : transaction.type === "refund" ? "Возврат" : transaction.type === "deduction" ? "Списание" : "Долг"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="capitalize">{transaction.paymentMethod}</TableCell>
-                        <TableCell>{transaction.description}</TableCell>
-                        <TableCell className="text-right font-medium">
-                          {transaction.type === "payment" ? "+" : "-"}{transaction.amount.toLocaleString()} ₸
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-
-          {/* Pagination for Transactions */}
-          {totalPagesTransactions > 1 && (
-            <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious 
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      if (currentPageTransactions > 1) setCurrentPageTransactions(currentPageTransactions - 1);
-                    }}
-                    className={currentPageTransactions === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                  />
-                </PaginationItem>
-                {generatePageNumbers(currentPageTransactions, totalPagesTransactions).map((p, idx) => {
-                  if (p === 'ellipsis') {
-                    return (
-                      <PaginationItem key={`ellipsis-${idx}`}>
-                        <PaginationEllipsis />
-                      </PaginationItem>
-                    );
-                  }
-                  return (
-                    <PaginationItem key={p}>
-                      <PaginationLink
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setCurrentPageTransactions(p);
-                        }}
-                        isActive={currentPageTransactions === p}
-                        className="cursor-pointer"
-                      >
-                        {p}
-                      </PaginationLink>
-                    </PaginationItem>
-                  );
-                })}
-                <PaginationItem>
-                  <PaginationNext
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      if (currentPageTransactions < totalPagesTransactions) setCurrentPageTransactions(currentPageTransactions + 1);
-                    }}
-                    className={currentPageTransactions === totalPagesTransactions ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          )}
+          {/* Transactions as cards grouped by date */}
+          <div className="space-y-6">
+            {sortedDates.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <CreditCard className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                <p>Нет транзакций</p>
+              </div>
+            ) : (
+              sortedDates.slice(0, 10).map(date => (
+                <div key={date}>
+                  <div className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-primary" />
+                    {moment(date).format("D MMMM YYYY")}
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {groupedTransactions[date].map(transaction => {
+                      const isPositive = transaction.type === "payment";
+                      return (
+                        <div
+                          key={transaction.id}
+                          className={`p-4 rounded-2xl transition-all hover:scale-[1.02] cursor-pointer ${
+                            isPositive 
+                              ? "bg-emerald-50 dark:bg-emerald-950 hover:shadow-emerald-100 dark:hover:shadow-emerald-900/30" 
+                              : "bg-rose-50 dark:bg-rose-950 hover:shadow-rose-100 dark:hover:shadow-rose-900/30"
+                          } hover:shadow-lg`}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1 min-w-0">
+                              <div className={`text-lg font-bold ${isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                                {isPositive ? "+" : "-"}{transaction.amount.toLocaleString()} ₸
+                              </div>
+                              <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate mt-1">
+                                {getStudentName(transaction.studentId, transaction.studentName)}
+                              </div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                {moment(transaction.createdAt).format("HH:mm")} • {transaction.paymentMethod}
+                              </div>
+                            </div>
+                            <Badge 
+                              className={`shrink-0 rounded-lg ${
+                                isPositive 
+                                  ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300" 
+                                  : "bg-rose-100 text-rose-700 dark:bg-rose-900 dark:text-rose-300"
+                              }`}
+                            >
+                              {transaction.type === "payment" ? "Платеж" : transaction.type === "refund" ? "Возврат" : "Долг"}
+                            </Badge>
+                          </div>
+                          {transaction.description && (
+                            <div className="text-xs text-gray-400 mt-2 truncate">
+                              {transaction.description}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </TabsContent>
 
-        {/* Balances Tab */}
-        <TabsContent value="balances" className="space-y-4">
+        {/* Balances Tab - Card Grid */}
+        <TabsContent value="balances" className="space-y-4 mt-6">
           <h2 className="text-xl font-semibold">Балансы студентов</h2>
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Студент</TableHead>
-                    <TableHead>Баланс</TableHead>
-                    <TableHead>Последний платеж</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedBalances.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={3} className="text-center text-muted-foreground">
-                          Нет данных о балансах
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                    paginatedBalances.map(balance => (
-                      <TableRow key={balance.studentId}>
-                        <TableCell>{getStudentName(balance.studentId, balance.studentName)}</TableCell>
-                        <TableCell>
-                          <span className={balance.balance >= 0 ? "text-green-600 font-medium" : "text-red-600 font-medium"}>
-                            {balance.balance.toLocaleString()} ₸
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          {balance.lastPaymentDate ? moment(balance.lastPaymentDate).format("DD.MM.YYYY HH:mm") : "—"}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-
-          {/* Pagination for Balances */}
-          {totalPagesBalances > 1 && (
-            <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious 
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      if (currentPageBalances > 1) setCurrentPageBalances(currentPageBalances - 1);
-                    }}
-                    className={currentPageBalances === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                  />
-                </PaginationItem>
-                {generatePageNumbers(currentPageBalances, totalPagesBalances).map((p, idx) => {
-                  if (p === 'ellipsis') {
-                    return (
-                      <PaginationItem key={`ellipsis-${idx}`}>
-                        <PaginationEllipsis />
-                      </PaginationItem>
-                    );
-                  }
-                  return (
-                    <PaginationItem key={p}>
-                      <PaginationLink
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setCurrentPageBalances(p);
-                        }}
-                        isActive={currentPageBalances === p}
-                        className="cursor-pointer"
-                      >
-                        {p}
-                      </PaginationLink>
-                    </PaginationItem>
-                  );
-                })}
-                <PaginationItem>
-                  <PaginationNext
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      if (currentPageBalances < totalPagesBalances) setCurrentPageBalances(currentPageBalances + 1);
-                    }}
-                    className={currentPageBalances === totalPagesBalances ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
+          
+          {balances.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Wallet className="h-12 w-12 mx-auto mb-4 opacity-30" />
+              <p>Нет данных о балансах</p>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {balances.map(balance => (
+                <div
+                  key={balance.studentId}
+                  className={`p-4 rounded-2xl transition-all hover:scale-[1.02] cursor-pointer ${
+                    balance.balance >= 0 
+                      ? "bg-gradient-to-br from-emerald-50 to-green-100 dark:from-emerald-950 dark:to-green-900" 
+                      : "bg-gradient-to-br from-rose-50 to-red-100 dark:from-rose-950 dark:to-red-900"
+                  }`}
+                >
+                  <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                    {getStudentName(balance.studentId, balance.studentName)}
+                  </div>
+                  <div className={`text-2xl font-bold mt-2 ${
+                    balance.balance >= 0 
+                      ? "text-emerald-600 dark:text-emerald-400" 
+                      : "text-rose-600 dark:text-rose-400"
+                  }`}>
+                    {balance.balance.toLocaleString()} ₸
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                    {balance.lastPaymentDate 
+                      ? `Последний платеж: ${moment(balance.lastPaymentDate).format("D MMM")}`
+                      : "Нет платежей"
+                    }
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </TabsContent>
 
         {/* Discounts Tab */}
-        <TabsContent value="discounts" className="space-y-4">
+        <TabsContent value="discounts" className="space-y-4 mt-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <h2 className="text-xl font-semibold">Скидки</h2>
             <Dialog open={isDiscountDialogOpen} onOpenChange={(open) => { setIsDiscountDialogOpen(open); if (!open) setSelectedDiscount(null); }}>
               <DialogTrigger asChild>
-                <Button size="sm" className="sm:size-default">
-                  <Plus className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Создать скидку</span>
-                  <span className="sm:hidden">Создать</span>
+                <Button className="rounded-xl">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Создать скидку
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="rounded-3xl">
                 <DialogHeader>
                   <DialogTitle>{selectedDiscount ? "Редактировать скидку" : "Новая скидка"}</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleDiscountSubmit} className="space-y-4">
                   <div>
                     <Label htmlFor="name">Название</Label>
-                    <Input id="name" name="name" defaultValue={selectedDiscount?.name} required />
+                    <Input id="name" name="name" defaultValue={selectedDiscount?.name} required className="rounded-xl" />
                   </div>
                   <div>
                     <Label htmlFor="description">Описание</Label>
-                    <Input id="description" name="description" defaultValue={selectedDiscount?.description} />
+                    <Input id="description" name="description" defaultValue={selectedDiscount?.description} className="rounded-xl" />
                   </div>
                   <div>
                     <Label htmlFor="type">Тип скидки</Label>
                     <Select name="type" defaultValue={selectedDiscount?.type || "percentage"} required>
-                      <SelectTrigger>
+                      <SelectTrigger className="rounded-xl">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -572,15 +430,13 @@ export default function Finance() {
                     </Select>
                   </div>
                   <div>
-                    <Label htmlFor="value">
-                      {selectedDiscount?.type === "fixed" || document.querySelector('[name="type"]')?.getAttribute('value') === 'fixed' ? "Сумма (₸)" : "Процент (%)"}
-                    </Label>
-                    <Input id="value" name="value" type="number" step="0.01" defaultValue={selectedDiscount?.value} required />
+                    <Label htmlFor="value">Значение</Label>
+                    <Input id="value" name="value" type="number" step="0.01" defaultValue={selectedDiscount?.value} required className="rounded-xl" />
                   </div>
                   <div>
                     <Label htmlFor="isActive">Активна</Label>
                     <Select name="isActive" defaultValue={selectedDiscount?.isActive ? "true" : "false"} required>
-                      <SelectTrigger>
+                      <SelectTrigger className="rounded-xl">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -589,91 +445,84 @@ export default function Finance() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button type="submit" className="w-full">{selectedDiscount ? "Сохранить" : "Создать"}</Button>
+                  <Button type="submit" className="w-full rounded-xl">{selectedDiscount ? "Сохранить" : "Создать"}</Button>
                 </form>
               </DialogContent>
             </Dialog>
           </div>
 
-          {discountsLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          {discounts.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-30" />
+              <p>Нет скидок</p>
             </div>
-          ) : discounts.length === 0 ? (
-            <Card>
-              <CardContent className="py-8">
-                <p className="text-center text-muted-foreground">Нет скидок</p>
-              </CardContent>
-            </Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {discounts.map(discount => (
-                <Card key={discount.id} className="cursor-pointer hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <CardTitle>{discount.name}</CardTitle>
-                      <Badge variant={discount.isActive ? "default" : "secondary"}>
-                        {discount.isActive ? "Активна" : "Неактивна"}
-                      </Badge>
+                <div 
+                  key={discount.id} 
+                  className="p-5 rounded-3xl bg-gradient-to-br from-violet-50 to-purple-100 dark:from-violet-950 dark:to-purple-900 transition-all hover:scale-[1.02]"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="font-semibold text-violet-900 dark:text-violet-100">{discount.name}</span>
+                    <Badge className={`rounded-lg ${discount.isActive ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-600"}`}>
+                      {discount.isActive ? "Активна" : "Неактивна"}
+                    </Badge>
+                  </div>
+                  <div className="text-3xl font-bold text-violet-600 dark:text-violet-400">
+                    {discount.type === "percentage" ? `${discount.value}%` : `${discount.value.toLocaleString()} ₸`}
+                  </div>
+                  <div className="text-xs text-violet-600/70 dark:text-violet-400/70 mt-1">
+                    {discount.type === "percentage" ? "Процентная" : "Фиксированная"}
+                  </div>
+                  {discount.description && (
+                    <div className="text-sm text-violet-700/80 dark:text-violet-300/80 mt-3">
+                      {discount.description}
                     </div>
-                    <p className="text-sm text-muted-foreground">{discount.description}</p>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-2xl font-bold">
-                          {discount.type === "percentage" 
-                            ? `${discount.value}%` 
-                            : `${discount.value.toLocaleString()} ₸`}
-                        </div>
-                        <div className="text-sm text-muted-foreground mt-1">
-                          {discount.type === "percentage" ? "Процентная скидка" : "Фиксированная сумма"}
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedDiscount(discount);
-                            setIsDiscountDialogOpen(true);
-                          }}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            if (confirm("Вы уверены, что хотите удалить эту скидку?")) {
-                              deleteDiscount.mutate(discount.id);
-                            }
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                  )}
+                  <div className="flex gap-2 mt-4">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="rounded-xl"
+                      onClick={() => {
+                        setSelectedDiscount(discount);
+                        setIsDiscountDialogOpen(true);
+                      }}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="rounded-xl text-rose-600 hover:text-rose-700"
+                      onClick={() => {
+                        if (confirm("Удалить эту скидку?")) {
+                          deleteDiscount.mutate(discount.id);
+                        }
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
               ))}
             </div>
           )}
         </TabsContent>
 
         {/* Debts Tab */}
-        <TabsContent value="debts" className="space-y-4">
+        <TabsContent value="debts" className="space-y-4 mt-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <h2 className="text-xl font-semibold">Долги</h2>
             <Dialog open={isDebtDialogOpen} onOpenChange={(open) => { setIsDebtDialogOpen(open); if (!open) setSelectedDebt(null); }}>
               <DialogTrigger asChild>
-                <Button size="sm" className="sm:size-default">
-                  <Plus className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Добавить долг</span>
-                  <span className="sm:hidden">Добавить</span>
+                <Button className="rounded-xl">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Добавить долг
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="rounded-3xl">
                 <DialogHeader>
                   <DialogTitle>{selectedDebt ? "Редактировать долг" : "Новый долг"}</DialogTitle>
                 </DialogHeader>
@@ -681,7 +530,7 @@ export default function Finance() {
                   <div>
                     <Label htmlFor="debt-studentId">Студент</Label>
                     <Select name="studentId" defaultValue={selectedDebt?.studentId} required>
-                      <SelectTrigger>
+                      <SelectTrigger className="rounded-xl">
                         <SelectValue placeholder="Выберите студента" />
                       </SelectTrigger>
                       <SelectContent>
@@ -695,16 +544,16 @@ export default function Finance() {
                   </div>
                   <div>
                     <Label htmlFor="debt-amount">Сумма (₸)</Label>
-                    <Input id="debt-amount" name="amount" type="number" step="0.01" defaultValue={selectedDebt?.amount} required />
+                    <Input id="debt-amount" name="amount" type="number" step="0.01" defaultValue={selectedDebt?.amount} required className="rounded-xl" />
                   </div>
                   <div>
                     <Label htmlFor="dueDate">Срок погашения</Label>
-                    <Input id="dueDate" name="dueDate" type="date" defaultValue={selectedDebt?.dueDate?.split('T')[0]} />
+                    <Input id="dueDate" name="dueDate" type="date" defaultValue={selectedDebt?.dueDate?.split('T')[0]} className="rounded-xl" />
                   </div>
                   <div>
                     <Label htmlFor="debt-status">Статус</Label>
                     <Select name="status" defaultValue={selectedDebt?.status || "pending"} required>
-                      <SelectTrigger>
+                      <SelectTrigger className="rounded-xl">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -715,103 +564,63 @@ export default function Finance() {
                   </div>
                   <div>
                     <Label htmlFor="notes">Примечания</Label>
-                    <Input id="notes" name="notes" defaultValue={selectedDebt?.notes} />
+                    <Input id="notes" name="notes" defaultValue={selectedDebt?.notes} className="rounded-xl" />
                   </div>
-                  <Button type="submit" className="w-full">{selectedDebt ? "Сохранить" : "Создать"}</Button>
+                  <Button type="submit" className="w-full rounded-xl">{selectedDebt ? "Сохранить" : "Создать"}</Button>
                 </form>
               </DialogContent>
             </Dialog>
           </div>
 
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Студент</TableHead>
-                    <TableHead>Сумма</TableHead>
-                    <TableHead>Срок погашения</TableHead>
-                    <TableHead>Статус</TableHead>
-                    <TableHead>Примечания</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedDebts.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center text-muted-foreground">
-                          Нет долгов
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                    paginatedDebts.map(debt => (
-                      <TableRow key={debt.id} className="cursor-pointer hover:bg-muted/50" onClick={() => { setSelectedDebt(debt); setIsDebtDialogOpen(true); }}>
-                        <TableCell>{getStudentName(debt.studentId)}</TableCell>
-                        <TableCell className="font-medium text-orange-600">{debt.amount.toLocaleString()} ₸</TableCell>
-                        <TableCell>{debt.dueDate ? moment(debt.dueDate).format("DD.MM.YYYY") : "—"}</TableCell>
-                        <TableCell>
-                          <Badge variant={debt.status === "paid" ? "default" : "destructive"}>
-                            {debt.status === "paid" ? "Оплачен" : "Ожидает оплаты"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{debt.notes}</TableCell>
-                      </TableRow>
-                    ))
+          {debts.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-30" />
+              <p>Нет долгов</p>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {debts.map(debt => (
+                <div
+                  key={debt.id}
+                  className={`p-4 rounded-2xl transition-all hover:scale-[1.02] cursor-pointer ${
+                    debt.status === "paid" 
+                      ? "bg-gradient-to-br from-emerald-50 to-green-100 dark:from-emerald-950 dark:to-green-900" 
+                      : "bg-gradient-to-br from-amber-50 to-orange-100 dark:from-amber-950 dark:to-orange-900"
+                  }`}
+                  onClick={() => { setSelectedDebt(debt); setIsDebtDialogOpen(true); }}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                      {getStudentName(debt.studentId)}
+                    </span>
+                    <Badge className={`rounded-lg ${
+                      debt.status === "paid" 
+                        ? "bg-emerald-100 text-emerald-700" 
+                        : "bg-amber-100 text-amber-700"
+                    }`}>
+                      {debt.status === "paid" ? "Оплачен" : "Ожидает"}
+                    </Badge>
+                  </div>
+                  <div className={`text-2xl font-bold ${
+                    debt.status === "paid" 
+                      ? "text-emerald-600 dark:text-emerald-400" 
+                      : "text-amber-600 dark:text-amber-400"
+                  }`}>
+                    {debt.amount.toLocaleString()} ₸
+                  </div>
+                  {debt.dueDate && (
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                      Срок: {moment(debt.dueDate).format("D MMM YYYY")}
+                    </div>
                   )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-
-          {/* Pagination for Debts */}
-          {totalPagesDebts > 1 && (
-            <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious 
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      if (currentPageDebts > 1) setCurrentPageDebts(currentPageDebts - 1);
-                    }}
-                    className={currentPageDebts === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                  />
-                </PaginationItem>
-                {generatePageNumbers(currentPageDebts, totalPagesDebts).map((p, idx) => {
-                  if (p === 'ellipsis') {
-                    return (
-                      <PaginationItem key={`ellipsis-${idx}`}>
-                        <PaginationEllipsis />
-                      </PaginationItem>
-                    );
-                  }
-                  return (
-                    <PaginationItem key={p}>
-                      <PaginationLink
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setCurrentPageDebts(p);
-                        }}
-                        isActive={currentPageDebts === p}
-                        className="cursor-pointer"
-                      >
-                        {p}
-                      </PaginationLink>
-                    </PaginationItem>
-                  );
-                })}
-                <PaginationItem>
-                  <PaginationNext
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      if (currentPageDebts < totalPagesDebts) setCurrentPageDebts(currentPageDebts + 1);
-                    }}
-                    className={currentPageDebts === totalPagesDebts ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
+                  {debt.notes && (
+                    <div className="text-xs text-gray-400 mt-1 truncate">
+                      {debt.notes}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
         </TabsContent>
       </Tabs>
@@ -830,4 +639,3 @@ export default function Finance() {
     </div>
   );
 }
-

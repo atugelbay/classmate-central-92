@@ -49,7 +49,6 @@ import { Label } from "@/components/ui/label";
 import { 
   ArrowLeft, 
   User, 
-  DollarSign, 
   Calendar, 
   Bell, 
   Loader2,
@@ -67,6 +66,9 @@ import {
   TrendingUp,
   GraduationCap,
   Trash2,
+  Percent,
+  Wallet,
+  CalendarClock,
 } from "lucide-react";
 import { Discount, PaymentTransaction } from "@/types";
 import moment from "moment";
@@ -292,57 +294,44 @@ export default function StudentDetail() {
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Hero Header */}
-      <div className="relative bg-card border-b shadow-sm">
-        <div className="relative px-6 py-8">
-          <div className="max-w-7xl mx-auto">
-            <div className="flex items-start justify-between mb-6">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => navigate("/students")}
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div className="flex items-center gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="h-9"
-                  onClick={() => setIsEditStudentDialogOpen(true)}
-                >
-                  <Edit className="h-4 w-4 mr-2" />
-                  Править
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="h-9"
-                  onClick={() => setIsReportsDialogOpen(true)}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Отчеты
-                </Button>
-              </div>
-            </div>
-            
-            <div className="flex items-start gap-6">
-              <div className="relative group">
-                <div className="h-24 w-24 rounded-full bg-primary/10 flex items-center justify-center border-4 border-primary/20 group-hover:scale-105 transition-transform duration-300">
-                  <User className="h-12 w-12 text-primary" />
+    <div className="space-y-6 animate-fade-in-up">
+      {/* Back Button */}
+      <Button 
+        variant="ghost" 
+        size="sm" 
+        onClick={() => navigate("/students")} 
+        className="rounded-xl hover:bg-muted -mb-2"
+      >
+        <ArrowLeft className="h-4 w-4 mr-2" />
+        Назад к ученикам
+      </Button>
+
+      {/* Bento Grid Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
+        
+        {/* Hero Card - Large */}
+        <div className="lg:col-span-8 p-6 rounded-3xl bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-100 dark:from-violet-950 dark:via-purple-950 dark:to-indigo-900 relative overflow-hidden shadow-soft">
+          <div className="absolute top-[-20%] right-[-10%] w-96 h-96 bg-violet-200/30 dark:bg-violet-800/20 rounded-full blur-3xl" />
+          <div className="absolute bottom-[-30%] left-[-5%] w-72 h-72 bg-purple-200/30 dark:bg-purple-800/20 rounded-full blur-3xl" />
+          
+          <div className="relative">
+            <div className="flex items-start gap-4 mb-6">
+              <div className="flex items-center gap-4 min-w-0 flex-1">
+                <div className="relative group">
+                  <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-soft-lg shrink-0 group-hover:scale-105 transition-transform duration-300">
+                    <User className="h-10 w-10 text-white" />
+                  </div>
+                  <div className={`absolute -bottom-1 -right-1 h-5 w-5 rounded-lg border-3 border-white ${statusColors[displayStatus]}`}></div>
                 </div>
-                <div className={`absolute -bottom-1 -right-1 h-6 w-6 rounded-full border-4 border-white ${statusColors[displayStatus]}`}></div>
-              </div>
-              
-              <div className="flex-1 min-w-0">
-                <h1 className="text-2xl sm:text-3xl font-bold mb-2 break-words">{student.name}</h1>
-                <div className="flex items-center gap-3 mb-4 flex-wrap">
-                  <Badge className={`${statusColors[displayStatus]} text-white border-0`}>
-                    {statusNames[displayStatus]}
-                  </Badge>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-3 mb-1 flex-wrap">
+                    <h1 className="text-2xl sm:text-3xl font-bold truncate">{student.name}</h1>
+                    <Badge className={`${statusColors[displayStatus]} text-white border-0`}>
+                      {statusNames[displayStatus]}
+                    </Badge>
+                  </div>
                   <Select value={selectedStatus} onValueChange={handleStatusChange}>
-                    <SelectTrigger className="w-[180px] h-8">
+                    <SelectTrigger className="w-[180px] h-8 bg-white/50 dark:bg-white/10 border-0">
                       <SelectValue placeholder="Изменить статус" />
                     </SelectTrigger>
                     <SelectContent>
@@ -353,25 +342,112 @@ export default function StudentDetail() {
                     </SelectContent>
                   </Select>
                 </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-muted-foreground">
-                  {student.phone && (
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4" />
-                      <span>{student.phone}</span>
-                    </div>
-                  )}
-                  {student.email && (
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4" />
-                      <span>{student.email}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2">
-                    <GraduationCap className="h-4 w-4" />
-                    <span>{studentGroups.length} {studentGroups.length === 1 ? "группа" : "групп"}</span>
-                  </div>
+              </div>
+            </div>
+            
+            {/* Contact Info Row */}
+            <div className="flex flex-wrap gap-4 mb-6 text-sm">
+              {student.phone && (
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                  <span>{student.phone}</span>
                 </div>
+              )}
+              {student.email && (
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                  <span>{student.email}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <GraduationCap className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                <span>{studentGroups.length} {studentGroups.length === 1 ? "группа" : "групп"}</span>
+              </div>
+            </div>
+            
+            {/* Action Buttons */}
+            <div className="flex flex-wrap gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setIsEditStudentDialogOpen(true)}
+                className="rounded-xl bg-white/70 dark:bg-white/10 border border-violet-200/50 dark:border-white/10 hover:bg-white hover:shadow-md hover:scale-[1.02] transition-all duration-200"
+              >
+                <Edit className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Править</span>
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setIsReportsDialogOpen(true)}
+                className="rounded-xl bg-white/70 dark:bg-white/10 border border-violet-200/50 dark:border-white/10 hover:bg-white hover:shadow-md hover:scale-[1.02] transition-all duration-200"
+              >
+                <Download className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Отчеты</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Balance Card - Side */}
+        <div className="lg:col-span-4 p-6 rounded-3xl bg-gradient-to-br from-emerald-50 via-green-50 to-teal-100 dark:from-emerald-950 dark:via-green-950 dark:to-teal-900 relative overflow-hidden shadow-soft">
+          <div className="absolute top-[-30%] right-[-20%] w-48 h-48 bg-emerald-200/40 dark:bg-emerald-800/20 rounded-full blur-3xl" />
+          
+          <div className="relative">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 shadow-soft">
+                <Wallet className="h-5 w-5 text-white" />
+              </div>
+              <span className="text-sm font-medium text-muted-foreground">Баланс</span>
+            </div>
+            
+            <div className={`text-4xl font-bold mb-1 ${(balance?.balance || 0) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+              {(balance?.balance || 0).toLocaleString()}
+              <span className="text-lg font-normal ml-1">₸</span>
+            </div>
+            
+            <div className="space-y-3 pt-4 border-t border-emerald-200/50 dark:border-emerald-700/50">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Посещаемость</span>
+                <span className="font-semibold">{attendanceStats.total > 0 ? Math.round((attendanceStats.attended / attendanceStats.total) * 100) : 0}%</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Занятий</span>
+                <span className="font-semibold">{attendanceStats.attended} из {attendanceStats.total}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Stats Cards Row - Only unique metrics */}
+        <div className="lg:col-span-6 p-6 rounded-3xl bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-100 dark:from-violet-950 dark:via-purple-950 dark:to-indigo-900 shadow-soft relative overflow-hidden">
+          <div className="absolute top-[-30%] right-[-20%] w-32 h-32 bg-violet-200/30 dark:bg-violet-800/20 rounded-full blur-3xl" />
+          <div className="relative flex items-center gap-4">
+            <div className="p-3 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-soft">
+              <BookOpen className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <span className="text-sm font-medium text-muted-foreground">Уроки</span>
+              <div className="text-3xl font-bold text-violet-600 dark:text-violet-400">
+                {totalLessonsRemaining} <span className="text-lg font-normal text-muted-foreground">из {totalLessonsInSubscriptions}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="lg:col-span-6 p-6 rounded-3xl bg-gradient-to-br from-slate-50 via-gray-50 to-zinc-100 dark:from-slate-950 dark:via-gray-950 dark:to-zinc-900 shadow-soft relative overflow-hidden">
+          <div className="absolute top-[-30%] right-[-20%] w-32 h-32 bg-slate-200/30 dark:bg-slate-800/20 rounded-full blur-3xl" />
+          <div className="relative flex items-center gap-4">
+            <div className="p-3 rounded-2xl bg-gradient-to-br from-slate-500 to-gray-600 shadow-soft">
+              <CalendarClock className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <span className="text-sm font-medium text-muted-foreground">Следующий урок</span>
+              <div className="text-2xl font-bold">
+                {nextLesson ? moment(nextLesson.start).format("DD MMM, HH:mm") : "—"}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {nextLesson ? "запланирован" : "нет уроков"}
               </div>
             </div>
           </div>
@@ -380,38 +456,34 @@ export default function StudentDetail() {
 
       {/* Notifications */}
       {notifications.filter((n) => !n.isRead).length > 0 && (
-        <div className="max-w-7xl mx-auto px-6 -mt-4">
-          <Card className="border-2 border-yellow-400 dark:border-yellow-500 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-950/30 dark:to-orange-950/30 shadow-lg">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200">
-                <Bell className="h-5 w-5" />
-                Важные уведомления ({notifications.filter((n) => !n.isRead).length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {notifications
-                .filter((n) => !n.isRead)
-                .map((notification) => (
-                  <div
-                    key={notification.id}
-                    className="flex items-start justify-between gap-4 cursor-pointer hover:bg-yellow-100/50 dark:hover:bg-yellow-900/30 p-3 rounded-lg transition-colors"
-                    onClick={() => handleNotificationClick(notification.id)}
-                  >
-                    <p className="text-sm text-yellow-900 dark:text-yellow-100">{notification.message}</p>
-                    <Badge variant="outline" className="text-xs shrink-0 border-yellow-600 dark:border-yellow-500 text-yellow-700 dark:text-yellow-300">
-                      {moment(notification.createdAt).fromNow()}
-                    </Badge>
-                  </div>
-                ))}
-            </CardContent>
-          </Card>
+        <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-100 dark:from-amber-950 dark:to-orange-900 border border-amber-200/50 dark:border-amber-700/50">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600">
+              <Bell className="h-4 w-4 text-white" />
+            </div>
+            <span className="font-semibold">Важные уведомления ({notifications.filter((n) => !n.isRead).length})</span>
+          </div>
+          <div className="space-y-2">
+            {notifications
+              .filter((n) => !n.isRead)
+              .map((notification) => (
+                <div
+                  key={notification.id}
+                  className="flex items-start justify-between gap-4 cursor-pointer hover:bg-white/50 dark:hover:bg-white/10 p-3 rounded-xl transition-colors"
+                  onClick={() => handleNotificationClick(notification.id)}
+                >
+                  <p className="text-sm">{notification.message}</p>
+                  <Badge variant="outline" className="text-xs shrink-0">
+                    {moment(notification.createdAt).fromNow()}
+                  </Badge>
+                </div>
+              ))}
+          </div>
         </div>
       )}
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-6 space-y-6">
-        {/* Quick Stats */}
-        <StudentStats stats={statsData} />
+      <div className="space-y-6">
 
         {/* Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -419,7 +491,7 @@ export default function StudentDetail() {
           <div className="lg:col-span-2 space-y-6">
             {/* Calendar */}
             {id && subscriptions.length > 0 && (
-              <Card className="shadow-lg border-2 hover:shadow-xl transition-shadow duration-300">
+              <div className="rounded-3xl border border-border/50 bg-white dark:bg-gray-900 shadow-soft overflow-hidden">
                 <StudentLessonCalendar
                   studentId={id}
                   subscriptions={subscriptions}
@@ -427,190 +499,192 @@ export default function StudentDetail() {
                   attendances={studentAttendances}
                   freezes={allFreezes}
                 />
-              </Card>
+              </div>
             )}
 
             {/* Groups */}
-            <Card className="shadow-lg border-2 hover:shadow-xl transition-shadow duration-300">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5 text-primary" />
-                    Группы
-                  </CardTitle>
-                  <Select
-                    onValueChange={async (groupId) => {
-                      if (!id || !groupId) return;
-                      const group = groups.find((g) => g.id === groupId);
-                      if (!group) return;
-                      
-                      if (!group.studentIds.includes(id)) {
-                        await updateGroup.mutateAsync({
-                          id: groupId,
-                          data: {
-                            ...group,
-                            studentIds: [...group.studentIds, id],
-                          },
-                        });
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="w-[200px]">
-                      <SelectValue placeholder="Добавить в группу" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {groups
-                        .filter((g) => !studentGroups.find((sg) => sg.id === g.id))
-                        .map((group) => (
-                          <SelectItem key={group.id} value={group.id}>
-                            {group.name} - {group.subject}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {studentGroups.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">Студент не состоит в группах</p>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {studentGroups.map((group) => {
-                      const groupLessons = studentLessons.filter(
-                        (l) => l.groupId === group.id && l.status !== "cancelled"
-                      );
-                      
-                      const scheduleMap = new Map<number, string>();
-                      groupLessons.forEach((lesson) => {
-                        const dayOfWeek = moment(lesson.start).day();
-                        const timeKey = `${moment(lesson.start).format("HH:mm")} - ${moment(lesson.end).format("HH:mm")}`;
-                        if (!scheduleMap.has(dayOfWeek)) {
-                          scheduleMap.set(dayOfWeek, timeKey);
-                        }
-                      });
-
-                      const weekdayNames = ["ВС", "ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ"];
-                      const sortedDays = Array.from(scheduleMap.keys()).sort((a, b) => {
-                        const aAdj = a === 0 ? 7 : a;
-                        const bAdj = b === 0 ? 7 : b;
-                        return aAdj - bAdj;
-                      });
-                      const scheduleText = sortedDays.map(day => weekdayNames[day]).join(" ");
-                      const scheduleTime = scheduleMap.get(sortedDays[0]) || "";
-
-                      return (
-                        <div key={group.id} className="p-4 border-2 rounded-lg hover:shadow-md transition-shadow bg-card">
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <h4 className="font-semibold">{group.name}</h4>
-                                <Badge variant="outline">{group.subject}</Badge>
-                              </div>
-                              {scheduleText && scheduleTime && (
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                  <Clock className="h-4 w-4" />
-                                  <span className="font-medium">{scheduleText}</span>
-                                  <span>{scheduleTime}</span>
-                                </div>
-                              )}
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                              onClick={async () => {
-                                if (!id) return;
-                                await updateGroup.mutateAsync({
-                                  id: group.id,
-                                  data: {
-                                    ...group,
-                                    studentIds: group.studentIds.filter((sid) => sid !== id),
-                                  },
-                                });
-                              }}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    })}
+            <div className="p-6 rounded-3xl border border-border/50 bg-white dark:bg-gray-900 shadow-soft">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600">
+                    <Users className="h-5 w-5 text-white" />
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                  <h3 className="text-lg font-semibold">Группы</h3>
+                </div>
+                <Select
+                  onValueChange={async (groupId) => {
+                    if (!id || !groupId) return;
+                    const group = groups.find((g) => g.id === groupId);
+                    if (!group) return;
+                    
+                    if (!group.studentIds.includes(id)) {
+                      await updateGroup.mutateAsync({
+                        id: groupId,
+                        data: {
+                          ...group,
+                          studentIds: [...group.studentIds, id],
+                        },
+                      });
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Добавить в группу" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {groups
+                      .filter((g) => !studentGroups.find((sg) => sg.id === g.id))
+                      .map((group) => (
+                        <SelectItem key={group.id} value={group.id}>
+                          {group.name} - {group.subject}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {studentGroups.length === 0 ? (
+                <div className="text-center text-muted-foreground py-12 rounded-2xl bg-muted/30">
+                  <Users className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
+                  <p>Студент не состоит в группах</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {studentGroups.map((group) => {
+                    const groupLessons = studentLessons.filter(
+                      (l) => l.groupId === group.id && l.status !== "cancelled"
+                    );
+                    
+                    const scheduleMap = new Map<number, string>();
+                    groupLessons.forEach((lesson) => {
+                      const dayOfWeek = moment(lesson.start).day();
+                      const timeKey = `${moment(lesson.start).format("HH:mm")} - ${moment(lesson.end).format("HH:mm")}`;
+                      if (!scheduleMap.has(dayOfWeek)) {
+                        scheduleMap.set(dayOfWeek, timeKey);
+                      }
+                    });
+
+                    const weekdayNames = ["ВС", "ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ"];
+                    const sortedDays = Array.from(scheduleMap.keys()).sort((a, b) => {
+                      const aAdj = a === 0 ? 7 : a;
+                      const bAdj = b === 0 ? 7 : b;
+                      return aAdj - bAdj;
+                    });
+                    const scheduleText = sortedDays.map(day => weekdayNames[day]).join(" ");
+                    const scheduleTime = scheduleMap.get(sortedDays[0]) || "";
+
+                    return (
+                      <div key={group.id} className="p-4 rounded-2xl bg-gradient-to-br from-sky-50 to-blue-100 dark:from-sky-950 dark:to-blue-900 hover:shadow-soft transition-all">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <h4 className="font-semibold">{group.name}</h4>
+                              <Badge className="bg-white/70 dark:bg-white/10 text-foreground border-0">{group.subject}</Badge>
+                            </div>
+                            {scheduleText && scheduleTime && (
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Clock className="h-4 w-4" />
+                                <span className="font-medium">{scheduleText}</span>
+                                <span>{scheduleTime}</span>
+                              </div>
+                            )}
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 rounded-xl hover:bg-white/50"
+                            onClick={async () => {
+                              if (!id) return;
+                              await updateGroup.mutateAsync({
+                                id: group.id,
+                                data: {
+                                  ...group,
+                                  studentIds: group.studentIds.filter((sid) => sid !== id),
+                                },
+                              });
+                            }}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
             {/* Balance Chart */}
-            <Card className="shadow-lg border-2 hover:shadow-xl transition-shadow duration-300">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-primary" />
-                    История баланса
-                  </CardTitle>
-                  <Button 
-                    size="sm" 
-                    onClick={() => setIsPaymentDialogOpen(true)}
-                    className="h-9"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Добавить платеж
-                  </Button>
+            <div className="p-6 rounded-3xl border border-border/50 bg-white dark:bg-gray-900 shadow-soft">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600">
+                    <TrendingUp className="h-5 w-5 text-white" />
+                  </div>
+                  <h3 className="text-lg font-semibold">История баланса</h3>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <BalanceChart transactions={transactions} currentBalance={balance?.balance || 0} />
-              </CardContent>
-            </Card>
+                <Button 
+                  size="sm" 
+                  onClick={() => setIsPaymentDialogOpen(true)}
+                  className="rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Добавить платеж
+                </Button>
+              </div>
+              <BalanceChart transactions={transactions} currentBalance={balance?.balance || 0} />
+            </div>
 
             {/* Activity Timeline */}
-            <Card className="shadow-lg border-2 hover:shadow-xl transition-shadow duration-300">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-primary" />
-                  История активности
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ActivityTimeline items={timelineItems} maxItems={15} />
-              </CardContent>
-            </Card>
+            <div className="p-6 rounded-3xl border border-border/50 bg-white dark:bg-gray-900 shadow-soft">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600">
+                  <Clock className="h-5 w-5 text-white" />
+                </div>
+                <h3 className="text-lg font-semibold">История активности</h3>
+              </div>
+              <ActivityTimeline items={timelineItems} maxItems={15} />
+            </div>
           </div>
 
           {/* Right Column - 1 col */}
           <div className="space-y-6">
             {/* Subscriptions with Progress */}
-            <Card className="shadow-lg border-2 hover:shadow-xl transition-shadow duration-300">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <BookOpen className="h-4 w-4" />
-                    Абонементы
-                  </CardTitle>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="h-8 px-3 text-xs" 
-                    onClick={() => setIsAssignSubModalOpen(true)}
-                  >
-                    <Plus className="h-3 w-3 mr-1" />
-                    Добавить
-                  </Button>
+            <div className="p-5 rounded-3xl border border-border/50 bg-white dark:bg-gray-900 shadow-soft">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600">
+                    <BookOpen className="h-4 w-4 text-white" />
+                  </div>
+                  <span className="font-semibold">Абонементы</span>
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-6">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-8 px-3 text-xs rounded-xl hover:bg-muted" 
+                  onClick={() => setIsAssignSubModalOpen(true)}
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Добавить
+                </Button>
+              </div>
+              
+              <div className="space-y-4">
                 {subscriptions.length === 0 ? (
-                  <p className="text-xs text-muted-foreground text-center py-8">Нет абонементов</p>
+                  <div className="text-center text-muted-foreground py-8 rounded-2xl bg-muted/30">
+                    <BookOpen className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
+                    <p className="text-sm">Нет абонементов</p>
+                  </div>
                 ) : (
                   subscriptions.map((sub) => (
-                    <div key={sub.id} className="space-y-4">
+                    <div key={sub.id} className="p-4 rounded-2xl bg-gradient-to-br from-violet-50 to-purple-100 dark:from-violet-950 dark:to-purple-900">
                       <SubscriptionProgress
                         lessonsUsed={sub.totalLessons - (sub.lessonsRemaining || 0)}
                         totalLessons={sub.totalLessons}
                         subscriptionName={sub.subscriptionTypeName || "Индивидуальный"}
                         size="sm"
                       />
-                      <div className="space-y-2 pt-2 border-t">
+                      <div className="space-y-2 pt-3 mt-3 border-t border-violet-200/50 dark:border-violet-700/50">
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-muted-foreground">Стоимость</span>
                           {sub.originalPrice && sub.originalPrice > sub.totalPrice && sub.discountAmount ? (
@@ -634,15 +708,15 @@ export default function StudentDetail() {
                           </span>
                         </div>
                         <div className="flex items-center gap-2 pt-2">
-                          <Badge variant={sub.status === "active" ? "default" : "secondary"} className="text-xs">
+                          <Badge className={sub.status === "active" ? "bg-gradient-to-r from-emerald-500 to-green-600 border-0 text-xs" : "text-xs"}>
                             {sub.status === "active" ? "Активен" : "Неактивен"}
                           </Badge>
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1 ml-auto">
                             {sub.status === "active" && (
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-7 px-2 text-xs"
+                                className="h-7 px-2 text-xs rounded-lg"
                                 onClick={() => {
                                   setSelectedSubscriptionForFreeze(sub);
                                   setIsFreezeModalOpen(true);
@@ -655,15 +729,14 @@ export default function StudentDetail() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                              className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 rounded-lg"
                               onClick={async () => {
                                 if (window.confirm("Вы уверены, что хотите удалить этот абонемент?")) {
                                   await deleteSubscription.mutateAsync(sub.id);
                                 }
                               }}
                             >
-                              <Trash2 className="h-3 w-3 mr-1" />
-                              Удалить
+                              <Trash2 className="h-3 w-3" />
                             </Button>
                           </div>
                         </div>
@@ -671,69 +744,80 @@ export default function StudentDetail() {
                     </div>
                   ))
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Discounts */}
-            <Card className="shadow-lg border-2 hover:shadow-xl transition-shadow duration-300">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm">Скидки</CardTitle>
-                  <StudentDiscountCreateDialog studentId={id || ""} onApplied={() => { }} />
-                </div>
-              </CardHeader>
-              <CardContent>
-                {studentDiscounts.length === 0 ? (
-                  <p className="text-xs text-muted-foreground text-center py-4">(не задано)</p>
-                ) : (
-                  <div className="space-y-2">
-                    {studentDiscounts.map((sd) => {
-                      const discount = discounts.find((d) => d.id === sd.discountId);
-                      return discount ? (
-                        <div key={sd.id} className="flex items-center justify-between p-3 border-2 rounded-lg text-sm bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 hover:shadow-md transition-shadow">
-                          <div>
-                            <div className="font-medium">{discount.name}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {discount.type === "percentage" ? `${discount.value}%` : `${discount.value} ₸`}
-                            </div>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 w-7 p-0"
-                            onClick={() => {
-                              if (id) {
-                                removeDiscount.mutate({ studentId: id, discountId: discount.id });
-                              }
-                            }}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ) : null;
-                    })}
+            <div className="p-5 rounded-3xl border border-border/50 bg-white dark:bg-gray-900 shadow-soft">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600">
+                    <Percent className="h-4 w-4 text-white" />
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                  <span className="font-semibold">Скидки</span>
+                </div>
+                <StudentDiscountCreateDialog studentId={id || ""} onApplied={() => { }} />
+              </div>
+              
+              {studentDiscounts.length === 0 ? (
+                <div className="text-center text-muted-foreground py-6 rounded-2xl bg-muted/30">
+                  <p className="text-sm">(не задано)</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {studentDiscounts.map((sd) => {
+                    const discount = discounts.find((d) => d.id === sd.discountId);
+                    return discount ? (
+                      <div key={sd.id} className="flex items-center justify-between p-3 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-100 dark:from-amber-950 dark:to-orange-900 hover:shadow-soft transition-all">
+                        <div>
+                          <div className="font-medium text-sm">{discount.name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {discount.type === "percentage" ? `${discount.value}%` : `${discount.value} ₸`}
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 rounded-lg hover:bg-white/50"
+                          onClick={() => {
+                            if (id) {
+                              removeDiscount.mutate({ studentId: id, discountId: discount.id });
+                            }
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ) : null;
+                  })}
+                </div>
+              )}
+            </div>
 
             {/* Notes */}
-            <Card className="shadow-lg border-2 hover:shadow-xl transition-shadow duration-300">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <StickyNote className="h-4 w-4" />
-                  Заметки
-                </CardTitle>
+            <div className="p-5 rounded-3xl border border-border/50 bg-white dark:bg-gray-900 shadow-soft">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-gradient-to-br from-sky-500 to-blue-600">
+                    <StickyNote className="h-4 w-4 text-white" />
+                  </div>
+                  <span className="font-semibold">Заметки</span>
+                </div>
                 <Dialog open={isNoteDialogOpen} onOpenChange={setIsNoteDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 px-3 text-xs">
+                    <Button variant="ghost" size="sm" className="h-8 px-3 text-xs rounded-xl hover:bg-muted">
                       <Plus className="h-3 w-3 mr-1" />
                       Добавить
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Новая заметка</DialogTitle>
+                      <DialogTitle className="flex items-center gap-3">
+                        <div className="p-2 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600">
+                          <StickyNote className="h-5 w-5 text-white" />
+                        </div>
+                        Новая заметка
+                      </DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4">
                       <Textarea
@@ -741,29 +825,34 @@ export default function StudentDetail() {
                         value={newNote}
                         onChange={(e) => setNewNote(e.target.value)}
                         rows={4}
+                        className="rounded-xl"
                       />
-                      <Button onClick={handleAddNote} disabled={!newNote.trim()}>
+                      <Button onClick={handleAddNote} disabled={!newNote.trim()} className="rounded-xl">
                         Сохранить
                       </Button>
                     </div>
                   </DialogContent>
                 </Dialog>
-              </CardHeader>
-              <CardContent className="space-y-3 max-h-[300px] overflow-y-auto">
+              </div>
+              
+              <div className="space-y-3 max-h-[300px] overflow-y-auto">
                 {notes.length === 0 ? (
-                  <p className="text-xs text-center text-muted-foreground py-4">Нет заметок</p>
+                  <div className="text-center text-muted-foreground py-6 rounded-2xl bg-muted/30">
+                    <StickyNote className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
+                    <p className="text-sm">Нет заметок</p>
+                  </div>
                 ) : (
                   notes.map((note) => (
-                    <div key={note.id} className="border-l-4 border-primary pl-3 py-2 bg-muted rounded-r">
+                    <div key={note.id} className="p-3 rounded-2xl bg-gradient-to-br from-sky-50 to-blue-100 dark:from-sky-950 dark:to-blue-900">
                       <p className="text-sm">{note.note}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="text-xs text-muted-foreground mt-2">
                         {moment(note.createdAt).format("DD.MM.YYYY HH:mm")}
                       </p>
                     </div>
                   ))
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         </div>
       </div>

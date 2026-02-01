@@ -281,7 +281,7 @@ export default function Teachers() {
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-lg font-semibold text-primary">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 to-blue-600 text-lg font-bold text-white shadow-soft">
                       {teacher.name.charAt(0)}
                     </div>
                     <div>
@@ -309,34 +309,34 @@ export default function Teachers() {
                     {teacher.phone}
                   </div>
                   
-                  <div className="mt-4 rounded-lg bg-muted p-3">
-                    <p className="text-sm font-medium">Загруженность на неделю</p>
-                    <p className="text-2xl font-bold text-primary">
+                  <div className="mt-4 rounded-2xl bg-gradient-to-br from-sky-50 to-blue-100 dark:from-sky-950 dark:to-blue-900 p-4">
+                    <p className="text-sm font-medium text-sky-700 dark:text-sky-300">Загруженность на неделю</p>
+                    <p className="text-2xl font-bold text-sky-900 dark:text-sky-100">
                       {workloadHours}
-                      <span className="text-sm font-normal text-muted-foreground">
+                      <span className="text-sm font-normal text-sky-600 dark:text-sky-400">
                         {" "}
                         ч
                       </span>
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="text-xs text-sky-600 dark:text-sky-400 mt-1">
                       {teacherLessons.length} {teacherLessons.length === 1 ? 'урок' : teacherLessons.length < 5 ? 'урока' : 'уроков'}
                     </p>
                   </div>
                   
                   {/* Next Lesson */}
                   {nextLesson && (
-                    <div className="mt-2 rounded-lg bg-green-50 border border-green-200 p-3">
-                      <p className="text-xs font-medium text-green-900 mb-1">Ближайший урок:</p>
-                      <p className="text-sm text-green-800">
+                    <div className="mt-2 rounded-2xl bg-gradient-to-br from-emerald-50 to-green-100 dark:from-emerald-950 dark:to-green-900 p-3">
+                      <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300 mb-1">Ближайший урок:</p>
+                      <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
                         {moment(nextLesson.start).format("DD MMM, HH:mm")}
                       </p>
                       {nextLessonGroup && (
-                        <p className="text-xs text-green-700 mt-1">
+                        <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
                           {nextLessonGroup.name}
                         </p>
                       )}
                       {!nextLessonGroup && (
-                        <p className="text-xs text-green-700 mt-1">
+                        <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
                           Индивидуальное
                         </p>
                       )}
@@ -347,7 +347,7 @@ export default function Teachers() {
                     <Button
                       variant="default"
                       size="sm"
-                      className="w-full"
+                      className="w-full rounded-xl"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleCreateLesson(teacher);

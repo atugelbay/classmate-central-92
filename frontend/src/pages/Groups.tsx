@@ -792,29 +792,38 @@ export default function Groups() {
 
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-medium hidden sm:inline">Статус:</span>
-          <Button
-            variant={activityFilter === "active" ? "default" : "outline"}
-            size="sm"
+          <button
             onClick={() => setActivityFilter("active")}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+              activityFilter === "active"
+                ? "bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-md"
+                : "bg-muted/50 hover:bg-muted"
+            }`}
           >
             <span className="hidden sm:inline">Активные ({groups.filter(g => getGroupActivity(g).isActive).length})</span>
             <span className="sm:hidden">Активн. ({groups.filter(g => getGroupActivity(g).isActive).length})</span>
-          </Button>
-          <Button
-            variant={activityFilter === "inactive" ? "default" : "outline"}
-            size="sm"
+          </button>
+          <button
             onClick={() => setActivityFilter("inactive")}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+              activityFilter === "inactive"
+                ? "bg-gradient-to-r from-gray-500 to-gray-600 text-white shadow-md"
+                : "bg-muted/50 hover:bg-muted"
+            }`}
           >
             <span className="hidden sm:inline">Неактивные ({groups.filter(g => !getGroupActivity(g).isActive).length})</span>
             <span className="sm:hidden">Неакт. ({groups.filter(g => !getGroupActivity(g).isActive).length})</span>
-          </Button>
-          <Button
-            variant={activityFilter === "all" ? "default" : "outline"}
-            size="sm"
+          </button>
+          <button
             onClick={() => setActivityFilter("all")}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+              activityFilter === "all"
+                ? "bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-md"
+                : "bg-muted/50 hover:bg-muted"
+            }`}
           >
             Все ({groups.length})
-          </Button>
+          </button>
         </div>
       </div>
 
@@ -852,14 +861,14 @@ export default function Groups() {
                 <div className="space-y-3">
                   {/* Activity Summary */}
                   {activity.isActive && activity.nextLesson && (
-                    <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                      <p className="text-sm font-medium text-green-900 mb-1">
+                    <div className="p-3 rounded-2xl bg-gradient-to-br from-emerald-50 to-green-100 dark:from-emerald-950 dark:to-green-900">
+                      <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300 mb-1">
                         Следующее занятие:
                       </p>
-                      <p className="text-sm text-green-800">
+                      <p className="text-sm text-emerald-800 dark:text-emerald-200">
                         {formatDateRu(activity.nextLesson.start)}
                       </p>
-                      <p className="text-sm text-green-800">
+                      <p className="text-sm text-emerald-800 dark:text-emerald-200 font-semibold">
                         {formatTimeRu(activity.nextLesson.start)} - {formatTimeRu(activity.nextLesson.end)}
                       </p>
                     </div>
@@ -868,13 +877,13 @@ export default function Groups() {
                   {/* Stats */}
                   {activity.totalLessons > 0 && (
                     <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div className="p-2 bg-blue-50 rounded-lg">
-                        <p className="text-muted-foreground">Запланировано</p>
-                        <p className="font-semibold text-blue-900">{activity.upcomingLessons}</p>
+                      <div className="p-3 rounded-xl bg-gradient-to-br from-sky-50 to-blue-100 dark:from-sky-950 dark:to-blue-900">
+                        <p className="text-sky-600 dark:text-sky-400 text-xs">Запланировано</p>
+                        <p className="font-bold text-lg text-sky-900 dark:text-sky-100">{activity.upcomingLessons}</p>
                       </div>
-                      <div className="p-2 bg-gray-50 rounded-lg">
-                        <p className="text-muted-foreground">Проведено</p>
-                        <p className="font-semibold">{activity.completedLessons}</p>
+                      <div className="p-3 rounded-xl bg-gradient-to-br from-violet-50 to-purple-100 dark:from-violet-950 dark:to-purple-900">
+                        <p className="text-violet-600 dark:text-violet-400 text-xs">Проведено</p>
+                        <p className="font-bold text-lg text-violet-900 dark:text-violet-100">{activity.completedLessons}</p>
                       </div>
                     </div>
                   )}
@@ -922,7 +931,7 @@ export default function Groups() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="flex-1"
+                      className="flex-1 rounded-xl"
                       onClick={(e) => {
                         e.stopPropagation();
                         extendGroup.mutate(group.id);
@@ -939,7 +948,7 @@ export default function Groups() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="flex-1"
+                      className="flex-1 rounded-xl"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleEdit(group);
@@ -949,8 +958,9 @@ export default function Groups() {
                       Изменить
                     </Button>
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
+                      className="rounded-xl text-rose-500 hover:text-rose-600 hover:bg-rose-50"
                       onClick={(e) => {
                         e.stopPropagation();
                         deleteConfirm.open(group.id);

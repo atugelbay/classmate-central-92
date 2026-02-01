@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import moment from "moment";
 import "moment/dist/locale/ru";
 import { Room, Lesson, Teacher, Group, Student, StudentSubscription } from "@/types";
-import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Edit2, X, Clock, User, Users } from "lucide-react";
@@ -108,8 +107,9 @@ export default function RoomScheduleView({
     const startHour = startTime.hour() + startTime.minute() / 60;
     const endHour = endTime.hour() + endTime.minute() / 60;
     
-    const startOffset = ((startHour - 8) / 13) * 100; // 13 hours from 8 to 21
-    const height = ((endHour - startHour) / 13) * 100;
+    // 14 hours from 8:00 to 22:00 - extra hour at end for lessons starting at 21:00
+    const startOffset = ((startHour - 8) / 14) * 100;
+    const height = ((endHour - startHour) / 14) * 100;
     
     return { top: `${startOffset}%`, height: `${height}%` };
   };
@@ -554,45 +554,50 @@ export default function RoomScheduleView({
   return (
     <div 
       ref={containerRef}
-      className="relative isolate min-w-0 w-full p-2 sm:p-0" 
+      className="relative isolate w-full p-2 sm:p-4" 
       style={{ userSelect: (isDragging || draggingLesson || resizingLesson) ? 'none' : 'auto' }}
     >
-      <div className="overflow-x-hidden pb-4 w-full">
+      <div className="w-full">
         <div className="flex gap-1 sm:gap-2">
           {/* Time Column */}
-          <div className="flex-shrink-0 w-12 sm:w-16 sticky left-0 z-[5] bg-background">
-            <div className="h-10 border-b bg-background" /> {/* Header spacer */}
-            <div className="relative bg-background" style={{ height: "calc(100vh - 280px)", minHeight: "400px", maxHeight: "600px" }}>
+          <div className="flex-shrink-0 w-12 sm:w-14 z-[5]">
+            <div className="h-10 sm:h-12" /> {/* Header spacer */}
+            <div className="relative" style={{ height: "calc(100vh - 380px)", minHeight: "280px" }}>
               {timeSlots.map((time) => {
                 const [hour] = time.split(':').map(Number);
-                const position = ((hour - 8) / 13) * 100; // Same formula as getLessonPosition
+                const position = ((hour - 8) / 14) * 100; // 14 hours from 8:00 to 22:00
                 return (
                   <div
                     key={time}
-                    className="absolute w-full text-xs text-muted-foreground pr-1 sm:pr-2 text-right"
-                    style={{ top: `${position}%` }}
+                    className="absolute w-full flex items-center justify-end pr-1"
+                    style={{ top: `${position}%`, transform: 'translateY(-50%)' }}
                   >
-                    {time}
+                    <span className="text-[10px] sm:text-xs text-muted-foreground font-medium">
+                      {time}
+                    </span>
                   </div>
                 );
               })}
             </div>
           </div>
 
-          {/* Room Columns */}
-          {activeRooms.map((room) => (
+          {/* Room Columns - flex-1 to fill available space */}
+          {activeRooms.map((room, index) => (
             <div 
               key={room.id} 
-              className="flex-shrink-0"
-              style={{
-                width: `${columnWidth}px`
-              }}
+              className="flex-1 min-w-0"
             >
               {/* Room Header */}
-              <div className="h-10 border-b flex items-center justify-center bg-background relative z-[4]">
-                <div className="text-center">
-                  <div className="font-semibold text-sm">{room.name}</div>
-                  <div className="text-xs text-muted-foreground">
+              <div 
+                className="h-10 sm:h-12 rounded-lg flex items-center justify-center relative z-[4] border-b-2"
+                style={{
+                  backgroundColor: `${room.color}15`,
+                  borderBottomColor: room.color,
+                }}
+              >
+                <div className="text-center px-1">
+                  <div className="font-semibold text-[11px] sm:text-xs truncate" style={{ color: room.color }}>{room.name}</div>
+                  <div className="text-[9px] sm:text-[10px] text-muted-foreground">
                     {room.capacity} мест
                   </div>
                 </div>
@@ -600,12 +605,12 @@ export default function RoomScheduleView({
 
               {/* Room Schedule */}
               <div 
-                className={`relative border-l transition-colors ${
+                className={`relative transition-colors ${
                   draggingLesson && hoveredRoomId === room.id && draggingLesson.roomId !== room.id
-                    ? 'bg-blue-50/30'
+                    ? 'bg-blue-50/50 dark:bg-blue-950/20'
                     : ''
                 }`}
-                style={{ height: "calc(100vh - 280px)", minHeight: "400px", maxHeight: "600px" }}
+                style={{ height: "calc(100vh - 380px)", minHeight: "280px" }}
                 onMouseMove={(e) => {
                   const roomElement = e.currentTarget;
                   if (draggingLesson) {
@@ -620,15 +625,15 @@ export default function RoomScheduleView({
               {timeSlots.map((time) => {
                 const isSelected = isSlotSelected(time, room.id);
                 const [hour] = time.split(':').map(Number);
-                const position = ((hour - 8) / 13) * 100; // Same formula as getLessonPosition
-                const slotHeight = (1 / 13) * 100; // Each hour slot is 1/13 of total height
+                const position = ((hour - 8) / 14) * 100; // 14 hours from 8:00 to 22:00
+                const slotHeight = (1 / 14) * 100;
                 return (
                   <div
                     key={time}
-                    className={`absolute w-full border-t border-gray-100 transition-colors select-none ${
+                    className={`absolute w-full transition-colors select-none border-t border-gray-100 dark:border-gray-800 ${
                       isSelected 
-                        ? 'bg-blue-200/50 cursor-pointer z-[1]' 
-                        : 'hover:bg-blue-50/30 cursor-pointer z-[1]'
+                        ? 'bg-blue-100/50 dark:bg-blue-900/30 cursor-pointer z-[1]' 
+                        : 'hover:bg-blue-50/30 dark:hover:bg-blue-950/20 cursor-pointer z-[1]'
                     }`}
                     style={{ 
                       top: `${position}%`,
@@ -677,13 +682,13 @@ export default function RoomScheduleView({
                   }}>
                     <PopoverTrigger asChild>
                       <div
-                        className={`absolute left-0 right-0 mx-1 transition-all hover:z-[10] z-[5] group select-none ${
-                          isDragged || isResized ? 'cursor-move opacity-80 z-[15]' : 'cursor-pointer hover:shadow-lg'
+                        className={`absolute left-1 right-1 transition-all hover:z-[10] z-[5] group select-none ${
+                          isDragged || isResized ? 'cursor-move opacity-80 z-[15]' : 'cursor-pointer'
                         }`}
                         style={{
                           top: position.top,
                           height: position.height,
-                          minHeight: "40px",
+                          minHeight: "44px",
                           userSelect: 'none',
                         }}
                         onClick={(e) => {
@@ -706,45 +711,46 @@ export default function RoomScheduleView({
                           }}
                         />
                         
-                        <Card
-                          className={`h-full overflow-hidden border-l-4 ${
+                        {/* Lesson Card - Clean Style with border-left */}
+                        <div
+                          className={`h-full overflow-hidden rounded-lg border-l-4 bg-white dark:bg-gray-800 shadow-sm ${
                             lesson.status === 'cancelled' 
-                              ? 'opacity-60 grayscale' 
+                              ? 'opacity-50 grayscale' 
                               : unmarkedLessonIds.has(lesson.id)
-                              ? 'border-red-500 border-2 animate-pulse bg-red-50'
+                              ? 'animate-pulse bg-red-50 dark:bg-red-950 border-red-500 ring-2 ring-red-400'
                               : moment(lesson.start).isBefore(moment()) && lesson.status !== 'cancelled'
-                              ? 'opacity-50 grayscale'
-                              : ''
+                              ? 'opacity-60 grayscale'
+                              : 'hover:shadow-md'
                           }`}
                           style={{ 
-                            borderLeftColor: unmarkedLessonIds.has(lesson.id) 
-                              ? undefined 
-                              : room.color,
-                            padding: showMinimalInfo ? "4px 6px" : "8px"
+                            borderLeftColor: unmarkedLessonIds.has(lesson.id) ? '#ef4444' : room.color,
+                            padding: showMinimalInfo ? "4px 6px" : "8px 10px",
                           }}
                         >
                           {/* Group name - always shown as title */}
                           <div 
-                            className={`font-semibold truncate ${lesson.status === 'cancelled' ? 'line-through' : ''}`}
-                            style={{ fontSize: showMinimalInfo ? "10px" : "12px" }}
+                            className={`font-semibold truncate ${lesson.status === 'cancelled' ? 'line-through text-muted-foreground' : ''}`}
+                            style={{ 
+                              fontSize: showMinimalInfo ? "10px" : "12px",
+                            }}
                           >
                             {groupName || lesson.title}
                           </div>
 
                           {/* Teacher name - shown for 1hr+ lessons */}
                           {showMediumInfo && (
-                            <div className="text-xs text-muted-foreground truncate">
+                            <div className="text-[10px] sm:text-xs text-muted-foreground truncate">
                               {teacher?.name}
                             </div>
                           )}
 
                           {/* Time - shown for 1hr+ lessons */}
                           {showMediumInfo && (
-                            <div className="text-xs text-muted-foreground mt-1">
+                            <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">
                               {moment.utc(currentLesson.start).local().format("HH:mm")} - {moment.utc(currentLesson.end).local().format("HH:mm")}
                             </div>
                           )}
-                        </Card>
+                        </div>
                         
                         {/* Bottom resize handle */}
                         <div
@@ -898,30 +904,28 @@ export default function RoomScheduleView({
                     minHeight: "40px",
                   }}
                 >
-                  <Card
-                    className="h-full overflow-hidden border-l-4 border-dashed"
+                  {/* Ghost preview */}
+                  <div
+                    className="h-full overflow-hidden rounded-lg border-l-4 border-dashed bg-white/80 dark:bg-gray-800/80 opacity-70"
                     style={{ 
                       borderLeftColor: room.color,
-                      padding: "8px"
+                      padding: "6px 8px"
                     }}
                   >
                     <div className="font-semibold truncate text-xs">
                       {draggingLesson.title}
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      {teachers.find((t) => t.id === draggingLesson.teacherId)?.name}
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1">
+                    <div className="text-[10px] text-muted-foreground">
                       {moment(tempLessonPosition.start).format("HH:mm")} - {moment(tempLessonPosition.end).format("HH:mm")}
                     </div>
-                  </Card>
+                  </div>
                 </div>
               )}
 
               {/* Empty state */}
               {lessonsByRoom[room.id]?.length === 0 && !draggingLesson && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <p className="text-sm text-muted-foreground">Нет занятий</p>
+                  <p className="text-xs text-muted-foreground/50">Нет занятий</p>
                 </div>
               )}
             </div>

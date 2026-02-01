@@ -35,7 +35,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Mail, Phone, Plus, Loader2, Calendar, List, Edit, Trash2, Clock, Users, MapPin, DollarSign, Calculator, X } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Plus, Loader2, Calendar, List, Edit, Trash2, Clock, Users, MapPin, DollarSign, Calculator, X, BookOpen, TrendingUp, ChevronLeft, ChevronRight, GraduationCap } from "lucide-react";
 import { Lesson } from "@/types";
 import { toast } from "sonner";
 import {
@@ -220,471 +220,525 @@ export default function TeacherDetail() {
 
   return (
     <div className="space-y-6 animate-fade-in-up">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div className="flex items-start gap-2 sm:gap-4 min-w-0">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/teachers")} className="shrink-0">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-2xl sm:text-3xl font-bold truncate">{teacher.name}</h1>
-            <p className="text-sm sm:text-base text-muted-foreground truncate">{teacher.subject}</p>
+      {/* Back Button */}
+      <Button 
+        variant="ghost" 
+        size="sm" 
+        onClick={() => navigate("/teachers")} 
+        className="rounded-xl hover:bg-muted -mb-2"
+      >
+        <ArrowLeft className="h-4 w-4 mr-2" />
+        Назад к учителям
+      </Button>
+
+      {/* Bento Grid Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
+        
+        {/* Hero Card - Large */}
+        <div className="lg:col-span-8 p-6 rounded-3xl bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-100 dark:from-sky-950 dark:via-blue-950 dark:to-indigo-900 relative overflow-hidden shadow-soft">
+          <div className="absolute top-[-20%] right-[-10%] w-96 h-96 bg-sky-200/30 dark:bg-sky-800/20 rounded-full blur-3xl" />
+          <div className="absolute bottom-[-30%] left-[-5%] w-72 h-72 bg-blue-200/30 dark:bg-blue-800/20 rounded-full blur-3xl" />
+          
+          <div className="relative">
+            <div className="flex items-start gap-4 mb-6">
+              <div className="flex items-center gap-4 min-w-0 flex-1">
+                <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center shadow-soft-lg shrink-0">
+                  <span className="text-3xl font-bold text-white">{teacher.name.charAt(0)}</span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-3 mb-1">
+                    <h1 className="text-2xl sm:text-3xl font-bold truncate">{teacher.name}</h1>
+                    <Badge 
+                      variant={teacher.status === "active" ? "default" : "secondary"} 
+                      className={teacher.status === "active" ? "bg-gradient-to-r from-emerald-500 to-green-600 border-0" : ""}
+                    >
+                      {teacher.status === "active" ? "Активен" : "Неактивен"}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <GraduationCap className="h-4 w-4" />
+                    <span className="text-sm sm:text-base">{teacher.subject}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Contact Info Row */}
+            <div className="flex flex-wrap gap-4 mb-6">
+              <div className="flex items-center gap-2 text-sm">
+                <Mail className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+                <span>{teacher.email}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <Phone className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+                <span>{teacher.phone}</span>
+              </div>
+            </div>
+            
+            {/* Action Buttons */}
+            <div className="flex flex-wrap gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setIsEditDialogOpen(true)}
+                className="rounded-xl bg-white/70 dark:bg-white/10 border border-sky-200/50 dark:border-white/10 hover:bg-white hover:shadow-md hover:scale-[1.02] transition-all duration-200"
+              >
+                <Edit className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Редактировать</span>
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setIsRatesModalOpen(true)}
+                className="rounded-xl bg-white/70 dark:bg-white/10 border border-sky-200/50 dark:border-white/10 hover:bg-white hover:shadow-md hover:scale-[1.02] transition-all duration-200"
+              >
+                <Calculator className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Ставки</span>
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setIsSalaryCalcOpen(true)}
+                className="rounded-xl bg-white/70 dark:bg-white/10 border border-sky-200/50 dark:border-white/10 hover:bg-white hover:shadow-md hover:scale-[1.02] transition-all duration-200"
+              >
+                <DollarSign className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Зарплата</span>
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setIsDeleteDialogOpen(true)}
+                className="rounded-xl text-red-600 hover:text-red-700 hover:bg-red-100 hover:scale-[1.02] transition-all duration-200"
+              >
+                <Trash2 className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Удалить</span>
+              </Button>
+            </div>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2 shrink-0">
-          <Badge variant={teacher.status === "active" ? "default" : "secondary"} className="shrink-0">
-            {teacher.status === "active" ? "Активен" : "Неактивен"}
-          </Badge>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => setIsEditDialogOpen(true)}
-            className="sm:size-default"
-          >
-            <Edit className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Редактировать</span>
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => setIsRatesModalOpen(true)}
-            className="sm:size-default"
-          >
-            <Calculator className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Ставки</span>
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => setIsSalaryCalcOpen(true)}
-            className="sm:size-default"
-          >
-            <DollarSign className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Зарплата</span>
-          </Button>
-          <Button 
-            variant="destructive" 
-            size="sm" 
-            onClick={() => setIsDeleteDialogOpen(true)}
-            className="sm:size-default"
-          >
-            <Trash2 className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Удалить</span>
-          </Button>
-          <Button 
-            size="sm" 
-            onClick={handleCreateLesson}
-            className="sm:size-default w-full sm:w-auto"
-          >
-            <Plus className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Создать урок</span>
-            <span className="sm:hidden">Урок</span>
-          </Button>
-        </div>
-      </div>
 
-      {/* Teacher Info */}
-      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Контактная информация</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex items-center gap-2 text-sm">
-              <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
-              <span className="truncate">{teacher.email}</span>
+        {/* Workload Card - Side */}
+        <div className="lg:col-span-4 p-6 rounded-3xl bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-100 dark:from-violet-950 dark:via-purple-950 dark:to-fuchsia-900 relative overflow-hidden shadow-soft">
+          <div className="absolute top-[-30%] right-[-20%] w-48 h-48 bg-violet-200/40 dark:bg-violet-800/20 rounded-full blur-3xl" />
+          
+          <div className="relative">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-soft">
+                <TrendingUp className="h-5 w-5 text-white" />
+              </div>
+              <span className="text-sm font-medium text-muted-foreground">Загруженность</span>
             </div>
-            <div className="flex items-center gap-2 text-sm">
-              <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
-              <span className="truncate">{teacher.phone}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Статистика уроков</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Всего уроков:</span>
-              <span className="font-medium">{totalLessons}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Проведено:</span>
-              <span className="font-medium">{completedLessons}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Запланировано:</span>
-              <span className="font-medium">{scheduledLessons}</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Загруженность</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-primary">
+            
+            <div className="text-5xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent mb-1">
               {selectedWeekHours}
-              <span className="text-sm font-normal text-muted-foreground ml-1">ч/нед</span>
+              <span className="text-lg font-normal text-muted-foreground ml-1">ч/нед</span>
             </div>
-            <p className="text-sm text-muted-foreground mt-1">
+            
+            <p className="text-sm text-muted-foreground mb-4">
               {weekStart.format("D MMM")} - {weekEnd.format("D MMM YYYY")}
             </p>
-            <p className="text-sm text-muted-foreground mt-2">
-              {selectedWeekLessonsCount} {selectedWeekLessonsCount === 1 ? 'урок' : selectedWeekLessonsCount < 5 ? 'урока' : 'уроков'}
-            </p>
-            <p className="text-sm text-muted-foreground mt-2">
-              Плановая: {teacher.workload} ч/нед
-            </p>
-          </CardContent>
-        </Card>
+            
+            <div className="space-y-3 pt-2 border-t border-violet-200/50 dark:border-violet-700/50">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Уроков</span>
+                <span className="font-semibold text-lg">{selectedWeekLessonsCount}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Плановая</span>
+                <span className="font-semibold">{teacher.workload} ч/нед</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Stats Cards Row */}
+        <div className="lg:col-span-4 p-5 rounded-2xl bg-gradient-to-br from-emerald-50 to-green-100 dark:from-emerald-950 dark:to-green-900 shadow-soft">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600">
+              <BookOpen className="h-4 w-4 text-white" />
+            </div>
+            <span className="text-sm font-medium">Всего уроков</span>
+          </div>
+          <div className="text-4xl font-bold text-emerald-600 dark:text-emerald-400">{totalLessons}</div>
+        </div>
+
+        <div className="lg:col-span-4 p-5 rounded-2xl bg-gradient-to-br from-sky-50 to-blue-100 dark:from-sky-950 dark:to-blue-900 shadow-soft">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600">
+              <Clock className="h-4 w-4 text-white" />
+            </div>
+            <span className="text-sm font-medium">Проведено</span>
+          </div>
+          <div className="text-4xl font-bold text-sky-600 dark:text-sky-400">{completedLessons}</div>
+          <div className="text-sm text-muted-foreground mt-1">{completionRate}% выполнено</div>
+        </div>
+
+        <div className="lg:col-span-4 p-5 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-100 dark:from-amber-950 dark:to-orange-900 shadow-soft">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600">
+              <Calendar className="h-4 w-4 text-white" />
+            </div>
+            <span className="text-sm font-medium">Запланировано</span>
+          </div>
+          <div className="text-4xl font-bold text-amber-600 dark:text-amber-400">{scheduledLessons}</div>
+        </div>
       </div>
 
-      {/* Schedule Section */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Расписание</CardTitle>
-            <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as any)}>
-              <TabsList>
-                <TabsTrigger value="calendar" className="gap-2">
-                  <Calendar className="h-4 w-4" />
-                  Календарь
-                </TabsTrigger>
-                <TabsTrigger value="list" className="gap-2">
-                  <List className="h-4 w-4" />
-                  Список
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+      {/* Create Lesson Button - Floating */}
+      <div className="flex justify-end">
+        <Button 
+          onClick={handleCreateLesson}
+          className="rounded-2xl h-12 px-6 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 shadow-soft-lg"
+        >
+          <Plus className="h-5 w-5 mr-2" />
+          Создать урок
+        </Button>
+      </div>
+
+      {/* Schedule Section - Bento Style */}
+      <div className="p-6 rounded-3xl bg-white dark:bg-gray-900 border border-border/50 shadow-soft">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <h2 className="text-xl font-bold">Расписание</h2>
+          <div className="flex items-center gap-2 p-1 rounded-xl bg-muted/50">
+            <button
+              onClick={() => setViewMode("calendar")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                viewMode === "calendar" 
+                  ? "bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-soft" 
+                  : "hover:bg-muted"
+              }`}
+            >
+              <Calendar className="h-4 w-4" />
+              Календарь
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                viewMode === "list" 
+                  ? "bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-soft" 
+                  : "hover:bg-muted"
+              }`}
+            >
+              <List className="h-4 w-4" />
+              Список
+            </button>
           </div>
-        </CardHeader>
-        <CardContent>
-          <Tabs value={viewMode}>
-            {/* Calendar View */}
-            <TabsContent value="calendar" className="space-y-4">
-              {/* Week Navigation */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
-                <div className="flex gap-2 flex-wrap">
-                  <Button variant="outline" size="sm" onClick={handlePreviousWeek}>
-                    <span className="hidden sm:inline">Предыдущая</span>
-                    <span className="sm:hidden">Пред.</span>
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={handleToday}>
-                    Сегодня
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={handleNextWeek}>
-                    <span className="hidden sm:inline">Следующая</span>
-                    <span className="sm:hidden">След.</span>
-                  </Button>
-                </div>
-                <h3 className="text-sm font-medium text-center sm:text-right">
-                  {weekStart.format("D MMM")} - {weekEnd.format("D MMM YYYY")}
-                </h3>
+        </div>
+
+        <Tabs value={viewMode}>
+          {/* Calendar View */}
+          <TabsContent value="calendar" className="space-y-4">
+            {/* Week Navigation - Bento Style */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 rounded-2xl bg-gradient-to-r from-slate-50 to-gray-100 dark:from-slate-900 dark:to-gray-800">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handlePreviousWeek}
+                  className="p-2 rounded-xl bg-white dark:bg-gray-800 shadow-soft hover:shadow-soft-lg transition-all"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={handleToday}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 text-white text-sm font-medium shadow-soft hover:shadow-soft-lg transition-all"
+                >
+                  Сегодня
+                </button>
+                <button
+                  onClick={handleNextWeek}
+                  className="p-2 rounded-xl bg-white dark:bg-gray-800 shadow-soft hover:shadow-soft-lg transition-all"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
               </div>
+              <h3 className="text-sm font-semibold text-center sm:text-right">
+                {weekStart.format("D MMM")} - {weekEnd.format("D MMM YYYY")}
+              </h3>
+            </div>
 
-              {/* Week Grid */}
-              <div className="grid grid-cols-3 sm:grid-cols-7 gap-2">
-                {Array.from({ length: 7 }, (_, i) => {
-                  const day = weekStart.clone().add(i, "days");
-                  const dayKey = day.format("YYYY-MM-DD");
-                  const dayLessons = lessonsByDay[dayKey] || [];
-                  const isToday = day.isSame(moment(), "day");
+            {/* Week Grid - Bento Style */}
+            <div className="grid grid-cols-3 sm:grid-cols-7 gap-3">
+              {Array.from({ length: 7 }, (_, i) => {
+                const day = weekStart.clone().add(i, "days");
+                const dayKey = day.format("YYYY-MM-DD");
+                const dayLessons = lessonsByDay[dayKey] || [];
+                const isToday = day.isSame(moment(), "day");
 
-                  return (
-                    <div key={dayKey} className={`border rounded-lg p-2 min-h-[120px] sm:min-h-[150px] ${isToday ? "bg-blue-50 border-blue-200" : ""}`}>
-                      <div className="text-center mb-2">
-                        <div className="text-[10px] sm:text-xs text-muted-foreground">{day.format("dd")}</div>
-                        <div className={`text-xs sm:text-sm font-medium ${isToday ? "text-blue-600" : ""}`}>{day.format("D")}</div>
-                        <div className="text-[9px] sm:text-xs text-muted-foreground hidden sm:block">{day.format("MMM")}</div>
-                      </div>
-                      <div className="space-y-1">
-                        {dayLessons.slice(0, 3).map((lesson) => {
-                          const group = groups.find((g) => g.id === lesson.groupId);
-                          const room = rooms.find((r) => r.id === lesson.roomId);
-                          return (
-                            <Popover key={lesson.id} open={popoverOpen && selectedLessonForInfo?.id === lesson.id} onOpenChange={(open) => {
-                              if (!open) {
-                                setPopoverOpen(false);
-                                setSelectedLessonForInfo(null);
-                              }
-                            }}>
-                              <PopoverTrigger asChild>
-                                <div
-                                  onClick={() => handleLessonClick(lesson)}
-                                  className="text-[9px] sm:text-xs p-0.5 sm:p-1 rounded bg-primary/10 hover:bg-primary/20 cursor-pointer transition-colors"
-                                >
-                                  <div className="font-medium truncate">
-                                    {group?.name || lesson.title}
-                                  </div>
-                                  <div className="text-muted-foreground truncate">
-                                    {moment(lesson.start).format("HH:mm")}
-                                  </div>
-                                </div>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-80" side="right" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
-                                <div className="space-y-4">
-                                  <div className="flex items-start justify-between">
-                                    <div className="flex-1">
-                                      <h3 className="font-semibold text-lg">{lesson.title}</h3>
-                                      <p className="text-sm text-muted-foreground">{lesson.subject}</p>
-                                    </div>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8"
-                                      onClick={() => {
-                                        setPopoverOpen(false);
-                                        setSelectedLessonForInfo(null);
-                                      }}
-                                    >
-                                      <X className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-
-                                  <div className="space-y-3">
-                                    <div className="flex items-center gap-2 text-sm">
-                                      <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
-                                      <span>
-                                        {moment(lesson.start).format("DD.MM.YYYY, dddd, HH:mm")} - {moment(lesson.end).format("HH:mm")}
-                                      </span>
-                                    </div>
-
-                                    {room && (
-                                      <div className="flex items-center gap-2 text-sm">
-                                        <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
-                                        <span>{room.name}</span>
-                                      </div>
-                                    )}
-
-                                    {group && (
-                                      <div className="flex items-center gap-2 text-sm">
-                                        <Users className="h-4 w-4 text-muted-foreground shrink-0" />
-                                        <span>{group.name}</span>
-                                      </div>
-                                    )}
-
-                                    <div className="text-sm">
-                                      <span className="font-medium">Статус:</span>{" "}
-                                      {lesson.status === "completed" ? "Проведен" : lesson.status === "cancelled" ? "Отменен" : "Запланирован"}
-                                    </div>
-                                  </div>
-
-                                  <div className="pt-2">
-                                    <Button onClick={() => handleEditLesson(lesson)} className="w-full">
-                                      <Edit className="h-4 w-4 mr-2" /> Редактировать урок
-                                    </Button>
-                                  </div>
-                                </div>
-                              </PopoverContent>
-                            </Popover>
-                          );
-                        })}
-                        {dayLessons.length > 3 && (
-                          <div className="text-[9px] sm:text-xs text-muted-foreground text-center">
-                            +{dayLessons.length - 3}
-                          </div>
-                        )}
-                      </div>
+                return (
+                  <div 
+                    key={dayKey} 
+                    className={`rounded-2xl p-3 min-h-[140px] sm:min-h-[160px] transition-all ${
+                      isToday 
+                        ? "bg-gradient-to-br from-sky-50 to-blue-100 dark:from-sky-950 dark:to-blue-900 ring-2 ring-sky-400" 
+                        : "bg-muted/30 hover:bg-muted/50"
+                    }`}
+                  >
+                    <div className="text-center mb-3">
+                      <div className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide">{day.format("dd")}</div>
+                      <div className={`text-lg sm:text-xl font-bold ${isToday ? "text-sky-600 dark:text-sky-400" : ""}`}>{day.format("D")}</div>
+                      <div className="text-[9px] sm:text-xs text-muted-foreground hidden sm:block">{day.format("MMM")}</div>
                     </div>
-                  );
-                })}
-              </div>
-            </TabsContent>
-
-            {/* List View */}
-            <TabsContent value="list">
-              {/* Mobile View - Cards */}
-              <div className="md:hidden space-y-3">
-                {lessons.length === 0 ? (
-                  <div className="text-center text-muted-foreground py-8">
-                    Уроков не найдено
-                  </div>
-                ) : (
-                  lessons
-                    .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
-                    .map((lesson) => {
-                      const group = groups.find((g) => g.id === lesson.groupId);
-                      const room = rooms.find((r) => r.id === lesson.roomId);
-
-                      return (
-                        <Popover key={lesson.id} open={popoverOpen && selectedLessonForInfo?.id === lesson.id} onOpenChange={(open) => {
-                          if (!open) {
-                            setPopoverOpen(false);
-                            setSelectedLessonForInfo(null);
-                          }
-                        }}>
-                          <PopoverTrigger asChild>
-                            <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleLessonClick(lesson)}>
-                              <CardContent className="p-4 space-y-2">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex-1 min-w-0">
-                                <div className="font-semibold text-sm truncate">{lesson.title}</div>
-                                <div className="text-xs text-muted-foreground">{moment(lesson.start).format("DD.MM.YYYY, dddd")}</div>
+                    <div className="space-y-1.5">
+                      {dayLessons.slice(0, 3).map((lesson) => {
+                        const group = groups.find((g) => g.id === lesson.groupId);
+                        const room = rooms.find((r) => r.id === lesson.roomId);
+                        return (
+                          <Popover key={lesson.id} open={popoverOpen && selectedLessonForInfo?.id === lesson.id} onOpenChange={(open) => {
+                            if (!open) {
+                              setPopoverOpen(false);
+                              setSelectedLessonForInfo(null);
+                            }
+                          }}>
+                            <PopoverTrigger asChild>
+                              <div
+                                onClick={() => handleLessonClick(lesson)}
+                                className={`text-[9px] sm:text-xs p-1.5 sm:p-2 rounded-xl cursor-pointer transition-all ${
+                                  lesson.status === "completed"
+                                    ? "bg-gradient-to-r from-emerald-100 to-green-100 dark:from-emerald-900/50 dark:to-green-900/50 hover:shadow-soft"
+                                    : "bg-gradient-to-r from-sky-100 to-blue-100 dark:from-sky-900/50 dark:to-blue-900/50 hover:shadow-soft"
+                                }`}
+                              >
+                                <div className="font-semibold truncate">
+                                  {group?.name || lesson.title}
+                                </div>
+                                <div className="text-muted-foreground truncate">
+                                  {moment(lesson.start).format("HH:mm")}
+                                </div>
                               </div>
-                              <Badge variant={lesson.status === "completed" ? "secondary" : "default"} className="shrink-0 text-[10px]">
-                                {lesson.status === "completed" ? "Завер." : "Запл."}
-                              </Badge>
-                            </div>
-                            <div className="space-y-1 text-xs">
-                              <div className="flex items-center gap-2 text-muted-foreground">
-                                <Clock className="h-3 w-3 shrink-0" />
-                                <span>{moment(lesson.start).format("HH:mm")} - {moment(lesson.end).format("HH:mm")}</span>
-                              </div>
-                              {group && (
-                                <div className="flex items-center gap-2 text-muted-foreground">
-                                  <Users className="h-3 w-3 shrink-0" />
-                                  <span className="truncate">{group.name}</span>
-                                </div>
-                              )}
-                              {room && (
-                                <div className="flex items-center gap-2 text-muted-foreground">
-                                  <MapPin className="h-3 w-3 shrink-0" />
-                                  <span className="truncate">{room.name}</span>
-                                </div>
-                              )}
-                            </div>
-                              </CardContent>
-                            </Card>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-80" side="right" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
-                            <div className="space-y-4">
-                              <div className="flex items-start justify-between">
-                                <div className="flex-1">
-                                  <h3 className="font-semibold text-lg">{lesson.title}</h3>
-                                  <p className="text-sm text-muted-foreground">{lesson.subject}</p>
-                                </div>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8"
-                                  onClick={() => {
-                                    setPopoverOpen(false);
-                                    setSelectedLessonForInfo(null);
-                                  }}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
-
-                              <div className="space-y-3">
-                                <div className="flex items-center gap-2 text-sm">
-                                  <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
-                                  <span>
-                                    {moment(lesson.start).format("DD.MM.YYYY, dddd, HH:mm")} - {moment(lesson.end).format("HH:mm")}
-                                  </span>
-                                </div>
-
-                                {room && (
-                                  <div className="flex items-center gap-2 text-sm">
-                                    <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
-                                    <span>{room.name}</span>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-80" side="right" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
+                              <div className="space-y-4">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <h3 className="font-semibold text-lg">{lesson.title}</h3>
+                                    <p className="text-sm text-muted-foreground">{lesson.subject}</p>
                                   </div>
-                                )}
-
-                                {group && (
-                                  <div className="flex items-center gap-2 text-sm">
-                                    <Users className="h-4 w-4 text-muted-foreground shrink-0" />
-                                    <span>{group.name}</span>
-                                  </div>
-                                )}
-
-                                <div className="text-sm">
-                                  <span className="font-medium">Статус:</span>{" "}
-                                  {lesson.status === "completed" ? "Проведен" : lesson.status === "cancelled" ? "Отменен" : "Запланирован"}
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 rounded-xl"
+                                    onClick={() => {
+                                      setPopoverOpen(false);
+                                      setSelectedLessonForInfo(null);
+                                    }}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
                                 </div>
-                              </div>
 
-                              <div className="pt-2">
-                                <Button onClick={() => handleEditLesson(lesson)} className="w-full">
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2 text-sm p-2 rounded-xl bg-muted/50">
+                                    <Clock className="h-4 w-4 text-sky-600 shrink-0" />
+                                    <span>
+                                      {moment(lesson.start).format("DD.MM.YYYY, dddd, HH:mm")} - {moment(lesson.end).format("HH:mm")}
+                                    </span>
+                                  </div>
+
+                                  {room && (
+                                    <div className="flex items-center gap-2 text-sm p-2 rounded-xl bg-muted/50">
+                                      <MapPin className="h-4 w-4 text-violet-600 shrink-0" />
+                                      <span>{room.name}</span>
+                                    </div>
+                                  )}
+
+                                  {group && (
+                                    <div className="flex items-center gap-2 text-sm p-2 rounded-xl bg-muted/50">
+                                      <Users className="h-4 w-4 text-emerald-600 shrink-0" />
+                                      <span>{group.name}</span>
+                                    </div>
+                                  )}
+
+                                  <div className="flex items-center justify-between p-2 rounded-xl bg-muted/50">
+                                    <span className="text-sm font-medium">Статус</span>
+                                    <Badge className={
+                                      lesson.status === "completed" 
+                                        ? "bg-gradient-to-r from-emerald-500 to-green-600 border-0" 
+                                        : lesson.status === "cancelled"
+                                        ? "bg-gradient-to-r from-red-500 to-rose-600 border-0"
+                                        : "bg-gradient-to-r from-sky-500 to-blue-600 border-0"
+                                    }>
+                                      {lesson.status === "completed" ? "Проведен" : lesson.status === "cancelled" ? "Отменен" : "Запланирован"}
+                                    </Badge>
+                                  </div>
+                                </div>
+
+                                <Button onClick={() => handleEditLesson(lesson)} className="w-full rounded-xl">
                                   <Edit className="h-4 w-4 mr-2" /> Редактировать урок
                                 </Button>
                               </div>
+                            </PopoverContent>
+                          </Popover>
+                        );
+                      })}
+                      {dayLessons.length > 3 && (
+                        <div className="text-[9px] sm:text-xs text-muted-foreground text-center py-1 rounded-lg bg-white/50 dark:bg-white/10">
+                          +{dayLessons.length - 3} ещё
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </TabsContent>
+
+          {/* List View - Bento Style */}
+          <TabsContent value="list">
+            {/* Mobile View - Cards */}
+            <div className="md:hidden space-y-3">
+              {lessons.length === 0 ? (
+                <div className="text-center text-muted-foreground py-12 rounded-2xl bg-muted/30">
+                  <Calendar className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
+                  <p>Уроков не найдено</p>
+                </div>
+              ) : (
+                lessons
+                  .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
+                  .map((lesson) => {
+                    const group = groups.find((g) => g.id === lesson.groupId);
+                    const room = rooms.find((r) => r.id === lesson.roomId);
+
+                    return (
+                      <div 
+                        key={lesson.id} 
+                        className={`p-4 rounded-2xl cursor-pointer transition-all hover:shadow-soft ${
+                          lesson.status === "completed"
+                            ? "bg-gradient-to-br from-emerald-50 to-green-100 dark:from-emerald-950 dark:to-green-900"
+                            : "bg-gradient-to-br from-sky-50 to-blue-100 dark:from-sky-950 dark:to-blue-900"
+                        }`}
+                        onClick={() => handleLessonClick(lesson)}
+                      >
+                        <div className="flex items-start justify-between gap-2 mb-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold truncate">{lesson.title}</div>
+                            <div className="text-sm text-muted-foreground">{moment(lesson.start).format("DD.MM.YYYY, dddd")}</div>
+                          </div>
+                          <Badge className={`shrink-0 ${
+                            lesson.status === "completed"
+                              ? "bg-gradient-to-r from-emerald-500 to-green-600 border-0"
+                              : "bg-gradient-to-r from-sky-500 to-blue-600 border-0"
+                          }`}>
+                            {lesson.status === "completed" ? "Завершен" : "Запланир."}
+                          </Badge>
+                        </div>
+                        <div className="flex flex-wrap gap-2 text-xs">
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/50 dark:bg-white/10">
+                            <Clock className="h-3 w-3" />
+                            <span>{moment(lesson.start).format("HH:mm")} - {moment(lesson.end).format("HH:mm")}</span>
+                          </div>
+                          {group && (
+                            <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/50 dark:bg-white/10">
+                              <Users className="h-3 w-3" />
+                              <span className="truncate">{group.name}</span>
                             </div>
-                          </PopoverContent>
-                        </Popover>
+                          )}
+                          {room && (
+                            <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/50 dark:bg-white/10">
+                              <MapPin className="h-3 w-3" />
+                              <span className="truncate">{room.name}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+              )}
+            </div>
+
+            {/* Desktop View - Bento Table */}
+            <div className="hidden md:block rounded-2xl overflow-hidden border border-border/50">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gradient-to-r from-slate-50 to-gray-100 dark:from-slate-900 dark:to-gray-800">
+                    <TableHead className="font-semibold">Дата</TableHead>
+                    <TableHead className="font-semibold">Время</TableHead>
+                    <TableHead className="font-semibold">Название</TableHead>
+                    <TableHead className="font-semibold">Группа</TableHead>
+                    <TableHead className="font-semibold">Аудитория</TableHead>
+                    <TableHead className="font-semibold">Статус</TableHead>
+                    <TableHead className="text-right font-semibold">Действия</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {lessons.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-12">
+                        <Calendar className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
+                        <p>Уроков не найдено</p>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    lessons
+                      .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
+                      .map((lesson) => {
+                        const group = groups.find((g) => g.id === lesson.groupId);
+                        const room = rooms.find((r) => r.id === lesson.roomId);
+
+                      return (
+                        <TableRow key={lesson.id} className="hover:bg-muted/30">
+                          <TableCell>{moment(lesson.start).format("DD.MM.YYYY, dddd")}</TableCell>
+                          <TableCell>
+                            <span className="px-2 py-1 rounded-lg bg-muted/50 text-sm">
+                              {moment(lesson.start).format("HH:mm")} - {moment(lesson.end).format("HH:mm")}
+                            </span>
+                          </TableCell>
+                          <TableCell className="font-medium">{lesson.title}</TableCell>
+                          <TableCell>
+                            {group ? (
+                              <span className="flex items-center gap-1.5">
+                                <Users className="h-3 w-3 text-muted-foreground" />
+                                {group.name}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">Индивидуальное</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {room ? (
+                              <span className="flex items-center gap-1.5">
+                                <MapPin className="h-3 w-3 text-muted-foreground" />
+                                {room.name}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">{lesson.room}</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              className={
+                                lesson.status === "completed"
+                                  ? "bg-gradient-to-r from-emerald-500 to-green-600 border-0"
+                                  : lesson.status === "cancelled"
+                                  ? "bg-gradient-to-r from-red-500 to-rose-600 border-0"
+                                  : "bg-gradient-to-r from-sky-500 to-blue-600 border-0"
+                              }
+                            >
+                              {lesson.status === "completed"
+                                ? "Проведен"
+                                : lesson.status === "cancelled"
+                                ? "Отменен"
+                                : "Запланирован"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEditLesson(lesson)}
+                              className="rounded-xl hover:bg-sky-100 dark:hover:bg-sky-900/50"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
                       );
                     })
                 )}
-              </div>
-
-              {/* Desktop View - Table */}
-              <div className="hidden md:block">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Дата</TableHead>
-                      <TableHead>Время</TableHead>
-                      <TableHead>Название</TableHead>
-                      <TableHead>Группа</TableHead>
-                      <TableHead>Аудитория</TableHead>
-                      <TableHead>Статус</TableHead>
-                      <TableHead className="text-right">Действия</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {lessons.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center text-muted-foreground">
-                          Уроков не найдено
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      lessons
-                        .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
-                        .map((lesson) => {
-                          const group = groups.find((g) => g.id === lesson.groupId);
-                          const room = rooms.find((r) => r.id === lesson.roomId);
-
-                        return (
-                          <TableRow key={lesson.id}>
-                            <TableCell>{moment(lesson.start).format("DD.MM.YYYY, dddd")}</TableCell>
-                            <TableCell>
-                              {moment(lesson.start).format("HH:mm")} - {moment(lesson.end).format("HH:mm")}
-                            </TableCell>
-                            <TableCell className="font-medium">{lesson.title}</TableCell>
-                            <TableCell>{group?.name || "Индивидуальное"}</TableCell>
-                            <TableCell>{room?.name || lesson.room}</TableCell>
-                            <TableCell>
-                              <Badge
-                                variant={
-                                  lesson.status === "completed"
-                                    ? "default"
-                                    : lesson.status === "cancelled"
-                                    ? "destructive"
-                                    : "secondary"
-                                }
-                              >
-                                {lesson.status === "completed"
-                                  ? "Проведен"
-                                  : lesson.status === "cancelled"
-                                  ? "Отменен"
-                                  : "Запланирован"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleEditLesson(lesson)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                  )}
-                </TableBody>
-              </Table>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+              </TableBody>
+            </Table>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
 
       {/* Lesson Form Modal */}
       <LessonFormModal
@@ -701,77 +755,95 @@ export default function TeacherDetail() {
         }}
       />
 
-      {/* Edit Teacher Dialog */}
+      {/* Edit Teacher Dialog - Bento Style */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Редактировать учителя</DialogTitle>
+            <DialogTitle className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600">
+                <Edit className="h-5 w-5 text-white" />
+              </div>
+              Редактировать учителя
+            </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleEditTeacher} className="space-y-4">
-            <div>
-              <Label htmlFor="name">ФИО</Label>
-              <Input
-                id="name"
-                name="name"
-                defaultValue={teacher.name}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="subject">Предмет</Label>
-              <Input
-                id="subject"
-                name="subject"
-                defaultValue={teacher.subject}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                defaultValue={teacher.email}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="phone">Телефон</Label>
-              <Input
-                id="phone"
-                name="phone"
-                defaultValue={teacher.phone}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="status">Статус</Label>
-              <Select name="status" defaultValue={teacher.status}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Активный</SelectItem>
-                  <SelectItem value="inactive">Неактивный</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="workload">Плановая загруженность (часов/нед.)</Label>
-              <Input
-                id="workload"
-                name="workload"
-                type="number"
-                defaultValue={teacher.workload}
-                required
-              />
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-50 to-gray-100 dark:from-slate-900 dark:to-gray-800 space-y-4">
+              <div>
+                <Label htmlFor="name" className="text-sm font-medium">ФИО</Label>
+                <Input
+                  id="name"
+                  name="name"
+                  defaultValue={teacher.name}
+                  required
+                  className="mt-1.5 rounded-xl"
+                />
+              </div>
+              <div>
+                <Label htmlFor="subject" className="text-sm font-medium">Предмет</Label>
+                <Input
+                  id="subject"
+                  name="subject"
+                  defaultValue={teacher.subject}
+                  required
+                  className="mt-1.5 rounded-xl"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    defaultValue={teacher.email}
+                    required
+                    className="mt-1.5 rounded-xl"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="phone" className="text-sm font-medium">Телефон</Label>
+                  <Input
+                    id="phone"
+                    name="phone"
+                    defaultValue={teacher.phone}
+                    required
+                    className="mt-1.5 rounded-xl"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="status" className="text-sm font-medium">Статус</Label>
+                  <Select name="status" defaultValue={teacher.status}>
+                    <SelectTrigger className="mt-1.5">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Активный</SelectItem>
+                      <SelectItem value="inactive">Неактивный</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="workload" className="text-sm font-medium">Часов/нед.</Label>
+                  <Input
+                    id="workload"
+                    name="workload"
+                    type="number"
+                    defaultValue={teacher.workload}
+                    required
+                    className="mt-1.5 rounded-xl"
+                  />
+                </div>
+              </div>
             </div>
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)} className="rounded-xl">
                 Отмена
               </Button>
-              <Button type="submit">Сохранить</Button>
+              <Button type="submit" className="rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700">
+                Сохранить
+              </Button>
             </div>
           </form>
         </DialogContent>
@@ -784,12 +856,14 @@ export default function TeacherDetail() {
         teacherId={teacher.id}
       />
 
-      {/* Salary Calculation Dialog */}
+      {/* Salary Calculation Dialog - Bento Style */}
       <Dialog open={isSalaryCalcOpen} onOpenChange={setIsSalaryCalcOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5" />
+            <DialogTitle className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600">
+                <DollarSign className="h-5 w-5 text-white" />
+              </div>
               Расчет зарплаты: {teacher.name}
             </DialogTitle>
           </DialogHeader>
@@ -801,7 +875,7 @@ export default function TeacherDetail() {
             onPeriodEndChange={setSalaryPeriodEnd}
           />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsSalaryCalcOpen(false)}>
+            <Button variant="outline" onClick={() => setIsSalaryCalcOpen(false)} className="rounded-xl">
               Закрыть
             </Button>
           </DialogFooter>
@@ -829,7 +903,7 @@ export default function TeacherDetail() {
   );
 }
 
-// Salary Calculation Component
+// Salary Calculation Component - Bento Style
 function SalaryCalculationComponent({
   teacher,
   periodStart,
@@ -871,122 +945,120 @@ function SalaryCalculationComponent({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="periodStart">Начало периода</Label>
-          <Input
-            id="periodStart"
-            type="date"
-            value={periodStart}
-            onChange={(e) => onPeriodStartChange(e.target.value)}
-          />
-        </div>
-        <div>
-          <Label htmlFor="periodEnd">Конец периода</Label>
-          <Input
-            id="periodEnd"
-            type="date"
-            value={periodEnd}
-            onChange={(e) => onPeriodEndChange(e.target.value)}
-          />
+      <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-50 to-gray-100 dark:from-slate-900 dark:to-gray-800">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="periodStart" className="text-sm font-medium">Начало периода</Label>
+            <Input
+              id="periodStart"
+              type="date"
+              value={periodStart}
+              onChange={(e) => onPeriodStartChange(e.target.value)}
+              className="mt-1.5 rounded-xl"
+            />
+          </div>
+          <div>
+            <Label htmlFor="periodEnd" className="text-sm font-medium">Конец периода</Label>
+            <Input
+              id="periodEnd"
+              type="date"
+              value={periodEnd}
+              onChange={(e) => onPeriodEndChange(e.target.value)}
+              className="mt-1.5 rounded-xl"
+            />
+          </div>
         </div>
       </div>
 
       {isLoading ? (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-            <p className="text-sm text-muted-foreground mt-2">Расчет зарплаты...</p>
-          </CardContent>
-        </Card>
+        <div className="p-8 rounded-2xl bg-muted/30 text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+          <p className="text-sm text-muted-foreground mt-2">Расчет зарплаты...</p>
+        </div>
       ) : salaryData?.breakdown && salaryData.breakdown.length > 0 ? (
-        <Card className="border-2 border-green-200 bg-green-50/50">
-          <CardHeader>
-            <CardTitle className="text-lg">Результат расчета</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="text-sm">
-              <span className="text-muted-foreground">Период: </span>
-              <span className="font-medium">
-                {moment(salaryData.period.start).format("DD.MM.YYYY")} - {moment(salaryData.period.end).format("DD.MM.YYYY")}
-              </span>
+        <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-50 to-green-100 dark:from-emerald-950 dark:to-green-900">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600">
+              <DollarSign className="h-4 w-4 text-white" />
             </div>
-            
-            <div className="space-y-3">
-              {salaryData.breakdown.map((item: any, index: number) => (
-                <div key={index} className="border rounded-lg p-3 bg-white">
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="font-semibold text-sm capitalize">
-                      {item.lessonType === "group" ? "Групповые" : item.lessonType === "individual" ? "Индивидуальные" : "Специальные"} уроки
-                    </span>
-                    <Badge variant="secondary" className="text-xs">
-                      {item.rate.type === "hourly" ? "Почасовая" : "Поурочная"}
-                    </Badge>
+            <span className="font-semibold">Результат расчета</span>
+          </div>
+          
+          <div className="text-sm mb-4 px-3 py-2 rounded-xl bg-white/50 dark:bg-white/10 inline-block">
+            <span className="text-muted-foreground">Период: </span>
+            <span className="font-medium">
+              {moment(salaryData.period.start).format("DD.MM.YYYY")} - {moment(salaryData.period.end).format("DD.MM.YYYY")}
+            </span>
+          </div>
+          
+          <div className="space-y-3 mb-4">
+            {salaryData.breakdown.map((item: any, index: number) => (
+              <div key={index} className="p-4 rounded-xl bg-white/60 dark:bg-white/10">
+                <div className="flex justify-between items-start mb-3">
+                  <span className="font-semibold text-sm">
+                    {item.lessonType === "group" ? "Групповые" : item.lessonType === "individual" ? "Индивидуальные" : "Специальные"} уроки
+                  </span>
+                  <Badge className="text-xs bg-gradient-to-r from-violet-500 to-purple-600 border-0">
+                    {item.rate.type === "hourly" ? "Почасовая" : "Поурочная"}
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground mb-3">
+                  <div className="p-2 rounded-lg bg-white/50 dark:bg-white/5">
+                    {item.rate.type === "hourly" ? (
+                      <>
+                        <span>Часов: </span>
+                        <span className="font-semibold text-foreground">{parseFloat(item.hours).toFixed(2)}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Уроков: </span>
+                        <span className="font-semibold text-foreground">{item.lessons}</span>
+                      </>
+                    )}
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground mb-2">
-                    <div>
-                      {item.rate.type === "hourly" ? (
-                        <>
-                          <span>Часов: </span>
-                          <span className="font-medium">{parseFloat(item.hours).toFixed(2)}</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>Уроков: </span>
-                          <span className="font-medium">{item.lessons}</span>
-                        </>
-                      )}
-                    </div>
-                    <div className="text-right">
-                      <span>Ставка: </span>
-                      <span className="font-medium">{item.rate.value.toLocaleString()} ₸</span>
-                      <span className="text-[10px]">/{item.rate.type === "hourly" ? "час" : "урок"}</span>
-                    </div>
-                  </div>
-                  <div className="border-t pt-2 flex justify-between items-center">
-                    <span className="text-xs text-muted-foreground">Сумма:</span>
-                    <span className="font-bold text-green-600">{item.salary.toLocaleString()} ₸</span>
+                  <div className="p-2 rounded-lg bg-white/50 dark:bg-white/5 text-right">
+                    <span>Ставка: </span>
+                    <span className="font-semibold text-foreground">{item.rate.value.toLocaleString()} ₸</span>
+                    <span className="text-[10px]">/{item.rate.type === "hourly" ? "час" : "урок"}</span>
                   </div>
                 </div>
-              ))}
-            </div>
-            
-            <div className="border-t pt-4">
-              <div className="flex items-baseline justify-between">
-                <span className="text-lg font-semibold text-muted-foreground">Итого:</span>
-                <span className="text-3xl font-bold text-green-600">
-                  {salaryData.total.toLocaleString()} ₸
-                </span>
+                <div className="flex justify-between items-center pt-3 border-t border-white/30">
+                  <span className="text-sm text-muted-foreground">Сумма:</span>
+                  <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{item.salary.toLocaleString()} ₸</span>
+                </div>
               </div>
+            ))}
+          </div>
+          
+          <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 text-white">
+            <div className="flex items-baseline justify-between">
+              <span className="text-lg font-medium opacity-90">Итого:</span>
+              <span className="text-3xl font-bold">
+                {salaryData.total.toLocaleString()} ₸
+              </span>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       ) : salaryData?.message ? (
-        <Card className="border-2 border-yellow-200 bg-yellow-50/50">
-          <CardContent className="p-4">
-            <p className="text-sm text-yellow-800">
-              {salaryData.message === "No active rates found for this teacher" 
-                ? "Для расчета зарплаты необходимо добавить ставки для учителя. Используйте кнопку \"Ставки\" для управления ставками."
-                : salaryData.message}
-            </p>
-          </CardContent>
-        </Card>
+        <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-100 dark:from-amber-950 dark:to-orange-900">
+          <p className="text-sm text-amber-800 dark:text-amber-200">
+            {salaryData.message === "No active rates found for this teacher" 
+              ? "Для расчета зарплаты необходимо добавить ставки для учителя. Используйте кнопку \"Ставки\" для управления ставками."
+              : salaryData.message}
+          </p>
+        </div>
       ) : salaryData && (!salaryData.breakdown || salaryData.breakdown.length === 0) ? (
-        <Card className="border-2 border-yellow-200 bg-yellow-50/50">
-          <CardContent className="p-4">
-            <p className="text-sm text-yellow-800">
-              За выбранный период нет проведенных уроков или нет ставок для типов проведенных уроков.
-            </p>
-          </CardContent>
-        </Card>
+        <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-100 dark:from-amber-950 dark:to-orange-900">
+          <p className="text-sm text-amber-800 dark:text-amber-200">
+            За выбранный период нет проведенных уроков или нет ставок для типов проведенных уроков.
+          </p>
+        </div>
       ) : (
-        <Card className="border-2 border-yellow-200 bg-yellow-50/50">
-          <CardContent className="p-4">
-            <p className="text-sm text-yellow-800">
-              Для расчета зарплаты необходимо добавить ставки для учителя. Используйте кнопку "Ставки" для управления ставками.
-            </p>
-          </CardContent>
-        </Card>
+        <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-100 dark:from-amber-950 dark:to-orange-900">
+          <p className="text-sm text-amber-800 dark:text-amber-200">
+            Для расчета зарплаты необходимо добавить ставки для учителя. Используйте кнопку "Ставки" для управления ставками.
+          </p>
+        </div>
       )}
     </div>
   );

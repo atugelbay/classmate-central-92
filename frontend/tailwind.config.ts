@@ -67,11 +67,16 @@ export default {
       backgroundImage: {
         "gradient-primary": "var(--gradient-primary)",
         "gradient-accent": "var(--gradient-accent)",
+        "gradient-soft": "var(--gradient-soft)",
       },
       boxShadow: {
         sm: "var(--shadow-sm)",
         md: "var(--shadow-md)",
         lg: "var(--shadow-lg)",
+        soft: "var(--shadow-soft)",
+        "soft-lg": "var(--shadow-soft-lg)",
+        inner: "var(--shadow-inner)",
+        glow: "var(--shadow-glow)",
       },
       borderRadius: {
         lg: "var(--radius)",

@@ -161,27 +161,33 @@ export function ExportDialog({
 
         <div className="space-y-4 py-4">
           {/* Format selection */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Label>Формат экспорта</Label>
-            <div className="flex gap-2">
-              <Button
+            <div className="grid grid-cols-2 gap-3">
+              <button
                 type="button"
-                variant={format === "pdf" ? "default" : "outline"}
-                className="flex-1"
                 onClick={() => setFormat("pdf")}
+                className={`p-4 rounded-2xl transition-all flex flex-col items-center gap-2 ${
+                  format === "pdf"
+                    ? "bg-gradient-to-br from-rose-500 to-red-600 text-white shadow-lg"
+                    : "bg-muted/50 hover:bg-muted"
+                }`}
               >
-                <FileText className="mr-2 h-4 w-4" />
-                PDF
-              </Button>
-              <Button
+                <FileText className="h-6 w-6" />
+                <span className="font-medium">PDF</span>
+              </button>
+              <button
                 type="button"
-                variant={format === "excel" ? "default" : "outline"}
-                className="flex-1"
                 onClick={() => setFormat("excel")}
+                className={`p-4 rounded-2xl transition-all flex flex-col items-center gap-2 ${
+                  format === "excel"
+                    ? "bg-gradient-to-br from-emerald-500 to-green-600 text-white shadow-lg"
+                    : "bg-muted/50 hover:bg-muted"
+                }`}
               >
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                Excel
-              </Button>
+                <FileSpreadsheet className="h-6 w-6" />
+                <span className="font-medium">Excel</span>
+              </button>
             </div>
           </div>
 
@@ -477,11 +483,11 @@ export function ExportDialog({
           )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+        <DialogFooter className="border-t border-border/50 pt-4">
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading} className="rounded-xl">
             Отмена
           </Button>
-          <Button onClick={handleExport} disabled={loading}>
+          <Button onClick={handleExport} disabled={loading} className="rounded-xl">
             {loading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

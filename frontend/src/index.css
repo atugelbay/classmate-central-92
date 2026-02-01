@@ -8,111 +8,159 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222 47% 11%;
+    /* Soft UI Color Palette - Purple/Lavender Theme */
+    --background: 270 20% 99%;
+    --foreground: 262 40% 20%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 262 40% 20%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 262 40% 20%;
 
-    --primary: 239 84% 67%;
+    /* Primary - Vibrant Purple */
+    --primary: 262 83% 58%;
     --primary-foreground: 0 0% 100%;
-    
-    --primary-light: 239 84% 85%;
-    --primary-dark: 239 84% 50%;
+    --primary-light: 270 60% 85%;
+    --primary-dark: 263 70% 50%;
 
-    --secondary: 220 13% 95%;
-    --secondary-foreground: 222 47% 11%;
+    /* Secondary - Soft lavender */
+    --secondary: 270 30% 96%;
+    --secondary-foreground: 262 40% 25%;
 
-    --muted: 220 13% 95%;
-    --muted-foreground: 215 16% 47%;
+    /* Muted - Warm gray with lavender hint */
+    --muted: 270 15% 95%;
+    --muted-foreground: 262 20% 45%;
 
-    --accent: 160 84% 39%;
-    --accent-foreground: 0 0% 100%;
-    
-    --accent-light: 160 60% 50%;
+    /* Accent - Warm Peach/Coral */
+    --accent: 25 95% 70%;
+    --accent-foreground: 25 80% 20%;
+    --accent-light: 30 100% 85%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 239 84% 67%;
+    /* Borders - Soft and subtle */
+    --border: 270 20% 92%;
+    --input: 270 20% 92%;
+    --ring: 262 83% 58%;
 
-    --radius: 0.75rem;
+    /* Increased radius for softer look */
+    --radius: 1rem;
     
-    --success: 142 76% 36%;
-    --warning: 38 92% 50%;
+    /* Semantic colors - Softer variants */
+    --success: 158 64% 52%;
+    --warning: 38 92% 65%;
     --info: 199 89% 48%;
 
-    --sidebar-background: 222 47% 11%;
-    --sidebar-foreground: 220 9% 85%;
-    --sidebar-primary: 239 84% 67%;
+    /* Sidebar - Light gradient theme */
+    --sidebar-background: 270 30% 98%;
+    --sidebar-foreground: 262 40% 30%;
+    --sidebar-primary: 262 83% 58%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 47% 16%;
-    --sidebar-accent-foreground: 220 9% 85%;
-    --sidebar-border: 222 47% 16%;
-    --sidebar-ring: 239 84% 67%;
+    --sidebar-accent: 270 40% 95%;
+    --sidebar-accent-foreground: 262 40% 30%;
+    --sidebar-border: 270 20% 92%;
+    --sidebar-ring: 262 83% 58%;
     
-    --gradient-primary: linear-gradient(135deg, hsl(239 84% 67%) 0%, hsl(199 89% 48%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(160 84% 39%) 0%, hsl(142 76% 36%) 100%);
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+    /* Gradients - Purple to Indigo */
+    --gradient-primary: linear-gradient(135deg, hsl(262 83% 58%) 0%, hsl(270 70% 50%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(25 95% 70%) 0%, hsl(15 90% 65%) 100%);
+    --gradient-soft: linear-gradient(135deg, hsl(270 60% 98%) 0%, hsl(25 60% 97%) 100%);
     
-    /* Dashboard-specific colors - minimalist design */
+    /* Soft Shadows - Purple-tinted */
+    --shadow-sm: 0 1px 3px 0 rgba(139, 92, 246, 0.04), 0 1px 2px -1px rgba(139, 92, 246, 0.06);
+    --shadow-md: 0 4px 6px -1px rgba(139, 92, 246, 0.06), 0 2px 4px -2px rgba(139, 92, 246, 0.08);
+    --shadow-lg: 0 10px 15px -3px rgba(139, 92, 246, 0.08), 0 4px 6px -4px rgba(139, 92, 246, 0.1);
+    --shadow-soft: 0 4px 20px -2px rgba(139, 92, 246, 0.08), 0 2px 8px -2px rgba(139, 92, 246, 0.04);
+    --shadow-soft-lg: 0 10px 40px -8px rgba(139, 92, 246, 0.12), 0 4px 16px -4px rgba(139, 92, 246, 0.06);
+    --shadow-inner: inset 0 2px 4px rgba(139, 92, 246, 0.04);
+    --shadow-glow: 0 0 20px rgba(139, 92, 246, 0.15);
+    
+    /* Dashboard-specific colors - Soft pastels */
     --dashboard-card-bg: 0 0% 100%;
-    --dashboard-stat-positive: 142 45% 45%;
-    --dashboard-stat-positive-bg: 142 30% 97%;
-    --dashboard-stat-negative: 0 50% 50%;
-    --dashboard-stat-negative-bg: 0 30% 97%;
-    --dashboard-stat-neutral: 215 16% 47%;
-    --dashboard-stat-neutral-bg: 220 13% 97%;
-    --dashboard-accent-subtle: 239 40% 95%;
-    --dashboard-icon-muted: 220 9% 65%;
+    --dashboard-stat-positive: 158 55% 45%;
+    --dashboard-stat-positive-bg: 158 40% 96%;
+    --dashboard-stat-negative: 0 60% 55%;
+    --dashboard-stat-negative-bg: 0 40% 97%;
+    --dashboard-stat-neutral: 262 20% 50%;
+    --dashboard-stat-neutral-bg: 270 30% 97%;
+    --dashboard-accent-subtle: 262 40% 96%;
+    --dashboard-icon-muted: 262 20% 60%;
   }
 
   .dark {
-    --background: 222 47% 11%;
-    --foreground: 220 9% 85%;
+    /* Dark mode - Deep slate/purple theme */
+    --background: 224 71% 4%;
+    --foreground: 213 31% 91%;
 
-    --card: 222 47% 14%;
-    --card-foreground: 220 9% 85%;
+    --card: 224 71% 6%;
+    --card-foreground: 213 31% 91%;
 
-    --popover: 222 47% 14%;
-    --popover-foreground: 220 9% 85%;
+    --popover: 224 71% 6%;
+    --popover-foreground: 213 31% 91%;
 
-    --primary: 239 84% 67%;
+    --primary: 262 83% 65%;
     --primary-foreground: 0 0% 100%;
+    --primary-light: 270 50% 70%;
+    --primary-dark: 263 70% 55%;
 
-    --secondary: 222 47% 16%;
-    --secondary-foreground: 220 9% 85%;
+    --secondary: 215 28% 17%;
+    --secondary-foreground: 213 31% 91%;
 
-    --muted: 222 47% 16%;
+    --muted: 215 28% 17%;
     --muted-foreground: 215 20% 65%;
 
-    --accent: 160 84% 39%;
+    --accent: 25 80% 60%;
     --accent-foreground: 0 0% 100%;
+    --accent-light: 30 70% 50%;
 
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 220 9% 85%;
+    --destructive: 0 63% 50%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 222 47% 16%;
-    --input: 222 47% 16%;
-    --ring: 239 84% 67%;
+    --border: 215 28% 17%;
+    --input: 215 28% 17%;
+    --ring: 262 83% 65%;
+
+    /* Semantic colors dark */
+    --success: 158 64% 45%;
+    --warning: 38 92% 55%;
+    --info: 199 89% 48%;
+
+    /* Sidebar dark mode */
+    --sidebar-background: 224 71% 5%;
+    --sidebar-foreground: 213 31% 91%;
+    --sidebar-primary: 262 83% 65%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 215 28% 14%;
+    --sidebar-accent-foreground: 213 31% 91%;
+    --sidebar-border: 215 28% 14%;
+    --sidebar-ring: 262 83% 65%;
+    
+    /* Gradients dark mode */
+    --gradient-primary: linear-gradient(135deg, hsl(262 83% 60%) 0%, hsl(270 60% 50%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(25 80% 55%) 0%, hsl(15 75% 50%) 100%);
+    --gradient-soft: linear-gradient(135deg, hsl(224 71% 6%) 0%, hsl(215 28% 10%) 100%);
+    
+    /* Soft shadows dark mode */
+    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px -1px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
+    --shadow-soft: 0 4px 20px -2px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    --shadow-soft-lg: 0 10px 40px -8px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+    --shadow-glow: 0 0 30px rgba(139, 92, 246, 0.3);
     
     /* Dashboard-specific colors - dark mode */
-    --dashboard-card-bg: 222 47% 14%;
-    --dashboard-stat-positive: 142 45% 55%;
-    --dashboard-stat-positive-bg: 142 30% 15%;
-    --dashboard-stat-negative: 0 50% 60%;
-    --dashboard-stat-negative-bg: 0 30% 15%;
-    --dashboard-stat-neutral: 215 20% 65%;
-    --dashboard-stat-neutral-bg: 222 47% 18%;
-    --dashboard-accent-subtle: 239 30% 20%;
-    --dashboard-icon-muted: 220 9% 55%;
+    --dashboard-card-bg: 224 71% 6%;
+    --dashboard-stat-positive: 158 55% 50%;
+    --dashboard-stat-positive-bg: 158 40% 12%;
+    --dashboard-stat-negative: 0 60% 50%;
+    --dashboard-stat-negative-bg: 0 40% 12%;
+    --dashboard-stat-neutral: 215 20% 60%;
+    --dashboard-stat-neutral-bg: 215 28% 14%;
+    --dashboard-accent-subtle: 262 35% 18%;
+    --dashboard-icon-muted: 215 20% 55%;
   }
 }
 
@@ -191,7 +239,7 @@ All colors MUST be HSL.
   }
 
   *::-webkit-scrollbar-thumb {
-    background: hsl(215 16% 47% / 0.3);
+    background: hsl(262 30% 70% / 0.3);
     border-radius: 10px;
     border: 2px solid transparent;
     background-clip: padding-box;
@@ -199,12 +247,12 @@ All colors MUST be HSL.
   }
 
   *::-webkit-scrollbar-thumb:hover {
-    background: hsl(215 16% 47% / 0.5);
+    background: hsl(262 50% 60% / 0.5);
     background-clip: padding-box;
   }
 
   *::-webkit-scrollbar-thumb:active {
-    background: hsl(215 16% 47% / 0.7);
+    background: hsl(262 60% 55% / 0.7);
     background-clip: padding-box;
   }
 
@@ -214,25 +262,25 @@ All colors MUST be HSL.
 
   /* Dark theme specific */
   .dark *::-webkit-scrollbar-thumb {
-    background: hsl(215 20% 65% / 0.3);
+    background: hsl(262 40% 60% / 0.3);
   }
 
   .dark *::-webkit-scrollbar-thumb:hover {
-    background: hsl(215 20% 65% / 0.5);
+    background: hsl(262 50% 65% / 0.5);
   }
 
   .dark *::-webkit-scrollbar-thumb:active {
-    background: hsl(215 20% 65% / 0.7);
+    background: hsl(262 60% 70% / 0.7);
   }
 
   /* Firefox */
   * {
     scrollbar-width: thin;
-    scrollbar-color: hsl(215 16% 47% / 0.3) transparent;
+    scrollbar-color: hsl(262 30% 70% / 0.3) transparent;
   }
 
   .dark * {
-    scrollbar-color: hsl(215 20% 65% / 0.3) transparent;
+    scrollbar-color: hsl(262 40% 60% / 0.3) transparent;
   }
 
   /* Thin scrollbar variant for smaller elements */
@@ -385,14 +433,14 @@ All colors MUST be HSL.
   .stagger-5 { animation-delay: 0.5s; }
   .stagger-6 { animation-delay: 0.6s; }
 
-  /* Hover effects */
+  /* Hover effects - Soft UI style */
   .hover-lift {
     transition: transform 0.3s ease, box-shadow 0.3s ease;
   }
 
   .hover-lift:hover {
     transform: translateY(-4px);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-soft-lg);
   }
 
   .hover-glow {
@@ -400,20 +448,81 @@ All colors MUST be HSL.
   }
 
   .hover-glow:hover {
-    box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+    box-shadow: var(--shadow-glow);
   }
 
-  /* Glass morphism */
+  /* Soft card hover */
+  .hover-soft {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .hover-soft:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-soft);
+  }
+
+  /* Glass morphism - Soft purple tint */
   .glass {
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(139, 92, 246, 0.08);
   }
 
   .dark .glass {
-    background: rgba(34, 42, 69, 0.7);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(45, 35, 70, 0.7);
+    border: 1px solid rgba(139, 92, 246, 0.15);
+  }
+
+  /* Soft Card - No borders, soft shadows */
+  .soft-card {
+    background: hsl(var(--card));
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-soft);
+    border: none;
+    transition: all 0.3s ease;
+  }
+
+  .soft-card:hover {
+    box-shadow: var(--shadow-soft-lg);
+    transform: translateY(-2px);
+  }
+
+  /* Gradient text */
+  .text-gradient {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Soft Input - Inner shadow effect */
+  .soft-input {
+    background: hsl(var(--muted));
+    border: none;
+    box-shadow: var(--shadow-inner);
+    transition: all 0.2s ease;
+  }
+
+  .soft-input:focus {
+    box-shadow: var(--shadow-inner), 0 0 0 3px hsl(262 83% 58% / 0.15);
+  }
+
+  /* Blob decorative shapes */
+  .blob-decoration {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+    opacity: 0.4;
+    pointer-events: none;
+  }
+
+  .blob-purple {
+    background: hsl(262 83% 70%);
+  }
+
+  .blob-peach {
+    background: hsl(25 95% 75%);
   }
 
   /* Grid background pattern */
@@ -421,13 +530,13 @@ All colors MUST be HSL.
     background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
   }
 
-  /* Skeleton loader */
+  /* Skeleton loader - Purple themed */
   .skeleton {
     background: linear-gradient(
       90deg,
-      hsl(220 13% 91%) 0%,
-      hsl(220 13% 95%) 50%,
-      hsl(220 13% 91%) 100%
+      hsl(270 20% 94%) 0%,
+      hsl(270 15% 97%) 50%,
+      hsl(270 20% 94%) 100%
     );
     background-size: 200% 100%;
     animation: shimmer 1.5s ease-in-out infinite;
@@ -436,9 +545,9 @@ All colors MUST be HSL.
   .dark .skeleton {
     background: linear-gradient(
       90deg,
-      hsl(222 47% 16%) 0%,
-      hsl(222 47% 20%) 50%,
-      hsl(222 47% 16%) 100%
+      hsl(262 30% 16%) 0%,
+      hsl(262 30% 20%) 50%,
+      hsl(262 30% 16%) 100%
     );
   }
 

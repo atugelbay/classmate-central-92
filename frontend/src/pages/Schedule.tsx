@@ -7,7 +7,7 @@ import "moment/dist/locale/ru";
 import { useLessons, useDeleteLesson, useUpdateLesson, useTeachers, useGroups, useRooms, useCreateRoom, useStudents, useMarkAttendance, useAllSubscriptions } from "@/hooks/useData";
 import { useLessonAttendances } from "@/hooks/useLessonAttendances";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Plus, Loader2, Trash2, ChevronLeft, ChevronRight, Building2, Calendar, CalendarDays, CalendarRange, CheckCircle2, XCircle, Clock, Edit, ClipboardCheck, FileText, FileSpreadsheet } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,7 +17,6 @@ import MonthScheduleView from "@/components/MonthScheduleView";
 import MobileScheduleView from "@/components/MobileScheduleView";
 import { LessonFormModal } from "@/components/LessonFormModal";
 import { RoomsManagementDialog } from "@/components/RoomsManagementDialog";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -452,12 +451,12 @@ export default function Schedule() {
       />
 
       {/* View Mode and Date Navigation */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={handlePrevious}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="sm" onClick={handleToday}>
+          <Button variant="default" size="sm" onClick={handleToday}>
             Сегодня
           </Button>
           <Button variant="outline" size="sm" onClick={handleNext}>
@@ -465,47 +464,49 @@ export default function Schedule() {
           </Button>
         </div>
         
-        <h3 className="text-lg font-semibold">
+        <h3 className="text-lg font-semibold order-first sm:order-none">
           {getDateRangeText()}
         </h3>
         
-        <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as "day" | "week" | "month")}>
-          <TabsList>
-            <TabsTrigger value="day" className="gap-2">
-              <Calendar className="h-4 w-4" />
-              День
-            </TabsTrigger>
-            <TabsTrigger value="week" className="gap-2">
-              <CalendarDays className="h-4 w-4" />
-              Неделя
-            </TabsTrigger>
-            <TabsTrigger value="month" className="gap-2">
-              <CalendarRange className="h-4 w-4" />
-              Месяц
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="flex items-center gap-1 p-1 rounded-lg bg-muted">
+          <button
+            onClick={() => setViewMode("day")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              viewMode === "day" 
+                ? "bg-background text-foreground shadow-sm" 
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Calendar className="h-4 w-4" />
+            День
+          </button>
+          <button
+            onClick={() => setViewMode("week")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              viewMode === "week" 
+                ? "bg-background text-foreground shadow-sm" 
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <CalendarDays className="h-4 w-4" />
+            Неделя
+          </button>
+          <button
+            onClick={() => setViewMode("month")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              viewMode === "month" 
+                ? "bg-background text-foreground shadow-sm" 
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <CalendarRange className="h-4 w-4" />
+            Месяц
+          </button>
+        </div>
       </div>
 
-      <Card className="min-w-0 w-full overflow-hidden">
-        <CardHeader>
-          <CardTitle className="text-lg sm:text-xl">
-            {isMobile ? (
-              <>
-                {viewMode === "day" && "Уроки на день"}
-                {viewMode === "week" && "Уроки на неделю"}
-                {viewMode === "month" && "Календарь на месяц"}
-              </>
-            ) : (
-              <>
-                {viewMode === "day" && "Расписание по аудиториям"}
-                {viewMode === "week" && "Расписание на неделю"}
-                {viewMode === "month" && "Календарь на месяц"}
-              </>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="min-w-0 w-full p-0 sm:p-6">
+      {/* Schedule Content */}
+      <div className="w-full rounded-lg border bg-card">
           {isMobile && viewMode !== "month" ? (
             <MobileScheduleView
               lessons={lessons}
@@ -563,8 +564,7 @@ export default function Schedule() {
               )}
             </>
           )}
-        </CardContent>
-      </Card>
+      </div>
 
 
       {/* Lesson Form Modal */}

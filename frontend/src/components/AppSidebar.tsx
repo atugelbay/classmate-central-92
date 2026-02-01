@@ -145,20 +145,21 @@ export function AppSidebar({ onRestartOnboarding }: AppSidebarProps) {
 
   return (
     <Sidebar className={isCollapsed ? "w-16" : "w-64"} collapsible="icon">
-      <SidebarHeader className={`border-b border-sidebar-border py-4 ${isCollapsed ? "px-2" : "px-4"}`}>
+      <SidebarHeader className={`py-4 ${isCollapsed ? "px-2" : "px-4"}`}>
         <div className={`flex items-center ${isCollapsed ? "justify-center" : "gap-2.5"}`}>
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg">
             <img 
               src="/Neosmart/logo.png" 
               alt="Neosmart Logo" 
-              className="h-full w-full object-contain"
+              className="h-8 w-8 object-contain"
             />
           </div>
           {!isCollapsed && (
             <div className="min-w-0 flex-1">
-              <h2 className="text-sm font-semibold text-sidebar-foreground truncate">
+              <h2 className="text-sm font-semibold text-foreground truncate">
                 {settings?.centerName || "Neosmart"}
               </h2>
+              <p className="text-[10px] text-muted-foreground">Учебный центр</p>
             </div>
           )}
         </div>
@@ -207,17 +208,17 @@ export function AppSidebar({ onRestartOnboarding }: AppSidebarProps) {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className={`border-t border-sidebar-border ${isCollapsed ? "p-2" : "p-4"}`}>
+      <SidebarFooter className={`mt-auto ${isCollapsed ? "p-2" : "p-4"}`}>
         {!isCollapsed && user && (
-          <div className="mb-2 px-2">
-            <p className="text-sm font-medium text-sidebar-foreground">{user.name}</p>
-            <p className="text-xs text-sidebar-foreground/60">{user.email}</p>
+          <div className="mb-3 p-3 rounded-xl bg-gradient-to-r from-primary/5 to-accent/5">
+            <p className="text-sm font-medium text-foreground">{user.name}</p>
+            <p className="text-xs text-muted-foreground">{user.email}</p>
           </div>
         )}
         {onRestartOnboarding && (
           <Button
             variant="ghost"
-            className={`${isCollapsed ? "w-full justify-center" : "w-full justify-start gap-3 mb-2"}`}
+            className={`${isCollapsed ? "w-full justify-center" : "w-full justify-start gap-3 mb-2"} rounded-xl hover:bg-primary/10`}
             onClick={onRestartOnboarding}
           >
             <RefreshCcw className="h-5 w-5" />
@@ -226,7 +227,7 @@ export function AppSidebar({ onRestartOnboarding }: AppSidebarProps) {
         )}
         <Button
           variant="ghost"
-          className={`${isCollapsed ? "w-full justify-center" : "w-full justify-start gap-3"}`}
+          className={`${isCollapsed ? "w-full justify-center" : "w-full justify-start gap-3"} rounded-xl hover:bg-destructive/10 hover:text-destructive`}
           onClick={handleLogout}
         >
           <LogOut className="h-5 w-5" />

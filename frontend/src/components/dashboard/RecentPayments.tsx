@@ -73,15 +73,17 @@ export function RecentPayments() {
   return (
     <Card className="h-full flex flex-col overflow-hidden">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <div className="flex items-center gap-2">
-          <DollarSign className="h-5 w-5" style={{ color: 'hsl(var(--dashboard-icon-muted))' }} />
-          <CardTitle>Последние платежи</CardTitle>
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-gradient-to-br from-success/10 to-success/5">
+            <DollarSign className="h-5 w-5 text-success" />
+          </div>
+          <CardTitle className="text-lg">Последние платежи</CardTitle>
         </div>
         <Button
           variant="ghost"
           size="sm"
           onClick={() => navigate("/finance")}
-          className="gap-1"
+          className="gap-1 rounded-xl"
         >
           Все платежи
           <ArrowRight className="h-4 w-4" />
@@ -108,7 +110,7 @@ export function RecentPayments() {
               return (
                 <div
                   key={transaction.id}
-                  className="rounded-lg border p-2.5 transition-all hover:shadow-md cursor-pointer"
+                  className="rounded-xl p-3 bg-muted/30 hover:bg-muted/50 transition-all hover:shadow-soft cursor-pointer"
                   onClick={() => navigate("/finance")}
                 >
                   <div className="flex items-start justify-between">

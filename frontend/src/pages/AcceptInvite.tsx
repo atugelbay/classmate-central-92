@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { useAcceptInvite } from "@/hooks/useData";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { AuthResponse } from "@/api/auth";
+import { UserPlus, Mail, Key, Lock, CheckCircle } from "lucide-react";
 
 function useQueryParams() {
   const { search } = useLocation();
@@ -55,54 +56,85 @@ export default function AcceptInvite() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Принять приглашение</CardTitle>
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-[hsl(var(--primary)/0.1)] via-background to-[hsl(var(--accent)/0.1)] relative overflow-hidden">
+      {/* Decorative Blobs */}
+      <div className="absolute top-[-10%] left-[-5%] w-72 h-72 bg-primary/20 rounded-full blur-3xl" />
+      <div className="absolute bottom-[-10%] right-[-5%] w-96 h-96 bg-accent/20 rounded-full blur-3xl" />
+      <div className="absolute top-[40%] right-[10%] w-48 h-48 bg-primary/10 rounded-full blur-2xl" />
+
+      <Card className="w-full max-w-md shadow-soft-lg border-0 backdrop-blur-sm bg-white/80 dark:bg-gray-900/80 rounded-3xl">
+        <CardHeader className="space-y-4 pb-6">
+          <div className="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-primary via-primary-dark to-[hsl(280,70%,45%)] flex items-center justify-center shadow-soft">
+            <UserPlus className="h-8 w-8 text-white" />
+          </div>
+          <div className="text-center">
+            <CardTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-[hsl(280,70%,45%)] bg-clip-text text-transparent">
+              Принять приглашение
+            </CardTitle>
+            <CardDescription className="mt-2">
+              Завершите настройку вашего аккаунта
+            </CardDescription>
+          </div>
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="space-y-2">
-              <Label>Email</Label>
-              <Input
-                required
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-              />
+              <Label className="text-muted-foreground">Email</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  required
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="pl-10"
+                />
+              </div>
             </div>
             <div className="space-y-2">
-              <Label>Код приглашения</Label>
-              <Input
-                required
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                placeholder="6-значный код"
-              />
+              <Label className="text-muted-foreground">Код приглашения</Label>
+              <div className="relative">
+                <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  required
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  placeholder="6-значный код"
+                  className="pl-10"
+                />
+              </div>
             </div>
             <div className="space-y-2">
-              <Label>Пароль</Label>
-              <Input
-                required
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Не менее 6 символов"
-              />
+              <Label className="text-muted-foreground">Пароль</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  required
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Не менее 6 символов"
+                  className="pl-10"
+                />
+              </div>
             </div>
             <div className="space-y-2">
-              <Label>Повторите пароль</Label>
-              <Input
-                required
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Повторите пароль"
-              />
+              <Label className="text-muted-foreground">Повторите пароль</Label>
+              <div className="relative">
+                <CheckCircle className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  required
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Повторите пароль"
+                  className="pl-10"
+                />
+              </div>
             </div>
-            <Button type="submit" className="w-full" disabled={acceptInvite.isPending}>
-              {acceptInvite.isPending ? "Сохраняем..." : "Завершить приглашение"}
+            <Button type="submit" className="w-full rounded-xl" disabled={acceptInvite.isPending}>
+              {acceptInvite.isPending ? "Сохраняем..." : "Завершить регистрацию"}
             </Button>
           </form>
         </CardContent>
@@ -110,4 +142,3 @@ export default function AcceptInvite() {
     </div>
   );
 }
-

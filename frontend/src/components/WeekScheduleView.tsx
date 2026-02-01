@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import moment from "moment";
 import "moment/dist/locale/ru";
 import { Room, Lesson, Teacher, Group, Student, StudentSubscription } from "@/types";
-import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Edit2, X, Clock, User, Users } from "lucide-react";
@@ -370,15 +369,15 @@ export default function WeekScheduleView({
   return (
     <div 
       ref={containerRef}
-      className="relative isolate min-w-0 w-full p-2 sm:p-0" 
+      className="relative isolate w-full p-2 sm:p-4" 
       style={{ userSelect: draggingLesson ? 'none' : 'auto' }}
     >
-      <div className="overflow-x-auto pb-4 w-full">
-        <div className="flex flex-col min-w-fit">
+      <div className="w-full">
+        <div className="flex flex-col gap-1">
           {/* Header with days */}
-          <div className="flex gap-0 border-b">
-            <div className="flex-shrink-0 w-20 sm:w-28 md:w-32 sticky left-0 z-[5] bg-background border-r">
-              <div className="h-12 flex items-center justify-center font-semibold text-[10px] sm:text-sm px-1">
+          <div className="flex gap-1">
+            <div className="flex-shrink-0 w-20 sm:w-24 z-[5]">
+              <div className="h-12 sm:h-14 flex items-center justify-center font-semibold text-[10px] sm:text-xs px-1 border-b">
                 Аудитория
               </div>
             </div>
@@ -387,17 +386,22 @@ export default function WeekScheduleView({
               return (
                 <div 
                   key={index} 
-                  className={`flex-shrink-0 border-r ${isToday ? 'bg-blue-50' : ''}`}
-                  style={{ width: `${dayColumnWidth}px` }}
+                  className="flex-1 min-w-0"
                 >
-                  <div className="h-12 flex flex-col items-center justify-center gap-0 py-1">
-                    <div className={`text-[9px] leading-tight capitalize ${isToday ? 'text-blue-600 font-semibold' : 'text-muted-foreground'}`}>
+                  <div 
+                    className={`h-12 sm:h-14 flex flex-col items-center justify-center gap-0 py-1 border-b ${
+                      isToday 
+                        ? 'bg-blue-50 dark:bg-blue-950/30 border-b-2 border-blue-500' 
+                        : ''
+                    }`}
+                  >
+                    <div className={`text-[9px] leading-tight capitalize ${isToday ? 'text-blue-600 dark:text-blue-400 font-semibold' : 'text-muted-foreground'}`}>
                       {moment(day).format('dd')}
                     </div>
-                    <div className={`text-sm font-semibold leading-tight ${isToday ? 'text-blue-600' : ''}`}>
+                    <div className={`text-sm sm:text-base font-bold leading-tight ${isToday ? 'text-blue-600 dark:text-blue-400' : ''}`}>
                       {moment(day).format('D')}
                     </div>
-                    <div className={`text-[9px] leading-tight capitalize ${isToday ? 'text-blue-600' : 'text-muted-foreground'}`}>
+                    <div className={`text-[9px] leading-tight capitalize ${isToday ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground'}`}>
                       {moment(day).format('MMM')}
                     </div>
                   </div>
@@ -408,22 +412,22 @@ export default function WeekScheduleView({
 
           {/* Room rows */}
           {activeRooms.map((room) => (
-            <div key={room.id} className="flex gap-0 border-b">
+            <div key={room.id} className="flex gap-1">
               {/* Room name */}
               <div 
-                className="flex-shrink-0 w-20 sm:w-28 md:w-32 sticky left-0 z-[4] bg-background border-r"
+                className="flex-shrink-0 w-20 sm:w-24 z-[4] border-l-4"
                 style={{ 
-                  minHeight: containerWidth < 640 ? "60px" : "80px"
+                  height: "70px",
+                  borderLeftColor: room.color,
+                  backgroundColor: `${room.color}10`
                 }}
               >
-                <div className="h-full flex flex-col items-center justify-center p-0.5 sm:p-1 text-center">
-                  <div className="font-semibold text-[10px] sm:text-xs truncate max-w-full px-1">{room.name}</div>
-                  <div 
-                    className="w-2 h-2 rounded-full mt-0.5" 
-                    style={{ backgroundColor: room.color }}
-                  />
-                  <div className="text-[10px] sm:text-xs text-muted-foreground">
-                    {room.capacity}
+                <div className="h-full flex flex-col items-center justify-center p-1 text-center">
+                  <div className="font-semibold text-[10px] sm:text-xs truncate max-w-full px-1">
+                    {room.name}
+                  </div>
+                  <div className="text-[9px] sm:text-[10px] text-muted-foreground">
+                    {room.capacity} мест
                   </div>
                 </div>
               </div>
@@ -446,13 +450,13 @@ export default function WeekScheduleView({
                 return (
                   <div 
                     key={dayIndex}
-                    className={`flex-shrink-0 border-r p-0.5 sm:p-1 cursor-pointer transition-colors overflow-hidden ${
-                      isToday ? 'bg-blue-50/30' : ''
-                    } ${isHovered && draggingLesson ? 'bg-blue-100/50' : 'hover:bg-gray-50'}`}
+                    className={`flex-1 min-w-0 p-0.5 sm:p-1 cursor-pointer transition-colors border-r border-gray-100 dark:border-gray-800 overflow-hidden ${
+                      isToday 
+                        ? 'bg-blue-50/30 dark:bg-blue-950/20 border-t-2 border-t-blue-500' 
+                        : 'hover:bg-gray-50 dark:hover:bg-gray-900/30'
+                    } ${isHovered && draggingLesson ? 'bg-blue-100/50 dark:bg-blue-900/30' : ''}`}
                     style={{ 
-                      minHeight: containerWidth < 640 ? "60px" : "80px",
-                      maxHeight: containerWidth < 640 ? "80px" : "100px",
-                      width: `${dayColumnWidth}px`
+                      height: "70px",
                     }}
                     onClick={(e) => handleCellClick(day, room.id, e)}
                     onMouseEnter={() => {
@@ -477,14 +481,16 @@ export default function WeekScheduleView({
                             if (!open) setPopoverOpen(false);
                           }}>
                             <PopoverTrigger asChild>
-                              <Card
-                                className={`p-0.5 sm:p-1 hover:shadow-md transition-shadow cursor-pointer select-none overflow-hidden ${
-                                  isDragged ? 'opacity-50' : ''
+                              <div
+                                className={`p-0.5 sm:p-1 rounded border-l-2 cursor-pointer select-none overflow-hidden bg-white dark:bg-gray-800 shadow-sm ${
+                                  isDragged ? 'opacity-50' : 'hover:shadow-md'
                                 } ${
-                                  unmarkedLessonIds.has(lesson.id)
-                                    ? 'border-red-500 border-2 animate-pulse bg-red-50'
-                                    : moment(lesson.start).isBefore(moment()) && lesson.status !== 'cancelled'
+                                  lesson.status === 'cancelled' 
                                     ? 'opacity-50 grayscale'
+                                    : unmarkedLessonIds.has(lesson.id)
+                                    ? 'animate-pulse bg-red-50 dark:bg-red-950 border-red-500 ring-1 ring-red-400'
+                                    : moment(lesson.start).isBefore(moment()) && lesson.status !== 'cancelled'
+                                    ? 'opacity-60 grayscale'
                                     : ''
                                 }`}
                                 onClick={(e) => {
@@ -499,15 +505,22 @@ export default function WeekScheduleView({
                                     handleLessonDragStart(lesson, e);
                                   }
                                 }}
-                                style={{ userSelect: 'none' }}
+                                style={{ 
+                                  userSelect: 'none',
+                                  borderLeftColor: unmarkedLessonIds.has(lesson.id) ? '#ef4444' : room.color
+                                }}
                               >
-                                <div className="text-[8px] sm:text-[10px] font-semibold truncate leading-tight overflow-hidden text-ellipsis whitespace-nowrap">
+                                <div 
+                                  className={`text-[8px] sm:text-[10px] font-semibold truncate leading-tight ${
+                                    lesson.status === 'cancelled' ? 'line-through text-muted-foreground' : ''
+                                  }`}
+                                >
                                   {getGroupName(lesson.groupId) || lesson.title}
                                 </div>
-                                <div className="text-[7px] sm:text-[9px] text-muted-foreground truncate leading-tight overflow-hidden text-ellipsis whitespace-nowrap">
+                                <div className="text-[7px] sm:text-[9px] text-muted-foreground truncate leading-tight">
                                   {moment.utc(lesson.start).local().format("HH:mm")}
                                 </div>
-                              </Card>
+                              </div>
                             </PopoverTrigger>
                             <PopoverContent 
                               className="w-80"
@@ -608,41 +621,45 @@ export default function WeekScheduleView({
                         <Popover>
                           <PopoverTrigger asChild>
                             <div 
-                              className="text-[7px] sm:text-[9px] text-blue-600 font-medium text-center pt-0.5 cursor-pointer hover:text-blue-800 transition-colors"
+                              className="text-[7px] sm:text-[9px] text-blue-600 font-semibold text-center cursor-pointer hover:text-blue-800 transition-colors"
                               onClick={(e) => e.stopPropagation()}
                             >
                               +{sortedLessons.length - 2}
                             </div>
                           </PopoverTrigger>
                           <PopoverContent 
-                            className="w-80"
+                            className="w-72"
                             side="right"
                             align="start"
                           >
-                            <div className="space-y-3">
+                            <div className="space-y-2">
                               <h4 className="font-semibold text-sm">
                                 Все уроки ({sortedLessons.length})
                               </h4>
-                              <div className="space-y-2 max-h-96 overflow-y-auto">
+                              <div className="space-y-1 max-h-64 overflow-y-auto">
                                 {sortedLessons.map((lesson) => {
                                   const teacher = teachers.find((t) => t.id === lesson.teacherId);
+                                  const lessonRoom = rooms.find((r) => r.id === lesson.roomId);
                                   return (
-                                    <Card 
+                                    <div 
                                       key={lesson.id} 
-                                      className={`p-2 cursor-pointer hover:shadow-md transition-shadow ${
-                                        unmarkedLessonIds.has(lesson.id)
-                                          ? 'border-red-500 border-2 animate-pulse bg-red-50'
-                                          : moment(lesson.start).isBefore(moment()) && lesson.status !== 'cancelled'
+                                      className={`p-2 rounded border-l-2 cursor-pointer bg-white dark:bg-gray-800 shadow-sm hover:shadow-md ${
+                                        lesson.status === 'cancelled' 
                                           ? 'opacity-50 grayscale'
+                                          : unmarkedLessonIds.has(lesson.id)
+                                          ? 'animate-pulse bg-red-50 dark:bg-red-950 border-red-500'
+                                          : moment(lesson.start).isBefore(moment()) && lesson.status !== 'cancelled'
+                                          ? 'opacity-60 grayscale'
                                           : ''
                                       }`}
+                                      style={{ borderLeftColor: unmarkedLessonIds.has(lesson.id) ? '#ef4444' : lessonRoom?.color }}
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         setSelectedLesson(lesson);
                                         setPopoverOpen(true);
                                       }}
                                     >
-                                      <div className="text-sm font-semibold truncate">
+                                      <div className={`text-sm font-semibold truncate ${lesson.status === 'cancelled' ? 'line-through' : ''}`}>
                                         {getGroupName(lesson.groupId) || lesson.title}
                                       </div>
                                       <div className="text-xs text-muted-foreground">
@@ -651,12 +668,7 @@ export default function WeekScheduleView({
                                       <div className="text-xs text-muted-foreground truncate">
                                         {teacher?.name}
                                       </div>
-                                      {lesson.groupId && (
-                                        <Badge variant="outline" className="text-xs mt-1">
-                                          {getGroupName(lesson.groupId)}
-                                        </Badge>
-                                      )}
-                                    </Card>
+                                    </div>
                                   );
                                 })}
                               </div>
@@ -667,20 +679,23 @@ export default function WeekScheduleView({
 
                       {/* Ghost preview */}
                       {shouldShowGhost && tempLessonPosition && (
-                        <Card className="p-1.5 opacity-60 border-dashed">
-                          <div className="text-xs font-semibold truncate">
+                        <div 
+                          className="p-1 rounded border-l-2 border-dashed bg-white/80 dark:bg-gray-800/80 opacity-70"
+                          style={{ borderLeftColor: room.color }}
+                        >
+                          <div className="text-[10px] font-semibold truncate">
                             {draggingLesson.title}
                           </div>
-                          <div className="text-xs text-muted-foreground">
+                          <div className="text-[9px] text-muted-foreground">
                             {moment(tempLessonPosition.start).format("HH:mm")}
                           </div>
-                        </Card>
+                        </div>
                       )}
 
                       {/* Empty state */}
                       {sortedLessons.length === 0 && !shouldShowGhost && (
-                        <div className="flex items-center justify-center py-2">
-                          <p className="text-[10px] text-muted-foreground/50">Нет уроков</p>
+                        <div className="flex items-center justify-center h-full">
+                          <p className="text-[9px] text-muted-foreground/30">—</p>
                         </div>
                       )}
                     </div>

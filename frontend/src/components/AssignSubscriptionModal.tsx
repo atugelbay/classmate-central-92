@@ -278,13 +278,13 @@ export default function AssignSubscriptionModal({
           )}
 
           {/* Custom Mode Toggle */}
-          <div className="flex items-center space-x-2 p-4 bg-gray-50 rounded-lg">
+          <div className="flex items-center space-x-3 p-4 rounded-2xl bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-950 dark:to-purple-950">
             <Switch
               id="custom-mode"
               checked={customMode}
               onCheckedChange={setCustomMode}
             />
-            <Label htmlFor="custom-mode" className="cursor-pointer">
+            <Label htmlFor="custom-mode" className="cursor-pointer text-violet-700 dark:text-violet-300 font-medium">
               Создать индивидуальный абонемент (без шаблона)
             </Label>
           </div>
@@ -475,36 +475,60 @@ export default function AssignSubscriptionModal({
           </div>
 
           {/* Summary */}
-          <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-            <h4 className="font-semibold mb-2">Итого:</h4>
-            <div className="space-y-1 text-sm">
-              <p>• Занятий: <span className="font-semibold">{totalLessons}</span></p>
+          <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-50 to-green-100 dark:from-emerald-950 dark:to-green-900">
+            <h4 className="font-semibold mb-3 text-emerald-800 dark:text-emerald-200">Итого:</h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between items-center p-2 rounded-xl bg-white/50 dark:bg-white/10">
+                <span className="text-emerald-700 dark:text-emerald-300">Занятий</span>
+                <span className="font-bold text-emerald-900 dark:text-emerald-100">{totalLessons}</span>
+              </div>
               {priceCalculation.discountAmount > 0 ? (
                 <>
-                  <p>• Стоимость: <span className="line-through text-muted-foreground">{totalPrice.toLocaleString()} ₸</span> <span className="font-semibold text-green-600">{priceCalculation.finalPrice.toLocaleString()} ₸</span></p>
-                  <p className="text-xs text-green-700">• Скидка: <span className="font-semibold">-{priceCalculation.discountAmount.toLocaleString()} ₸</span></p>
-                  <p>• За занятие: <span className="font-semibold">{(priceCalculation.finalPrice / (totalLessons || 1)).toFixed(0)} ₸</span></p>
+                  <div className="flex justify-between items-center p-2 rounded-xl bg-white/50 dark:bg-white/10">
+                    <span className="text-emerald-700 dark:text-emerald-300">Стоимость</span>
+                    <div className="text-right">
+                      <span className="line-through text-muted-foreground text-xs mr-2">{totalPrice.toLocaleString()} ₸</span>
+                      <span className="font-bold text-emerald-900 dark:text-emerald-100">{priceCalculation.finalPrice.toLocaleString()} ₸</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center p-2 rounded-xl bg-emerald-200/50 dark:bg-emerald-800/30">
+                    <span className="text-emerald-700 dark:text-emerald-300">Скидка</span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">-{priceCalculation.discountAmount.toLocaleString()} ₸</span>
+                  </div>
+                  <div className="flex justify-between items-center p-2 rounded-xl bg-white/50 dark:bg-white/10">
+                    <span className="text-emerald-700 dark:text-emerald-300">За занятие</span>
+                    <span className="font-bold text-emerald-900 dark:text-emerald-100">{(priceCalculation.finalPrice / (totalLessons || 1)).toFixed(0)} ₸</span>
+                  </div>
                 </>
               ) : (
                 <>
-                  <p>• Стоимость: <span className="font-semibold">{totalPrice.toLocaleString()} ₸</span></p>
-                  <p>• За занятие: <span className="font-semibold">{pricePerLesson.toFixed(0)} ₸</span></p>
+                  <div className="flex justify-between items-center p-2 rounded-xl bg-white/50 dark:bg-white/10">
+                    <span className="text-emerald-700 dark:text-emerald-300">Стоимость</span>
+                    <span className="font-bold text-emerald-900 dark:text-emerald-100">{totalPrice.toLocaleString()} ₸</span>
+                  </div>
+                  <div className="flex justify-between items-center p-2 rounded-xl bg-white/50 dark:bg-white/10">
+                    <span className="text-emerald-700 dark:text-emerald-300">За занятие</span>
+                    <span className="font-bold text-emerald-900 dark:text-emerald-100">{pricePerLesson.toFixed(0)} ₸</span>
+                  </div>
                 </>
               )}
               {selectedType && (
-                <p>• Тип: <span className={`px-2 py-0.5 rounded text-xs ${billingTypeColors[selectedType.billingType]}`}>
-                  {billingTypeLabels[selectedType.billingType]}
-                </span></p>
+                <div className="flex justify-between items-center p-2 rounded-xl bg-white/50 dark:bg-white/10">
+                  <span className="text-emerald-700 dark:text-emerald-300">Тип</span>
+                  <span className={`px-3 py-1 rounded-xl text-xs font-medium ${billingTypeColors[selectedType.billingType]}`}>
+                    {billingTypeLabels[selectedType.billingType]}
+                  </span>
+                </div>
               )}
             </div>
           </div>
         </div>
 
-        <DialogFooter className="flex-shrink-0 border-t pt-4 mt-4">
-          <Button variant="outline" onClick={onClose} disabled={loading} className="w-full sm:w-auto">
+        <DialogFooter className="flex-shrink-0 border-t border-border/50 pt-4 mt-4">
+          <Button variant="outline" onClick={onClose} disabled={loading} className="w-full sm:w-auto rounded-xl">
             Отмена
           </Button>
-          <Button onClick={handleSubmit} disabled={loading} className="w-full sm:w-auto">
+          <Button onClick={handleSubmit} disabled={loading} className="w-full sm:w-auto rounded-xl">
             {loading ? "Создание..." : "Создать абонемент"}
           </Button>
         </DialogFooter>
