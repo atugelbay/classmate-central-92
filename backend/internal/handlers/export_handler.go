@@ -80,7 +80,8 @@ func (h *ExportHandler) ExportTransactionsPDF(c *gin.Context) {
 
 	pdfData, err := h.exportService.ExportTransactionsPDF(filteredTransactions, studentMap)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate PDF"})
+		logger.Error("Failed to generate transactions PDF", zap.Error(err), zap.Int("transactions_count", len(filteredTransactions)))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate PDF", "details": err.Error()})
 		return
 	}
 
@@ -271,7 +272,8 @@ func (h *ExportHandler) ExportSchedulePDF(c *gin.Context) {
 
 	pdfData, err := h.exportService.ExportSchedulePDF(filteredLessons, startDate, endDate)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate PDF"})
+		logger.Error("Failed to generate schedule PDF", zap.Error(err), zap.Int("lessons_count", len(filteredLessons)))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate PDF", "details": err.Error()})
 		return
 	}
 
