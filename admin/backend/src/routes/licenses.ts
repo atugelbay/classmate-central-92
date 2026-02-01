@@ -5,7 +5,7 @@ import { AuthenticatedRequest } from '../types/index.js';
 const router = Router();
 
 // GET /api/licenses/stats - License statistics
-router.get('/stats', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.get('/stats', async (_req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const stats = await dbService.getLicenseStats();
     res.json({
@@ -22,7 +22,7 @@ router.get('/stats', async (req: AuthenticatedRequest, res: Response): Promise<v
 });
 
 // GET /api/licenses/plans - Get all plans
-router.get('/plans', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.get('/plans', async (_req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const plans = await dbService.getPlans();
     res.json({
@@ -39,7 +39,7 @@ router.get('/plans', async (req: AuthenticatedRequest, res: Response): Promise<v
 });
 
 // GET /api/licenses/unassigned - Get companies without license
-router.get('/unassigned', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.get('/unassigned', async (_req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const companies = await dbService.getCompaniesWithoutLicense();
     res.json({
@@ -82,7 +82,7 @@ router.get('/', async (req: AuthenticatedRequest, res: Response): Promise<void> 
 // GET /api/licenses/:companyId - Get license for specific company
 router.get('/:companyId', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const companyId = req.params.companyId;
+    const companyId = req.params.companyId as string;
     const license = await dbService.getLicenseByCompany(companyId);
 
     if (!license) {
@@ -144,7 +144,7 @@ router.post('/', async (req: AuthenticatedRequest, res: Response): Promise<void>
 // PUT /api/licenses/:companyId - Update license
 router.put('/:companyId', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const companyId = req.params.companyId;
+    const companyId = req.params.companyId as string;
     const {
       planId,
       status,
@@ -195,7 +195,7 @@ router.put('/:companyId', async (req: AuthenticatedRequest, res: Response): Prom
 // DELETE /api/licenses/:companyId - Delete license
 router.delete('/:companyId', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const companyId = req.params.companyId;
+    const companyId = req.params.companyId as string;
     const result = await dbService.deleteLicense(companyId);
 
     if (!result.success) {
@@ -222,7 +222,7 @@ router.delete('/:companyId', async (req: AuthenticatedRequest, res: Response): P
 // POST /api/licenses/:companyId/extend - Quick extend license
 router.post('/:companyId/extend', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const companyId = req.params.companyId;
+    const companyId = req.params.companyId as string;
     const { months = 1 } = req.body;
 
     const result = await dbService.updateLicense(companyId, {
@@ -253,7 +253,7 @@ router.post('/:companyId/extend', async (req: AuthenticatedRequest, res: Respons
 // POST /api/licenses/:companyId/suspend - Suspend license
 router.post('/:companyId/suspend', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const companyId = req.params.companyId;
+    const companyId = req.params.companyId as string;
 
     const result = await dbService.updateLicense(companyId, {
       status: 'suspended',
@@ -283,7 +283,7 @@ router.post('/:companyId/suspend', async (req: AuthenticatedRequest, res: Respon
 // POST /api/licenses/:companyId/activate - Activate license
 router.post('/:companyId/activate', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const companyId = req.params.companyId;
+    const companyId = req.params.companyId as string;
 
     const result = await dbService.updateLicense(companyId, {
       status: 'active',
