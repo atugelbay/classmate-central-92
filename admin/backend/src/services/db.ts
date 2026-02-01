@@ -66,6 +66,12 @@ const ALLOWED_TABLES = [
   'student_activity_log',
   'notifications',
   'teacher_rates',
+  // Billing tables
+  'plans',
+  'company_licenses',
+  'billing_history',
+  'usage_metrics',
+  'billing_addons',
 ];
 
 // Tables that contain sensitive data and should be masked
@@ -515,6 +521,437 @@ export class DatabaseService {
       page,
       limit,
       totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  // ============================================================================
+  // LICENSE MANAGEMENT METHODS
+  // ============================================================================
+
+  /**
+   * Get all plans
+   */
+  async getPlans(): Promise<{
+    id: string;
+    name: string;
+    description: string;
+    price_monthly: number;
+    price_yearly: number;
+    max_students: number | null;
+    max_users: number | null;
+    max_teachers: number | null;
+    max_branches: number | null;
+    features: Record<string, unknown>;
+    is_active: boolean;
+    sort_order: number;
+  }[]> {
+    const query = `
+      SELECT * FROM plans
+      WHERE is_active = true
+      ORDER BY sort_order ASC
+    `;
+    const result = await pool.query(query);
+    return result.rows.map(row => ({
+      ...row,
+      price_monthly: parseFloat(row.price_monthly),
+      price_yearly: row.price_yearly ? parseFloat(row.price_yearly) : null,
+    }));
+  }
+
+  /**
+   * Get all licenses with company and plan info
+   */
+  async getLicenses(
+    page: number = 1,
+    limit: number = 50,
+    filters?: {
+      status?: string;
+      planId?: string;
+      search?: string;
+    }
+  ): Promise<PaginatedResponse<{
+    id: number;
+    company_id: string;
+    company_name: string;
+    plan_id: string;
+    plan_name: string;
+    status: string;
+    current_period_start: string;
+    current_period_end: string;
+    trial_ends_at: string | null;
+    students_count: number;
+    users_count: number;
+    max_students: number | null;
+    max_users: number | null;
+    notes: string | null;
+    created_at: string;
+  }>> {
+    const offset = (page - 1) * limit;
+    const conditions: string[] = [];
+    const params: unknown[] = [];
+    let paramIndex = 1;
+
+    if (filters?.status) {
+      conditions.push(`cl.status = $${paramIndex++}`);
+      params.push(filters.status);
+    }
+    if (filters?.planId) {
+      conditions.push(`cl.plan_id = $${paramIndex++}`);
+      params.push(filters.planId);
+    }
+    if (filters?.search) {
+      conditions.push(`c.name ILIKE $${paramIndex++}`);
+      params.push(`%${filters.search}%`);
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const countQuery = `
+      SELECT COUNT(*) as total 
+      FROM company_licenses cl
+      JOIN companies c ON cl.company_id = c.id
+      ${whereClause}
+    `;
+    const countResult = await pool.query(countQuery, params);
+    const total = parseInt(countResult.rows[0].total, 10);
+
+    const query = `
+      SELECT 
+        cl.id,
+        cl.company_id,
+        c.name as company_name,
+        cl.plan_id,
+        p.name as plan_name,
+        cl.status,
+        cl.current_period_start,
+        cl.current_period_end,
+        cl.trial_ends_at,
+        cl.custom_max_students,
+        cl.custom_max_users,
+        cl.notes,
+        cl.created_at,
+        p.max_students,
+        p.max_users,
+        (SELECT COUNT(*) FROM students s WHERE s.company_id = cl.company_id) as students_count,
+        (SELECT COUNT(*) FROM users u WHERE u.company_id = cl.company_id) as users_count
+      FROM company_licenses cl
+      JOIN companies c ON cl.company_id = c.id
+      JOIN plans p ON cl.plan_id = p.id
+      ${whereClause}
+      ORDER BY cl.current_period_end ASC
+      LIMIT $${paramIndex++} OFFSET $${paramIndex}
+    `;
+
+    const result = await pool.query(query, [...params, limit, offset]);
+
+    return {
+      data: result.rows.map(row => ({
+        id: row.id,
+        company_id: row.company_id,
+        company_name: row.company_name,
+        plan_id: row.plan_id,
+        plan_name: row.plan_name,
+        status: row.status,
+        current_period_start: row.current_period_start,
+        current_period_end: row.current_period_end,
+        trial_ends_at: row.trial_ends_at,
+        students_count: parseInt(row.students_count, 10),
+        users_count: parseInt(row.users_count, 10),
+        max_students: row.custom_max_students || row.max_students,
+        max_users: row.custom_max_users || row.max_users,
+        notes: row.notes,
+        created_at: row.created_at,
+      })),
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  /**
+   * Get license by company ID
+   */
+  async getLicenseByCompany(companyId: string): Promise<{
+    id: number;
+    company_id: string;
+    company_name: string;
+    plan_id: string;
+    plan_name: string;
+    plan: Record<string, unknown>;
+    status: string;
+    current_period_start: string;
+    current_period_end: string;
+    trial_ends_at: string | null;
+    custom_max_students: number | null;
+    custom_max_users: number | null;
+    custom_max_teachers: number | null;
+    custom_max_branches: number | null;
+    notes: string | null;
+    students_count: number;
+    users_count: number;
+    teachers_count: number;
+    branches_count: number;
+    created_at: string;
+    updated_at: string;
+  } | null> {
+    const query = `
+      SELECT 
+        cl.*,
+        c.name as company_name,
+        p.name as plan_name,
+        p.max_students as plan_max_students,
+        p.max_users as plan_max_users,
+        p.max_teachers as plan_max_teachers,
+        p.max_branches as plan_max_branches,
+        p.price_monthly,
+        p.features,
+        (SELECT COUNT(*) FROM students s WHERE s.company_id = cl.company_id) as students_count,
+        (SELECT COUNT(*) FROM users u WHERE u.company_id = cl.company_id) as users_count,
+        (SELECT COUNT(*) FROM teachers t WHERE t.company_id = cl.company_id) as teachers_count,
+        (SELECT COUNT(*) FROM branches b WHERE b.company_id = cl.company_id) as branches_count
+      FROM company_licenses cl
+      JOIN companies c ON cl.company_id = c.id
+      JOIN plans p ON cl.plan_id = p.id
+      WHERE cl.company_id = $1
+    `;
+
+    const result = await pool.query(query, [companyId]);
+    
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    const row = result.rows[0];
+    return {
+      id: row.id,
+      company_id: row.company_id,
+      company_name: row.company_name,
+      plan_id: row.plan_id,
+      plan_name: row.plan_name,
+      plan: {
+        max_students: row.plan_max_students,
+        max_users: row.plan_max_users,
+        max_teachers: row.plan_max_teachers,
+        max_branches: row.plan_max_branches,
+        price_monthly: parseFloat(row.price_monthly),
+        features: row.features,
+      },
+      status: row.status,
+      current_period_start: row.current_period_start,
+      current_period_end: row.current_period_end,
+      trial_ends_at: row.trial_ends_at,
+      custom_max_students: row.custom_max_students,
+      custom_max_users: row.custom_max_users,
+      custom_max_teachers: row.custom_max_teachers,
+      custom_max_branches: row.custom_max_branches,
+      notes: row.notes,
+      students_count: parseInt(row.students_count, 10),
+      users_count: parseInt(row.users_count, 10),
+      teachers_count: parseInt(row.teachers_count, 10),
+      branches_count: parseInt(row.branches_count, 10),
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+    };
+  }
+
+  /**
+   * Create or assign license to a company
+   */
+  async createLicense(data: {
+    companyId: string;
+    planId: string;
+    status?: string;
+    periodMonths?: number;
+    notes?: string;
+  }): Promise<{ id: number; company_id: string }> {
+    const periodMonths = data.periodMonths || 1;
+    const status = data.status || 'active';
+
+    const query = `
+      INSERT INTO company_licenses (
+        company_id, 
+        plan_id, 
+        status, 
+        current_period_start, 
+        current_period_end,
+        notes
+      )
+      VALUES ($1, $2, $3, NOW(), NOW() + INTERVAL '${periodMonths} months', $4)
+      ON CONFLICT (company_id) 
+      DO UPDATE SET
+        plan_id = EXCLUDED.plan_id,
+        status = EXCLUDED.status,
+        current_period_start = NOW(),
+        current_period_end = NOW() + INTERVAL '${periodMonths} months',
+        notes = EXCLUDED.notes,
+        updated_at = NOW()
+      RETURNING id, company_id
+    `;
+
+    const result = await pool.query(query, [
+      data.companyId,
+      data.planId,
+      status,
+      data.notes || null,
+    ]);
+
+    return result.rows[0];
+  }
+
+  /**
+   * Update license
+   */
+  async updateLicense(
+    companyId: string,
+    data: {
+      planId?: string;
+      status?: string;
+      periodEnd?: string;
+      extendMonths?: number;
+      reduceMonths?: number;
+      customMaxStudents?: number | null;
+      customMaxUsers?: number | null;
+      customMaxTeachers?: number | null;
+      customMaxBranches?: number | null;
+      notes?: string;
+    }
+  ): Promise<{ success: boolean; message: string }> {
+    const updates: string[] = [];
+    const params: unknown[] = [];
+    let paramIndex = 1;
+
+    if (data.planId) {
+      updates.push(`plan_id = $${paramIndex++}`);
+      params.push(data.planId);
+    }
+
+    if (data.status) {
+      updates.push(`status = $${paramIndex++}`);
+      params.push(data.status);
+    }
+
+    if (data.periodEnd) {
+      updates.push(`current_period_end = $${paramIndex++}`);
+      params.push(data.periodEnd);
+    }
+
+    if (data.extendMonths) {
+      updates.push(`current_period_end = current_period_end + INTERVAL '${data.extendMonths} months'`);
+    }
+
+    if (data.reduceMonths) {
+      updates.push(`current_period_end = current_period_end - INTERVAL '${data.reduceMonths} months'`);
+    }
+
+    if (data.customMaxStudents !== undefined) {
+      updates.push(`custom_max_students = $${paramIndex++}`);
+      params.push(data.customMaxStudents);
+    }
+
+    if (data.customMaxUsers !== undefined) {
+      updates.push(`custom_max_users = $${paramIndex++}`);
+      params.push(data.customMaxUsers);
+    }
+
+    if (data.customMaxTeachers !== undefined) {
+      updates.push(`custom_max_teachers = $${paramIndex++}`);
+      params.push(data.customMaxTeachers);
+    }
+
+    if (data.customMaxBranches !== undefined) {
+      updates.push(`custom_max_branches = $${paramIndex++}`);
+      params.push(data.customMaxBranches);
+    }
+
+    if (data.notes !== undefined) {
+      updates.push(`notes = $${paramIndex++}`);
+      params.push(data.notes);
+    }
+
+    if (updates.length === 0) {
+      return { success: false, message: 'No updates provided' };
+    }
+
+    updates.push('updated_at = NOW()');
+
+    const query = `
+      UPDATE company_licenses
+      SET ${updates.join(', ')}
+      WHERE company_id = $${paramIndex}
+      RETURNING id
+    `;
+
+    params.push(companyId);
+
+    const result = await pool.query(query, params);
+
+    if (result.rowCount === 0) {
+      return { success: false, message: 'License not found' };
+    }
+
+    return { success: true, message: 'License updated successfully' };
+  }
+
+  /**
+   * Delete license
+   */
+  async deleteLicense(companyId: string): Promise<{ success: boolean; message: string }> {
+    const query = `DELETE FROM company_licenses WHERE company_id = $1 RETURNING id`;
+    const result = await pool.query(query, [companyId]);
+
+    if (result.rowCount === 0) {
+      return { success: false, message: 'License not found' };
+    }
+
+    return { success: true, message: 'License deleted successfully' };
+  }
+
+  /**
+   * Get companies without license (for assigning)
+   */
+  async getCompaniesWithoutLicense(): Promise<{ id: string; name: string; created_at: string }[]> {
+    const query = `
+      SELECT c.id, c.name, c.created_at
+      FROM companies c
+      LEFT JOIN company_licenses cl ON c.id = cl.company_id
+      WHERE cl.id IS NULL
+      ORDER BY c.created_at DESC
+    `;
+    const result = await pool.query(query);
+    return result.rows;
+  }
+
+  /**
+   * Get license statistics
+   */
+  async getLicenseStats(): Promise<{
+    total: number;
+    active: number;
+    trial: number;
+    suspended: number;
+    expired: number;
+    expiringSoon: number;
+  }> {
+    const query = `
+      SELECT
+        COUNT(*) as total,
+        COUNT(*) FILTER (WHERE status = 'active') as active,
+        COUNT(*) FILTER (WHERE status = 'trial') as trial,
+        COUNT(*) FILTER (WHERE status = 'suspended') as suspended,
+        COUNT(*) FILTER (WHERE status = 'expired' OR status = 'cancelled') as expired,
+        COUNT(*) FILTER (WHERE current_period_end <= NOW() + INTERVAL '7 days' AND status = 'active') as expiring_soon
+      FROM company_licenses
+    `;
+    const result = await pool.query(query);
+    const row = result.rows[0];
+    return {
+      total: parseInt(row.total, 10),
+      active: parseInt(row.active, 10),
+      trial: parseInt(row.trial, 10),
+      suspended: parseInt(row.suspended, 10),
+      expired: parseInt(row.expired, 10),
+      expiringSoon: parseInt(row.expiring_soon, 10),
     };
   }
 

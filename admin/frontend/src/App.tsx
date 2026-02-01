@@ -8,6 +8,7 @@ import Users from './pages/Users';
 import Database from './pages/Database';
 import Logs from './pages/Logs';
 import Errors from './pages/Errors';
+import Licenses from './pages/Licenses';
 
 function App() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -33,6 +34,7 @@ function App() {
         <Route path="/database" element={<Database />} />
         <Route path="/logs" element={<Logs />} />
         <Route path="/errors" element={<Errors />} />
+        <Route path="/licenses" element={<Licenses />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -31,7 +31,7 @@ export default function VerifyEmail() {
       await authApi.verifyEmail(email, code);
       setStatus("success");
       toast.success("Email успешно подтвержден!");
-      setTimeout(() => navigate("/login"), 2000);
+      setTimeout(() => navigate("/select-plan"), 2000);
     } catch (error: any) {
       setStatus("idle");
       toast.error(error.response?.data?.error || "Неверный код подтверждения");
@@ -62,7 +62,7 @@ export default function VerifyEmail() {
             </div>
             <CardTitle className="text-center">Email подтвержден!</CardTitle>
             <CardDescription className="text-center">
-              Вы будете перенаправлены на страницу входа...
+              Вы будете перенаправлены на выбор тарифа...
             </CardDescription>
           </CardHeader>
         </Card>
@@ -131,10 +131,10 @@ export default function VerifyEmail() {
           
           <div className="mt-2 text-center">
             <button
-              onClick={() => navigate("/login")}
+              onClick={() => navigate("/select-plan")}
               className="text-sm text-muted-foreground hover:underline"
             >
-              Вернуться к входу
+              Пропустить верификацию
             </button>
           </div>
         </CardContent>

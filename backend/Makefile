@@ -54,6 +54,15 @@ test-subscription:
 test-group:
 	go test ./internal/... -v -run "Group"
 
+test-license:
+	go test ./internal/... -v -run "License"
+
+test-billing:
+	go test ./internal/... -v -run "Billing"
+
+test-tariff:
+	go test ./internal/repository/... ./internal/handlers/... ./internal/services/... -v -run "License|Billing|Plan"
+
 # Clean reports
 clean:
 	rm -rf reports/

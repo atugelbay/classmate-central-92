@@ -12,12 +12,14 @@ import {
   AlertCircle,
   LogOut,
   Shield,
+  CreditCard,
 } from 'lucide-react';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/companies', icon: Building2, label: 'Companies' },
   { to: '/users', icon: Users, label: 'Users' },
+  { to: '/licenses', icon: CreditCard, label: 'Licenses' },
   { to: '/database', icon: Database, label: 'Database' },
   { to: '/logs', icon: FileText, label: 'Logs' },
   { to: '/errors', icon: AlertCircle, label: 'Errors' },

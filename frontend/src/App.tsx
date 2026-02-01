@@ -24,6 +24,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import VerifyEmail from "./pages/VerifyEmail";
 import AcceptInvite from "./pages/AcceptInvite";
+import SelectPlan from "./pages/SelectPlan";
 import NotFound from "./pages/NotFound";
 import { ReactNode } from "react";
 
@@ -82,8 +83,8 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  // Allow verify-email and invite pages even if already signed in
-  if (isAuthenticated && location.pathname !== "/verify-email" && location.pathname !== "/invite") {
+  // Allow verify-email, invite, and select-plan pages even if already signed in
+  if (isAuthenticated && location.pathname !== "/verify-email" && location.pathname !== "/invite" && location.pathname !== "/select-plan") {
     return <Navigate to="/" replace />;
   }
 
@@ -129,6 +130,14 @@ const App = () => (
                 element={
                   <PublicRoute>
                     <AcceptInvite />
+                  </PublicRoute>
+                }
+              />
+              <Route
+                path="/select-plan"
+                element={
+                  <PublicRoute>
+                    <SelectPlan />
                   </PublicRoute>
                 }
               />

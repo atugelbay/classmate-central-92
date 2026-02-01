@@ -9,6 +9,7 @@ import { companiesRouter } from './routes/companies.js';
 import { usersRouter } from './routes/users.js';
 import { databaseRouter } from './routes/database.js';
 import { logsRouter } from './routes/logs.js';
+import { licensesRouter } from './routes/licenses.js';
 import { authMiddleware } from './middleware/auth.js';
 
 const app = express();
@@ -56,6 +57,7 @@ app.use('/api/companies', authMiddleware, companiesRouter);
 app.use('/api/users', authMiddleware, usersRouter);
 app.use('/api/database', authMiddleware, databaseRouter);
 app.use('/api/logs', authMiddleware, logsRouter);
+app.use('/api/licenses', authMiddleware, licensesRouter);
 
 // Error handling
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

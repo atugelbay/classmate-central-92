@@ -634,3 +634,71 @@ type AssignRoleRequest struct {
 	UserID int    `json:"userId" binding:"required"`
 	RoleID string `json:"roleId" binding:"required"`
 }
+
+// ============= BILLING MODULE (SaaS Plans & Licenses) =============
+
+// Plan represents a SaaS pricing plan (Standard, Professional, Business, Enterprise)
+type Plan struct {
+	ID           string                 `json:"id" db:"id"`
+	Name         string                 `json:"name" db:"name"`
+	Description  string                 `json:"description" db:"description"`
+	PriceMonthly float64                `json:"priceMonthly" db:"price_monthly"`
+	PriceYearly  *float64               `json:"priceYearly,omitempty" db:"price_yearly"`
+	MaxStudents  *int                   `json:"maxStudents,omitempty" db:"max_students"`
+	MaxUsers     *int                   `json:"maxUsers,omitempty" db:"max_users"`
+	MaxTeachers  *int                   `json:"maxTeachers,omitempty" db:"max_teachers"`
+	MaxBranches  *int                   `json:"maxBranches,omitempty" db:"max_branches"`
+	Features     map[string]interface{} `json:"features" db:"features"`
+	IsActive     bool                   `json:"isActive" db:"is_active"`
+	SortOrder    int                    `json:"sortOrder" db:"sort_order"`
+	CreatedAt    time.Time              `json:"createdAt" db:"created_at"`
+}
+
+// CompanyLicense represents a company's subscription to a plan
+type CompanyLicense struct {
+	ID                 int        `json:"id" db:"id"`
+	CompanyID          string     `json:"companyId" db:"company_id"`
+	PlanID             string     `json:"planId" db:"plan_id"`
+	Status             string     `json:"status" db:"status"` // trial, active, suspended, cancelled, expired
+	TrialEndsAt        *time.Time `json:"trialEndsAt,omitempty" db:"trial_ends_at"`
+	CurrentPeriodStart time.Time  `json:"currentPeriodStart" db:"current_period_start"`
+	CurrentPeriodEnd   time.Time  `json:"currentPeriodEnd" db:"current_period_end"`
+	CustomMaxStudents  *int       `json:"customMaxStudents,omitempty" db:"custom_max_students"`
+	CustomMaxUsers     *int       `json:"customMaxUsers,omitempty" db:"custom_max_users"`
+	CustomMaxTeachers  *int       `json:"customMaxTeachers,omitempty" db:"custom_max_teachers"`
+	CustomMaxBranches  *int       `json:"customMaxBranches,omitempty" db:"custom_max_branches"`
+	Notes              *string    `json:"notes,omitempty" db:"notes"`
+	CreatedAt          time.Time  `json:"createdAt" db:"created_at"`
+	UpdatedAt          time.Time  `json:"updatedAt" db:"updated_at"`
+}
+
+// CompanyLicenseWithPlan represents license with plan details for API response
+type CompanyLicenseWithPlan struct {
+	CompanyLicense
+	PlanName     string                 `json:"planName" db:"plan_name"`
+	PlanFeatures map[string]interface{} `json:"planFeatures" db:"features"`
+	MaxStudents  *int                   `json:"maxStudents" db:"max_students"`
+	MaxUsers     *int                   `json:"maxUsers" db:"max_users"`
+	MaxTeachers  *int                   `json:"maxTeachers" db:"max_teachers"`
+	MaxBranches  *int                   `json:"maxBranches" db:"max_branches"`
+	PriceMonthly float64                `json:"priceMonthly" db:"price_monthly"`
+}
+
+// CompanyUsage represents current usage metrics for a company
+type CompanyUsage struct {
+	StudentsCount int `json:"studentsCount"`
+	UsersCount    int `json:"usersCount"`
+	TeachersCount int `json:"teachersCount"`
+	BranchesCount int `json:"branchesCount"`
+}
+
+// LicenseWithUsage combines license info with current usage
+type LicenseWithUsage struct {
+	License *CompanyLicenseWithPlan `json:"license"`
+	Usage   *CompanyUsage           `json:"usage"`
+}
+
+// SelectPlanRequest represents a request to select/change a plan
+type SelectPlanRequest struct {
+	PlanID string `json:"planId" binding:"required"`
+}

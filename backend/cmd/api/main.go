@@ -73,6 +73,7 @@ func main() {
 	notificationRepo := repository.NewNotificationRepository(db.DB)
 	roleRepo := repository.NewRoleRepository(db.DB)
 	permRepo := repository.NewPermissionRepository(db.DB)
+	licenseRepo := repository.NewLicenseRepository(db.DB)
 
 	// Initialize services
 	activityService := services.NewActivityService(activityRepo)
@@ -104,6 +105,7 @@ func main() {
 	userRoleHandler := handlers.NewUserRoleHandler(userRepo, roleRepo)
 	exportHandler := handlers.NewExportHandler(exportService, paymentRepo, studentRepo, lessonRepo)
 	branchHandler := handlers.NewBranchHandler(db.DB)
+	licenseHandler := handlers.NewLicenseHandler(licenseRepo)
 
 	// Initialize Gin
 	router := gin.Default()
@@ -126,6 +128,9 @@ func main() {
 		auth.POST("/accept-invite", authHandler.AcceptInvite)
 	}
 
+	// Public routes for plans (available before login for plan selection page)
+	router.GET("/api/plans", licenseHandler.GetPlans)
+
 	// Protected routes
 	api := router.Group("/api")
 	api.Use(middleware.AuthMiddleware())
@@ -136,7 +141,7 @@ func main() {
 		api.POST("/auth/onboarding", authHandler.UpdateOnboardingStatus)
 		api.POST("/auth/me/resend-verification", authHandler.ResendVerificationEmail) // Protected route for authenticated users (uses email from context)
 		api.GET("/auth/users", middleware.RequirePermission("users", "manage"), authHandler.GetUsers)
-		api.POST("/auth/invite", middleware.RequirePermission("users", "manage"), authHandler.InviteUser)
+		api.POST("/auth/invite", licenseHandler.CheckLimits("users"), middleware.RequirePermission("users", "manage"), authHandler.InviteUser)
 		api.POST("/auth/logout", authHandler.Logout)
 
 		// ============= RBAC MODULE =============
@@ -162,7 +167,7 @@ func main() {
 		// Branches
 		api.GET("/branches", branchHandler.GetBranches)
 		api.GET("/branches/:id", branchHandler.GetBranch)
-		api.POST("/branches", middleware.RequirePermission("settings", "update"), branchHandler.CreateBranch)
+		api.POST("/branches", licenseHandler.CheckLimits("branches"), middleware.RequirePermission("settings", "update"), branchHandler.CreateBranch)
 		api.PUT("/branches/:id", middleware.RequirePermission("settings", "update"), branchHandler.UpdateBranch)
 		api.DELETE("/branches/:id", middleware.RequirePermission("settings", "update"), branchHandler.DeleteBranch)
 		api.POST("/branches/switch", branchHandler.SwitchBranch)
@@ -175,7 +180,7 @@ func main() {
 		// Teachers
 		api.GET("/teachers", middleware.RequirePermission("teachers", "view"), teacherHandler.GetAll)
 		api.GET("/teachers/:id", middleware.RequirePermission("teachers", "view"), teacherHandler.GetByID)
-		api.POST("/teachers", middleware.RequirePermission("teachers", "create"), teacherHandler.Create)
+		api.POST("/teachers", licenseHandler.CheckLimits("teachers"), middleware.RequirePermission("teachers", "create"), teacherHandler.Create)
 		api.PUT("/teachers/:id", middleware.RequirePermission("teachers", "update"), teacherHandler.Update)
 		api.DELETE("/teachers/:id", middleware.RequirePermission("teachers", "delete"), teacherHandler.Delete)
 		api.POST("/teachers/:id/salary/calculate", middleware.RequirePermission("teachers", "view"), teacherHandler.CalculateSalary)
@@ -188,7 +193,7 @@ func main() {
 
 		// Students
 		api.GET("/students", middleware.RequirePermission("students", "view"), studentHandler.GetAll)
-		api.POST("/students", middleware.RequirePermission("students", "create"), studentHandler.Create)
+		api.POST("/students", licenseHandler.CheckLimits("students"), middleware.RequirePermission("students", "create"), studentHandler.Create)
 
 		// Student-specific routes (must be before /students/:id)
 		api.GET("/students/:id/activities", middleware.RequirePermission("students", "view"), studentHandler.GetActivities)
@@ -346,6 +351,12 @@ func main() {
 		api.GET("/dashboard/today-lessons", middleware.RequirePermission("dashboard", "view"), dashboardHandler.GetTodayLessons)
 		api.GET("/dashboard/revenue-chart", middleware.RequirePermission("dashboard", "view"), dashboardHandler.GetRevenueChart)
 		api.GET("/dashboard/attendance-stats", middleware.RequirePermission("dashboard", "view"), dashboardHandler.GetAttendanceStats)
+
+		// ============= BILLING MODULE (SaaS License) =============
+
+		// Company License (current plan)
+		api.GET("/company/license", licenseHandler.GetCurrentLicense)
+		api.POST("/company/license", middleware.RequirePermission("settings", "update"), licenseHandler.SelectPlan)
 	}
 
 	// Health check endpoint

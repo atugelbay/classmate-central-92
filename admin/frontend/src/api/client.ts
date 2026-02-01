@@ -191,3 +191,81 @@ export const logsApi = {
     return response.data;
   },
 };
+
+// Licenses API
+export const licensesApi = {
+  getAll: async (params: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    plan_id?: string;
+    search?: string;
+  } = {}) => {
+    const searchParams = new URLSearchParams();
+    if (params.page) searchParams.set('page', params.page.toString());
+    if (params.limit) searchParams.set('limit', params.limit.toString());
+    if (params.status) searchParams.set('status', params.status);
+    if (params.plan_id) searchParams.set('plan_id', params.plan_id);
+    if (params.search) searchParams.set('search', params.search);
+    
+    const response = await apiClient.get(`/licenses?${searchParams.toString()}`);
+    return response.data;
+  },
+  getByCompany: async (companyId: string) => {
+    const response = await apiClient.get(`/licenses/${companyId}`);
+    return response.data;
+  },
+  getPlans: async () => {
+    const response = await apiClient.get('/licenses/plans');
+    return response.data;
+  },
+  getStats: async () => {
+    const response = await apiClient.get('/licenses/stats');
+    return response.data;
+  },
+  getUnassigned: async () => {
+    const response = await apiClient.get('/licenses/unassigned');
+    return response.data;
+  },
+  create: async (data: {
+    companyId: string;
+    planId: string;
+    status?: string;
+    periodMonths?: number;
+    notes?: string;
+  }) => {
+    const response = await apiClient.post('/licenses', data);
+    return response.data;
+  },
+  update: async (companyId: string, data: {
+    planId?: string;
+    status?: string;
+    periodEnd?: string;
+    extendMonths?: number;
+    reduceMonths?: number;
+    customMaxStudents?: number | null;
+    customMaxUsers?: number | null;
+    customMaxTeachers?: number | null;
+    customMaxBranches?: number | null;
+    notes?: string;
+  }) => {
+    const response = await apiClient.put(`/licenses/${companyId}`, data);
+    return response.data;
+  },
+  delete: async (companyId: string) => {
+    const response = await apiClient.delete(`/licenses/${companyId}`);
+    return response.data;
+  },
+  extend: async (companyId: string, months: number = 1) => {
+    const response = await apiClient.post(`/licenses/${companyId}/extend`, { months });
+    return response.data;
+  },
+  suspend: async (companyId: string) => {
+    const response = await apiClient.post(`/licenses/${companyId}/suspend`);
+    return response.data;
+  },
+  activate: async (companyId: string) => {
+    const response = await apiClient.post(`/licenses/${companyId}/activate`);
+    return response.data;
+  },
+};

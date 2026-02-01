@@ -712,3 +712,263 @@ func GetSubscriptionFreeze(t *testing.T, db *sql.DB, freezeID int) *models.Subsc
 
 	return &freeze
 }
+
+// ============= LICENSE/BILLING FIXTURES =============
+
+// CreateTestLicense creates a license for a company with specified plan
+func CreateTestLicense(t *testing.T, db *sql.DB, companyID, planID string, months int) *models.CompanyLicense {
+	now := time.Now()
+	periodEnd := now.AddDate(0, months, 0)
+
+	var id int
+	err := db.QueryRow(`
+		INSERT INTO company_licenses (company_id, plan_id, status, current_period_start, current_period_end, created_at, updated_at)
+		VALUES ($1, $2, 'active', $3, $4, $5, $6)
+		ON CONFLICT (company_id) DO UPDATE SET
+			plan_id = EXCLUDED.plan_id,
+			status = 'active',
+			current_period_start = EXCLUDED.current_period_start,
+			current_period_end = EXCLUDED.current_period_end,
+			updated_at = EXCLUDED.updated_at
+		RETURNING id
+	`, companyID, planID, now, periodEnd, now, now).Scan(&id)
+	if err != nil {
+		t.Fatalf("Failed to create test license: %v", err)
+	}
+
+	return &models.CompanyLicense{
+		ID:                 id,
+		CompanyID:          companyID,
+		PlanID:             planID,
+		Status:             "active",
+		CurrentPeriodStart: now,
+		CurrentPeriodEnd:   periodEnd,
+		CreatedAt:          now,
+		UpdatedAt:          now,
+	}
+}
+
+// CreateTestLicenseWithLimits creates a license with custom limits
+func CreateTestLicenseWithLimits(t *testing.T, db *sql.DB, companyID, planID string, maxStudents, maxUsers, maxTeachers, maxBranches *int) *models.CompanyLicense {
+	license := CreateTestLicense(t, db, companyID, planID, 1)
+
+	_, err := db.Exec(`
+		UPDATE company_licenses 
+		SET custom_max_students = $1, custom_max_users = $2, custom_max_teachers = $3, custom_max_branches = $4
+		WHERE company_id = $5
+	`, maxStudents, maxUsers, maxTeachers, maxBranches, companyID)
+	if err != nil {
+		t.Fatalf("Failed to set custom limits: %v", err)
+	}
+
+	license.CustomMaxStudents = maxStudents
+	license.CustomMaxUsers = maxUsers
+	license.CustomMaxTeachers = maxTeachers
+	license.CustomMaxBranches = maxBranches
+
+	return license
+}
+
+// GetLicense retrieves a license for a company
+func GetLicense(t *testing.T, db *sql.DB, companyID string) *models.CompanyLicense {
+	var license models.CompanyLicense
+	var trialEndsAt sql.NullTime
+	var notes sql.NullString
+
+	err := db.QueryRow(`
+		SELECT id, company_id, plan_id, status, trial_ends_at, current_period_start, current_period_end,
+		       custom_max_students, custom_max_users, custom_max_teachers, custom_max_branches, notes, created_at, updated_at
+		FROM company_licenses WHERE company_id = $1
+	`, companyID).Scan(
+		&license.ID, &license.CompanyID, &license.PlanID, &license.Status, &trialEndsAt,
+		&license.CurrentPeriodStart, &license.CurrentPeriodEnd,
+		&license.CustomMaxStudents, &license.CustomMaxUsers, &license.CustomMaxTeachers, &license.CustomMaxBranches,
+		&notes, &license.CreatedAt, &license.UpdatedAt,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil
+		}
+		t.Fatalf("Failed to get license: %v", err)
+	}
+
+	if trialEndsAt.Valid {
+		license.TrialEndsAt = &trialEndsAt.Time
+	}
+	if notes.Valid {
+		license.Notes = &notes.String
+	}
+
+	return &license
+}
+
+// GetPlan retrieves a plan by ID
+func GetPlan(t *testing.T, db *sql.DB, planID string) *models.Plan {
+	var plan models.Plan
+	var priceYearly sql.NullFloat64
+
+	err := db.QueryRow(`
+		SELECT id, name, description, price_monthly, price_yearly, max_students, max_users, max_teachers, max_branches, is_active, sort_order, created_at
+		FROM plans WHERE id = $1
+	`, planID).Scan(
+		&plan.ID, &plan.Name, &plan.Description, &plan.PriceMonthly, &priceYearly,
+		&plan.MaxStudents, &plan.MaxUsers, &plan.MaxTeachers, &plan.MaxBranches,
+		&plan.IsActive, &plan.SortOrder, &plan.CreatedAt,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil
+		}
+		t.Fatalf("Failed to get plan: %v", err)
+	}
+
+	if priceYearly.Valid {
+		plan.PriceYearly = &priceYearly.Float64
+	}
+
+	return &plan
+}
+
+// CreateMultipleStudents creates N students for a company
+func CreateMultipleStudents(t *testing.T, db *sql.DB, companyID, branchID string, count int) []*models.Student {
+	students := make([]*models.Student, count)
+	for i := 0; i < count; i++ {
+		id := uuid.New().String()
+		email := fmt.Sprintf("student-%d-%s@example.com", i, uuid.New().String()[:8])
+		now := time.Now().Format(time.RFC3339)
+
+		_, err := db.Exec(`
+			INSERT INTO students (id, name, age, email, phone, status, company_id, branch_id, created_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		`, id, fmt.Sprintf("Student %d", i), 18, email, "+77001112233", "active", companyID, branchID, now)
+		if err != nil {
+			t.Fatalf("Failed to create student %d: %v", i, err)
+		}
+
+		students[i] = &models.Student{
+			ID:        id,
+			Name:      fmt.Sprintf("Student %d", i),
+			Age:       18,
+			Email:     &email,
+			Phone:     "+77001112233",
+			Status:    "active",
+			CompanyID: companyID,
+			BranchID:  branchID,
+			CreatedAt: now,
+		}
+	}
+	return students
+}
+
+// CreateMultipleTeachers creates N teachers for a company
+func CreateMultipleTeachers(t *testing.T, db *sql.DB, companyID, branchID string, count int) []*models.Teacher {
+	teachers := make([]*models.Teacher, count)
+	for i := 0; i < count; i++ {
+		id := uuid.New().String()
+		email := fmt.Sprintf("teacher-%d-%s@example.com", i, uuid.New().String()[:8])
+
+		_, err := db.Exec(`
+			INSERT INTO teachers (id, name, subject, email, phone, status, workload, company_id, branch_id)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		`, id, fmt.Sprintf("Teacher %d", i), "Subject", email, "+77009876543", "active", 20, companyID, branchID)
+		if err != nil {
+			t.Fatalf("Failed to create teacher %d: %v", i, err)
+		}
+
+		teachers[i] = &models.Teacher{
+			ID:        id,
+			Name:      fmt.Sprintf("Teacher %d", i),
+			Subject:   "Subject",
+			Email:     email,
+			Phone:     "+77009876543",
+			Status:    "active",
+			Workload:  20,
+			CompanyID: companyID,
+			BranchID:  branchID,
+		}
+	}
+	return teachers
+}
+
+// CreateMultipleUsers creates N users for a company
+func CreateMultipleUsers(t *testing.T, db *sql.DB, companyID string, count int) []*models.User {
+	users := make([]*models.User, count)
+	now := time.Now()
+
+	for i := 0; i < count; i++ {
+		email := fmt.Sprintf("user-%d-%s@example.com", i, uuid.New().String()[:8])
+
+		var id int
+		err := db.QueryRow(`
+			INSERT INTO users (email, password, name, company_id, is_email_verified, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7)
+			RETURNING id
+		`, email, "hashedpassword", fmt.Sprintf("User %d", i), companyID, true, now, now).Scan(&id)
+		if err != nil {
+			t.Fatalf("Failed to create user %d: %v", i, err)
+		}
+
+		users[i] = &models.User{
+			ID:              id,
+			Email:           email,
+			Name:            fmt.Sprintf("User %d", i),
+			CompanyID:       companyID,
+			IsEmailVerified: true,
+			CreatedAt:       now,
+			UpdatedAt:       now,
+		}
+	}
+	return users
+}
+
+// CreateMultipleBranches creates N branches for a company
+func CreateMultipleBranches(t *testing.T, db *sql.DB, companyID string, count int) []*models.Branch {
+	branches := make([]*models.Branch, count)
+	now := time.Now()
+
+	for i := 0; i < count; i++ {
+		id := uuid.New().String()
+		branchName := fmt.Sprintf("Branch %d %s", i, id[:8])
+
+		_, err := db.Exec(`
+			INSERT INTO branches (id, name, company_id, address, phone, status, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		`, id, branchName, companyID, "Address", "+77001234567", "active", now, now)
+		if err != nil {
+			t.Fatalf("Failed to create branch %d: %v", i, err)
+		}
+
+		branches[i] = &models.Branch{
+			ID:        id,
+			Name:      branchName,
+			CompanyID: companyID,
+			Address:   "Address",
+			Phone:     "+77001234567",
+			Status:    "active",
+			CreatedAt: now,
+			UpdatedAt: now,
+		}
+	}
+	return branches
+}
+
+// GetCompanyUsageCounts returns usage counts for a company
+func GetCompanyUsageCounts(t *testing.T, db *sql.DB, companyID string) (students, users, teachers, branches int) {
+	err := db.QueryRow(`SELECT COUNT(*) FROM students WHERE company_id = $1`, companyID).Scan(&students)
+	if err != nil {
+		t.Fatalf("Failed to count students: %v", err)
+	}
+	err = db.QueryRow(`SELECT COUNT(*) FROM users WHERE company_id = $1`, companyID).Scan(&users)
+	if err != nil {
+		t.Fatalf("Failed to count users: %v", err)
+	}
+	err = db.QueryRow(`SELECT COUNT(*) FROM teachers WHERE company_id = $1`, companyID).Scan(&teachers)
+	if err != nil {
+		t.Fatalf("Failed to count teachers: %v", err)
+	}
+	err = db.QueryRow(`SELECT COUNT(*) FROM branches WHERE company_id = $1`, companyID).Scan(&branches)
+	if err != nil {
+		t.Fatalf("Failed to count branches: %v", err)
+	}
+	return
+}
