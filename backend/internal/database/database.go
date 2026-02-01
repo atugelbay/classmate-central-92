@@ -62,7 +62,7 @@ func NewDatabase() (*Database, error) {
 		}
 
 		connStr = fmt.Sprintf(
-			"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s connect_timeout=5",
+			"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s connect_timeout=5 client_encoding=UTF8",
 			dbHost, dbPort, dbUser, dbPassword, dbName, dbSSLMode,
 		)
 	}
@@ -78,6 +78,12 @@ func NewDatabase() (*Database, error) {
 			"  2. Database connection settings are correct\n"+
 			"  3. Database exists: CREATE DATABASE classmate_central;\n"+
 			"  4. User has proper permissions", err)
+	}
+
+	// Ensure UTF-8 encoding for all connections
+	_, err = db.Exec("SET client_encoding = 'UTF8'")
+	if err != nil {
+		log.Printf("Warning: could not set client_encoding to UTF8: %v", err)
 	}
 
 	log.Println("Successfully connected to database")

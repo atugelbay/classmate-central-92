@@ -6,6 +6,7 @@ import (
 	"classmate-central/internal/repository"
 	"classmate-central/internal/services"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -18,6 +19,14 @@ type ExportHandler struct {
 	paymentRepo   *repository.PaymentRepository
 	studentRepo   *repository.StudentRepository
 	lessonRepo    *repository.LessonRepository
+}
+
+// Helper function to create Content-Disposition header with proper encoding for non-ASCII filenames
+func contentDisposition(filename string) string {
+	// URL encode the filename for the filename* parameter (RFC 5987)
+	encodedFilename := url.PathEscape(filename)
+	// Provide both ASCII fallback and UTF-8 encoded filename
+	return `attachment; filename="` + filename + `"; filename*=UTF-8''` + encodedFilename
 }
 
 func NewExportHandler(
@@ -121,8 +130,11 @@ func (h *ExportHandler) ExportTransactionsExcel(c *gin.Context) {
 		return
 	}
 
-	c.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-	c.Header("Content-Disposition", `attachment; filename="transactions_`+time.Now().Format("20060102_150405")+`.xlsx"`)
+	filename := "transactions_" + time.Now().Format("20060102_150405") + ".xlsx"
+	c.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; charset=utf-8")
+	c.Header("Content-Disposition", contentDisposition(filename))
+	c.Header("Content-Transfer-Encoding", "binary")
+	c.Header("Cache-Control", "no-cache")
 	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", excelData)
 }
 
@@ -191,8 +203,11 @@ func (h *ExportHandler) ExportStudentsExcel(c *gin.Context) {
 		return
 	}
 
-	c.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-	c.Header("Content-Disposition", `attachment; filename="students_`+time.Now().Format("20060102_150405")+`.xlsx"`)
+	filename := "students_" + time.Now().Format("20060102_150405") + ".xlsx"
+	c.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; charset=utf-8")
+	c.Header("Content-Disposition", contentDisposition(filename))
+	c.Header("Content-Transfer-Encoding", "binary")
+	c.Header("Cache-Control", "no-cache")
 	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", excelData)
 }
 
@@ -329,8 +344,11 @@ func (h *ExportHandler) ExportScheduleExcel(c *gin.Context) {
 		return
 	}
 
-	c.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-	c.Header("Content-Disposition", `attachment; filename="schedule_`+time.Now().Format("20060102_150405")+`.xlsx"`)
+	filename := "schedule_" + time.Now().Format("20060102_150405") + ".xlsx"
+	c.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet; charset=utf-8")
+	c.Header("Content-Disposition", contentDisposition(filename))
+	c.Header("Content-Transfer-Encoding", "binary")
+	c.Header("Cache-Control", "no-cache")
 	c.Data(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", excelData)
 }
 
