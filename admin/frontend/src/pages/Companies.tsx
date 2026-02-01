@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Loader2, ChevronLeft, ChevronRight, Users, GraduationCap, Search, BookOpen, CreditCard, X } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight, Users, GraduationCap, BookOpen, CreditCard, X } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function Companies() {
