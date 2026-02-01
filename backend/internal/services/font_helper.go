@@ -3,6 +3,7 @@ package services
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/jung-kurt/gofpdf/v2"
@@ -24,39 +25,61 @@ func SetupCyrillicFonts(pdf *gofpdf.Fpdf) {
 		// Local project fonts
 		{"fonts/DejaVuSans.ttf", "fonts/DejaVuSans-Bold.ttf"},
 		{"./fonts/DejaVuSans.ttf", "./fonts/DejaVuSans-Bold.ttf"},
-		// Alpine Linux (Docker)
+		// Alpine Linux (Docker) - various possible paths
 		{"/usr/share/fonts/ttf-dejavu/DejaVuSans.ttf", "/usr/share/fonts/ttf-dejavu/DejaVuSans-Bold.ttf"},
+		{"/usr/share/fonts/dejavu/DejaVuSans.ttf", "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf"},
+		{"/usr/share/fonts/DejaVuSans.ttf", "/usr/share/fonts/DejaVuSans-Bold.ttf"},
 		// Debian/Ubuntu
 		{"/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"},
 		// Windows
 		{"C:/Windows/Fonts/arial.ttf", "C:/Windows/Fonts/arialbd.ttf"},
 	}
 
+	log.Println("[PDF] Searching for Cyrillic fonts...")
+	
+	// Debug: list available fonts directories
+	fontDirs := []string{"/usr/share/fonts", "/usr/share/fonts/ttf-dejavu", "/usr/share/fonts/dejavu", "/usr/share/fonts/truetype"}
+	for _, dir := range fontDirs {
+		if entries, err := os.ReadDir(dir); err == nil {
+			log.Printf("[PDF] Found fonts directory: %s", dir)
+			for _, e := range entries {
+				log.Printf("[PDF]   - %s", e.Name())
+			}
+		}
+	}
+
 	for _, paths := range fontPaths {
 		// Check if regular font file exists before trying to add it
 		if _, err := os.Stat(paths.regular); os.IsNotExist(err) {
+			log.Printf("[PDF] Font not found: %s", paths.regular)
 			continue // File doesn't exist, try next path
 		}
+
+		log.Printf("[PDF] Font file found: %s", paths.regular)
 
 		// File exists, try to add it
 		func() {
 			defer func() {
 				if r := recover(); r != nil {
-					// Font file exists but couldn't be loaded, try next
+					log.Printf("[PDF] Failed to load font %s: %v", paths.regular, r)
 				}
 			}()
 
 			// Try to add regular font
 			pdf.AddUTF8Font("DejaVu", "", paths.regular)
+			log.Printf("[PDF] Successfully added regular font: %s", paths.regular)
 
 			// Try to add bold font (may fail, but that's ok)
 			if _, err := os.Stat(paths.bold); err == nil {
 				func() {
 					defer func() {
 						// Ignore errors for bold font
-						_ = recover()
+						if r := recover(); r != nil {
+							log.Printf("[PDF] Failed to load bold font: %v", r)
+						}
 					}()
 					pdf.AddUTF8Font("DejaVu", "B", paths.bold)
+					log.Printf("[PDF] Successfully added bold font: %s", paths.bold)
 				}()
 			}
 
@@ -65,12 +88,14 @@ func SetupCyrillicFonts(pdf *gofpdf.Fpdf) {
 		}()
 
 		if cyrillicFontAdded {
+			log.Println("[PDF] Cyrillic font setup complete!")
 			return
 		}
 	}
 
 	// Fallback: use standard fonts (will not display Cyrillic correctly)
-	// This is a limitation - for proper Cyrillic support, font files are required
+	log.Println("[PDF] WARNING: No Cyrillic fonts found! PDF will not display Cyrillic correctly.")
+	log.Println("[PDF] Please install ttf-dejavu package or add DejaVuSans.ttf to fonts/ directory")
 }
 
 // GetCyrillicFontName returns the font name to use for Cyrillic text
