@@ -10,7 +10,6 @@ import {
   Calendar,
   Users,
   GraduationCap,
-  Building2,
   AlertTriangle,
   CheckCircle,
   XCircle,
