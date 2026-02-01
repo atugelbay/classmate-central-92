@@ -64,8 +64,8 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     };
 
     const token = jwt.sign(payload, config.jwtSecret, {
-      expiresIn: config.jwtExpiresIn,
-    });
+      expiresIn: config.jwtExpiresIn as string,
+    } as jwt.SignOptions);
 
     res.json({
       success: true,

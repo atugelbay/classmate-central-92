@@ -26,7 +26,7 @@ router.get('/tables', async (_req: AuthenticatedRequest, res: Response): Promise
 // GET /api/database/tables/:name
 router.get('/tables/:name', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const { name } = req.params;
+    const name = req.params.name as string;
     const page = parseInt(req.query.page as string, 10) || 1;
     const limit = Math.min(parseInt(req.query.limit as string, 10) || 50, 200);
     const orderBy = (req.query.order_by as string) || 'id';
@@ -58,7 +58,7 @@ router.get('/tables/:name', async (req: AuthenticatedRequest, res: Response): Pr
 // GET /api/database/tables/:name/columns
 router.get('/tables/:name/columns', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const { name } = req.params;
+    const name = req.params.name as string;
     const columns = await dbService.getTableColumns(name);
 
     res.json({
@@ -125,7 +125,7 @@ router.post('/query', async (req: AuthenticatedRequest, res: Response): Promise<
 // GET /api/database/export/:table
 router.get('/export/:table', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const { table } = req.params;
+    const table = req.params.table as string;
     const format = (req.query.format as string) || 'json';
     
     // Get all data (limited to 10000 rows for safety)

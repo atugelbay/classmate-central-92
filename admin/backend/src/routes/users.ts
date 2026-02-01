@@ -44,7 +44,8 @@ router.get('/', async (req: AuthenticatedRequest, res: Response): Promise<void> 
 // GET /api/users/:id
 router.get('/:id', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
+    const userId = parseInt(id, 10);
     
     const result = await dbService.executeQuery(`
       SELECT 
@@ -65,7 +66,7 @@ router.get('/:id', async (req: AuthenticatedRequest, res: Response): Promise<voi
       LEFT JOIN companies c ON u.company_id = c.id
       LEFT JOIN roles r ON u.role_id = r.id
       LEFT JOIN branches b ON u.current_branch_id = b.id
-      WHERE u.id = ${parseInt(id, 10)}
+      WHERE u.id = ${userId}
     `);
 
     if (result.rows.length === 0) {
@@ -81,7 +82,7 @@ router.get('/:id', async (req: AuthenticatedRequest, res: Response): Promise<voi
       SELECT r.id, r.name, r.description
       FROM user_roles ur
       JOIN roles r ON ur.role_id = r.id
-      WHERE ur.user_id = ${parseInt(id, 10)}
+      WHERE ur.user_id = ${userId}
     `);
 
     // Get user's branches
@@ -89,7 +90,7 @@ router.get('/:id', async (req: AuthenticatedRequest, res: Response): Promise<voi
       SELECT b.id, b.name
       FROM user_branches ub
       JOIN branches b ON ub.branch_id = b.id
-      WHERE ub.user_id = ${parseInt(id, 10)}
+      WHERE ub.user_id = ${userId}
     `);
 
     res.json({

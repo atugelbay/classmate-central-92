@@ -28,7 +28,7 @@ router.get('/', async (req: AuthenticatedRequest, res: Response): Promise<void> 
 // GET /api/companies/:id
 router.get('/:id', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const result = await dbService.getCompanyDetails(id);
 
     if (!result) {
@@ -55,7 +55,7 @@ router.get('/:id', async (req: AuthenticatedRequest, res: Response): Promise<voi
 // GET /api/companies/:id/users
 router.get('/:id/users', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const page = parseInt(req.query.page as string, 10) || 1;
     const limit = Math.min(parseInt(req.query.limit as string, 10) || 50, 100);
 
@@ -77,7 +77,7 @@ router.get('/:id/users', async (req: AuthenticatedRequest, res: Response): Promi
 // GET /api/companies/:id/stats
 router.get('/:id/stats', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const result = await dbService.getCompanyDetails(id);
 
     if (!result) {
