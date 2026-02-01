@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/jung-kurt/gofpdf/v2"
@@ -85,9 +86,18 @@ func SetupCyrillicFonts(pdf *gofpdf.Fpdf) {
 		return
 	}
 
-	// Add regular font
-	log.Printf("[PDF] Adding regular font: %s", foundFontRegular)
-	pdf.AddUTF8Font("DejaVu", "", foundFontRegular)
+	// gofpdf requires setting the font directory for absolute paths
+	// Extract directory and filename from the font path
+	fontDir := filepath.Dir(foundFontRegular)
+	fontFile := filepath.Base(foundFontRegular)
+	boldFile := filepath.Base(foundFontBold)
+	
+	log.Printf("[PDF] Setting font location to: %s", fontDir)
+	pdf.SetFontLocation(fontDir)
+
+	// Add regular font (now using just filename since we set the directory)
+	log.Printf("[PDF] Adding regular font: %s", fontFile)
+	pdf.AddUTF8Font("DejaVu", "", fontFile)
 	
 	if err := pdf.Error(); err != nil {
 		log.Printf("[PDF] ERROR adding regular font: %v", err)
@@ -98,8 +108,8 @@ func SetupCyrillicFonts(pdf *gofpdf.Fpdf) {
 
 	// Add bold font if available
 	if foundFontBold != "" {
-		log.Printf("[PDF] Adding bold font: %s", foundFontBold)
-		pdf.AddUTF8Font("DejaVu", "B", foundFontBold)
+		log.Printf("[PDF] Adding bold font: %s", boldFile)
+		pdf.AddUTF8Font("DejaVu", "B", boldFile)
 		if err := pdf.Error(); err != nil {
 			log.Printf("[PDF] Warning: bold font failed: %v", err)
 			// Don't return, regular font is enough
