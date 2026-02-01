@@ -482,377 +482,377 @@ export default function StudentDetail() {
         </div>
       )}
 
-      {/* Main Content */}
-      <div className="space-y-6">
-
-        {/* Grid Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - 2 cols */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Calendar */}
-            {id && subscriptions.length > 0 && (
-              <div className="rounded-3xl border border-border/50 bg-white dark:bg-gray-900 shadow-soft overflow-hidden">
-                <StudentLessonCalendar
-                  studentId={id}
-                  subscriptions={subscriptions}
-                  lessons={studentLessons}
-                  attendances={studentAttendances}
-                  freezes={allFreezes}
-                />
-              </div>
-            )}
-
-            {/* Groups */}
-            <div className="p-6 rounded-3xl border border-border/50 bg-white dark:bg-gray-900 shadow-soft">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600">
-                    <Users className="h-5 w-5 text-white" />
-                  </div>
-                  <h3 className="text-lg font-semibold">Группы</h3>
+      {/* Main Two-Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* Left Column - Narrow (Profile, Subscriptions, Discounts, Notes) */}
+        <div className="lg:col-span-4 space-y-5">
+          
+          {/* Subscriptions */}
+          <div className="p-5 rounded-xl bg-card border border-border">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-lg bg-[hsl(262,83%,58%)]">
+                  <BookOpen className="h-4 w-4 text-white" />
                 </div>
-                <Select
-                  onValueChange={async (groupId) => {
-                    if (!id || !groupId) return;
-                    const group = groups.find((g) => g.id === groupId);
-                    if (!group) return;
-                    
-                    if (!group.studentIds.includes(id)) {
-                      await updateGroup.mutateAsync({
-                        id: groupId,
-                        data: {
-                          ...group,
-                          studentIds: [...group.studentIds, id],
-                        },
-                      });
-                    }
-                  }}
-                >
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Добавить в группу" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {groups
-                      .filter((g) => !studentGroups.find((sg) => sg.id === g.id))
-                      .map((group) => (
-                        <SelectItem key={group.id} value={group.id}>
-                          {group.name} - {group.subject}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
+                <h3 className="font-semibold text-slate-900 dark:text-slate-100">Абонементы</h3>
               </div>
-              
-              {studentGroups.length === 0 ? (
-                <div className="text-center text-muted-foreground py-12 rounded-2xl bg-muted/30">
-                  <Users className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
-                  <p>Студент не состоит в группах</p>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-8 px-3 text-xs text-muted-foreground hover:text-foreground" 
+                onClick={() => setIsAssignSubModalOpen(true)}
+              >
+                <Plus className="h-3 w-3 mr-1" />
+                Добавить
+              </Button>
+            </div>
+            
+            <div className="space-y-3">
+              {subscriptions.length === 0 ? (
+                <div className="text-center text-muted-foreground py-8 rounded-lg bg-muted/30">
+                  <BookOpen className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                  <p className="text-sm">Нет абонементов</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {studentGroups.map((group) => {
-                    const groupLessons = studentLessons.filter(
-                      (l) => l.groupId === group.id && l.status !== "cancelled"
-                    );
-                    
-                    const scheduleMap = new Map<number, string>();
-                    groupLessons.forEach((lesson) => {
-                      const dayOfWeek = moment(lesson.start).day();
-                      const timeKey = `${moment(lesson.start).format("HH:mm")} - ${moment(lesson.end).format("HH:mm")}`;
-                      if (!scheduleMap.has(dayOfWeek)) {
-                        scheduleMap.set(dayOfWeek, timeKey);
-                      }
-                    });
-
-                    const weekdayNames = ["ВС", "ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ"];
-                    const sortedDays = Array.from(scheduleMap.keys()).sort((a, b) => {
-                      const aAdj = a === 0 ? 7 : a;
-                      const bAdj = b === 0 ? 7 : b;
-                      return aAdj - bAdj;
-                    });
-                    const scheduleText = sortedDays.map(day => weekdayNames[day]).join(" ");
-                    const scheduleTime = scheduleMap.get(sortedDays[0]) || "";
-
-                    return (
-                      <div key={group.id} className="p-4 rounded-2xl bg-gradient-to-br from-sky-50 to-blue-100 dark:from-sky-950 dark:to-blue-900 hover:shadow-soft transition-all">
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <h4 className="font-semibold">{group.name}</h4>
-                              <Badge className="bg-white/70 dark:bg-white/10 text-foreground border-0">{group.subject}</Badge>
-                            </div>
-                            {scheduleText && scheduleTime && (
-                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <Clock className="h-4 w-4" />
-                                <span className="font-medium">{scheduleText}</span>
-                                <span>{scheduleTime}</span>
-                              </div>
-                            )}
+                subscriptions.map((sub) => (
+                  <div key={sub.id} className="p-4 rounded-lg border border-border bg-muted/20">
+                    <SubscriptionProgress
+                      lessonsUsed={sub.totalLessons - (sub.lessonsRemaining || 0)}
+                      totalLessons={sub.totalLessons}
+                      subscriptionName={sub.subscriptionTypeName || "Индивидуальный"}
+                      size="sm"
+                    />
+                    <div className="space-y-2 pt-3 mt-3 border-t border-border">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">Стоимость</span>
+                        {sub.originalPrice && sub.originalPrice > sub.totalPrice && sub.discountAmount ? (
+                          <div className="flex flex-col items-end">
+                            <span className="font-semibold text-emerald-600">{sub.totalPrice.toLocaleString()} ₸</span>
+                            <span className="line-through text-muted-foreground text-[10px]">{sub.originalPrice.toLocaleString()} ₸</span>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 rounded-xl hover:bg-white/50"
-                            onClick={async () => {
-                              if (!id) return;
-                              await updateGroup.mutateAsync({
-                                id: group.id,
-                                data: {
-                                  ...group,
-                                  studentIds: group.studentIds.filter((sid) => sid !== id),
-                                },
-                              });
-                            }}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        ) : (
+                          <span className="font-semibold text-foreground">{sub.totalPrice.toLocaleString()} ₸</span>
+                        )}
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Balance Chart */}
-            <div className="p-6 rounded-3xl border border-border/50 bg-white dark:bg-gray-900 shadow-soft">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600">
-                    <TrendingUp className="h-5 w-5 text-white" />
-                  </div>
-                  <h3 className="text-lg font-semibold">История баланса</h3>
-                </div>
-                <Button 
-                  size="sm" 
-                  onClick={() => setIsPaymentDialogOpen(true)}
-                  className="rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Добавить платеж
-                </Button>
-              </div>
-              <BalanceChart transactions={transactions} currentBalance={balance?.balance || 0} />
-            </div>
-
-            {/* Activity Timeline */}
-            <div className="p-6 rounded-3xl border border-border/50 bg-white dark:bg-gray-900 shadow-soft">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600">
-                  <Clock className="h-5 w-5 text-white" />
-                </div>
-                <h3 className="text-lg font-semibold">История активности</h3>
-              </div>
-              <ActivityTimeline items={timelineItems} maxItems={15} />
-            </div>
-          </div>
-
-          {/* Right Column - 1 col */}
-          <div className="space-y-6">
-            {/* Subscriptions with Progress */}
-            <div className="p-5 rounded-3xl border border-border/50 bg-white dark:bg-gray-900 shadow-soft">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600">
-                    <BookOpen className="h-4 w-4 text-white" />
-                  </div>
-                  <span className="font-semibold">Абонементы</span>
-                </div>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-8 px-3 text-xs rounded-xl hover:bg-muted" 
-                  onClick={() => setIsAssignSubModalOpen(true)}
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  Добавить
-                </Button>
-              </div>
-              
-              <div className="space-y-4">
-                {subscriptions.length === 0 ? (
-                  <div className="text-center text-muted-foreground py-8 rounded-2xl bg-muted/30">
-                    <BookOpen className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
-                    <p className="text-sm">Нет абонементов</p>
-                  </div>
-                ) : (
-                  subscriptions.map((sub) => (
-                    <div key={sub.id} className="p-4 rounded-2xl bg-gradient-to-br from-violet-50 to-purple-100 dark:from-violet-950 dark:to-purple-900">
-                      <SubscriptionProgress
-                        lessonsUsed={sub.totalLessons - (sub.lessonsRemaining || 0)}
-                        totalLessons={sub.totalLessons}
-                        subscriptionName={sub.subscriptionTypeName || "Индивидуальный"}
-                        size="sm"
-                      />
-                      <div className="space-y-2 pt-3 mt-3 border-t border-violet-200/50 dark:border-violet-700/50">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground">Стоимость</span>
-                          {sub.originalPrice && sub.originalPrice > sub.totalPrice && sub.discountAmount ? (
-                            <div className="flex flex-col items-end">
-                              <span className="font-semibold text-green-600">{sub.totalPrice.toLocaleString()} ₸</span>
-                              <span className="line-through text-muted-foreground text-[10px]">{sub.originalPrice.toLocaleString()} ₸</span>
-                              <span className="text-green-600 text-[10px]">-{sub.discountAmount.toLocaleString()} ₸</span>
-                            </div>
-                          ) : (
-                            <span className="font-semibold">{sub.totalPrice.toLocaleString()} ₸</span>
-                          )}
-                        </div>
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground">За урок</span>
-                          <span className="font-semibold">{sub.pricePerLesson.toFixed(0)} ₸</span>
-                        </div>
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground">Период</span>
-                          <span className="font-semibold">
-                            {moment(sub.startDate).format("DD.MM")} - {sub.endDate ? moment(sub.endDate).format("DD.MM") : "∞"}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 pt-2">
-                          <Badge className={sub.status === "active" ? "bg-gradient-to-r from-emerald-500 to-green-600 border-0 text-xs" : "text-xs"}>
-                            {sub.status === "active" ? "Активен" : "Неактивен"}
-                          </Badge>
-                          <div className="flex items-center gap-1 ml-auto">
-                            {sub.status === "active" && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 px-2 text-xs rounded-lg"
-                                onClick={() => {
-                                  setSelectedSubscriptionForFreeze(sub);
-                                  setIsFreezeModalOpen(true);
-                                }}
-                              >
-                                <Clock className="h-3 w-3 mr-1" />
-                                Заморозить
-                              </Button>
-                            )}
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">За урок</span>
+                        <span className="font-semibold text-foreground">{sub.pricePerLesson.toFixed(0)} ₸</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">Период</span>
+                        <span className="font-semibold text-foreground">
+                          {moment(sub.startDate).format("DD.MM")} - {sub.endDate ? moment(sub.endDate).format("DD.MM") : "∞"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 pt-2">
+                        <Badge variant="outline" className={sub.status === "active" 
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 text-xs" 
+                          : "text-xs"
+                        }>
+                          {sub.status === "active" ? "Активен" : "Неактивен"}
+                        </Badge>
+                        <div className="flex items-center gap-1 ml-auto">
+                          {sub.status === "active" && (
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 rounded-lg"
-                              onClick={async () => {
-                                if (window.confirm("Вы уверены, что хотите удалить этот абонемент?")) {
-                                  await deleteSubscription.mutateAsync(sub.id);
-                                }
+                              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                              onClick={() => {
+                                setSelectedSubscriptionForFreeze(sub);
+                                setIsFreezeModalOpen(true);
                               }}
                             >
-                              <Trash2 className="h-3 w-3" />
+                              <Clock className="h-3 w-3 mr-1" />
+                              Заморозить
                             </Button>
-                          </div>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs text-muted-foreground hover:text-rose-600"
+                            onClick={async () => {
+                              if (window.confirm("Вы уверены, что хотите удалить этот абонемент?")) {
+                                await deleteSubscription.mutateAsync(sub.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
                         </div>
                       </div>
                     </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            {/* Discounts */}
-            <div className="p-5 rounded-3xl border border-border/50 bg-white dark:bg-gray-900 shadow-soft">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600">
-                    <Percent className="h-4 w-4 text-white" />
                   </div>
-                  <span className="font-semibold">Скидки</span>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Discounts */}
+          <div className="p-5 rounded-xl bg-card border border-border">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-lg bg-amber-500">
+                  <Percent className="h-4 w-4 text-white" />
                 </div>
-                <StudentDiscountCreateDialog studentId={id || ""} onApplied={() => { }} />
+                <h3 className="font-semibold text-slate-900 dark:text-slate-100">Скидки</h3>
               </div>
-              
-              {studentDiscounts.length === 0 ? (
-                <div className="text-center text-muted-foreground py-6 rounded-2xl bg-muted/30">
-                  <p className="text-sm">(не задано)</p>
+              <StudentDiscountCreateDialog studentId={id || ""} onApplied={() => { }} />
+            </div>
+            
+            {studentDiscounts.length === 0 ? (
+              <div className="text-center text-muted-foreground py-6 rounded-lg bg-muted/30">
+                <p className="text-sm">(не задано)</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {studentDiscounts.map((sd) => {
+                  const discount = discounts.find((d) => d.id === sd.discountId);
+                  return discount ? (
+                    <div key={sd.id} className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/20">
+                      <div>
+                        <div className="font-medium text-sm text-foreground">{discount.name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {discount.type === "percentage" ? `${discount.value}%` : `${discount.value} ₸`}
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                        onClick={() => {
+                          if (id) {
+                            removeDiscount.mutate({ studentId: id, discountId: discount.id });
+                          }
+                        }}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : null;
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Notes */}
+          <div className="p-5 rounded-xl bg-card border border-border">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-lg bg-sky-500">
+                  <StickyNote className="h-4 w-4 text-white" />
+                </div>
+                <h3 className="font-semibold text-slate-900 dark:text-slate-100">Заметки</h3>
+              </div>
+              <Dialog open={isNoteDialogOpen} onOpenChange={setIsNoteDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-8 px-3 text-xs text-muted-foreground hover:text-foreground">
+                    <Plus className="h-3 w-3 mr-1" />
+                    Добавить
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-sky-500">
+                        <StickyNote className="h-5 w-5 text-white" />
+                      </div>
+                      Новая заметка
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <Textarea
+                      placeholder="Введите текст заметки..."
+                      value={newNote}
+                      onChange={(e) => setNewNote(e.target.value)}
+                      rows={4}
+                    />
+                    <Button onClick={handleAddNote} disabled={!newNote.trim()}>
+                      Сохранить
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+            
+            <div className="space-y-2 max-h-[280px] overflow-y-auto">
+              {notes.length === 0 ? (
+                <div className="text-center text-muted-foreground py-6 rounded-lg bg-muted/30">
+                  <StickyNote className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                  <p className="text-sm">Нет заметок</p>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {studentDiscounts.map((sd) => {
-                    const discount = discounts.find((d) => d.id === sd.discountId);
-                    return discount ? (
-                      <div key={sd.id} className="flex items-center justify-between p-3 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-100 dark:from-amber-950 dark:to-orange-900 hover:shadow-soft transition-all">
-                        <div>
-                          <div className="font-medium text-sm">{discount.name}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {discount.type === "percentage" ? `${discount.value}%` : `${discount.value} ₸`}
+                notes.map((note) => (
+                  <div key={note.id} className="p-3 rounded-lg border border-border bg-muted/20">
+                    <p className="text-sm text-foreground">{note.note}</p>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      {moment(note.createdAt).format("DD.MM.YYYY HH:mm")}
+                    </p>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column - Wide (Charts, Groups, Activity) */}
+        <div className="lg:col-span-8 space-y-5">
+          
+          {/* Balance Chart */}
+          <div className="p-6 rounded-xl bg-card border border-border">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-[hsl(262,83%,58%)]">
+                  <TrendingUp className="h-5 w-5 text-white" />
+                </div>
+                <h3 className="font-semibold text-slate-900 dark:text-slate-100">История баланса</h3>
+              </div>
+              <Button 
+                size="sm" 
+                onClick={() => setIsPaymentDialogOpen(true)}
+                className="bg-gradient-to-r from-[#6366f1] via-[#a855f7] to-[#ec4899] hover:opacity-90 text-white border-0"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Добавить платеж
+              </Button>
+            </div>
+            <BalanceChart transactions={transactions} currentBalance={balance?.balance || 0} />
+          </div>
+
+          {/* Calendar */}
+          {id && subscriptions.length > 0 && (
+            <div className="rounded-xl border border-border bg-card overflow-hidden">
+              <StudentLessonCalendar
+                studentId={id}
+                subscriptions={subscriptions}
+                lessons={studentLessons}
+                attendances={studentAttendances}
+                freezes={allFreezes}
+              />
+            </div>
+          )}
+
+          {/* Groups - Compact */}
+          <div className="p-6 rounded-xl bg-card border border-border">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-sky-500">
+                  <Users className="h-5 w-5 text-white" />
+                </div>
+                <h3 className="font-semibold text-slate-900 dark:text-slate-100">Группы</h3>
+              </div>
+              <Select
+                onValueChange={async (groupId) => {
+                  if (!id || !groupId) return;
+                  const group = groups.find((g) => g.id === groupId);
+                  if (!group) return;
+                  
+                  if (!group.studentIds.includes(id)) {
+                    await updateGroup.mutateAsync({
+                      id: groupId,
+                      data: {
+                        ...group,
+                        studentIds: [...group.studentIds, id],
+                      },
+                    });
+                  }
+                }}
+              >
+                <SelectTrigger className="w-[180px] h-9">
+                  <SelectValue placeholder="Добавить в группу" />
+                </SelectTrigger>
+                <SelectContent>
+                  {groups
+                    .filter((g) => !studentGroups.find((sg) => sg.id === g.id))
+                    .map((group) => (
+                      <SelectItem key={group.id} value={group.id}>
+                        {group.name} - {group.subject}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {studentGroups.length === 0 ? (
+              <div className="text-center text-muted-foreground py-10 rounded-lg bg-muted/30">
+                <Users className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                <p>Студент не состоит в группах</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {studentGroups.map((group) => {
+                  const groupLessons = studentLessons.filter(
+                    (l) => l.groupId === group.id && l.status !== "cancelled"
+                  );
+                  
+                  const scheduleMap = new Map<number, string>();
+                  groupLessons.forEach((lesson) => {
+                    const dayOfWeek = moment(lesson.start).day();
+                    const timeKey = `${moment(lesson.start).format("HH:mm")} - ${moment(lesson.end).format("HH:mm")}`;
+                    if (!scheduleMap.has(dayOfWeek)) {
+                      scheduleMap.set(dayOfWeek, timeKey);
+                    }
+                  });
+
+                  const weekdayNames = ["ВС", "ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ"];
+                  const sortedDays = Array.from(scheduleMap.keys()).sort((a, b) => {
+                    const aAdj = a === 0 ? 7 : a;
+                    const bAdj = b === 0 ? 7 : b;
+                    return aAdj - bAdj;
+                  });
+                  const scheduleText = sortedDays.map(day => weekdayNames[day]).join(" ");
+                  const scheduleTime = scheduleMap.get(sortedDays[0]) || "";
+
+                  return (
+                    <div key={group.id} className="p-4 rounded-lg border border-border bg-muted/20 hover:shadow-md transition-shadow">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h4 className="font-semibold text-foreground truncate">{group.name}</h4>
+                            <Badge variant="outline" className="text-xs shrink-0">{group.subject}</Badge>
                           </div>
+                          {scheduleText && scheduleTime && (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Clock className="h-3.5 w-3.5" />
+                              <span className="font-medium">{scheduleText}</span>
+                              <span>{scheduleTime}</span>
+                            </div>
+                          )}
                         </div>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-7 w-7 p-0 rounded-lg hover:bg-white/50"
-                          onClick={() => {
-                            if (id) {
-                              removeDiscount.mutate({ studentId: id, discountId: discount.id });
-                            }
+                          className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground shrink-0"
+                          onClick={async () => {
+                            if (!id) return;
+                            await updateGroup.mutateAsync({
+                              id: group.id,
+                              data: {
+                                ...group,
+                                studentIds: group.studentIds.filter((sid) => sid !== id),
+                              },
+                            });
                           }}
                         >
-                          <X className="h-3 w-3" />
+                          <X className="h-4 w-4" />
                         </Button>
                       </div>
-                    ) : null;
-                  })}
-                </div>
-              )}
-            </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
-            {/* Notes */}
-            <div className="p-5 rounded-3xl border border-border/50 bg-white dark:bg-gray-900 shadow-soft">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-gradient-to-br from-sky-500 to-blue-600">
-                    <StickyNote className="h-4 w-4 text-white" />
-                  </div>
-                  <span className="font-semibold">Заметки</span>
-                </div>
-                <Dialog open={isNoteDialogOpen} onOpenChange={setIsNoteDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 px-3 text-xs rounded-xl hover:bg-muted">
-                      <Plus className="h-3 w-3 mr-1" />
-                      Добавить
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle className="flex items-center gap-3">
-                        <div className="p-2 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600">
-                          <StickyNote className="h-5 w-5 text-white" />
-                        </div>
-                        Новая заметка
-                      </DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <Textarea
-                        placeholder="Введите текст заметки..."
-                        value={newNote}
-                        onChange={(e) => setNewNote(e.target.value)}
-                        rows={4}
-                        className="rounded-xl"
-                      />
-                      <Button onClick={handleAddNote} disabled={!newNote.trim()} className="rounded-xl">
-                        Сохранить
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+          {/* Activity Timeline */}
+          <div className="p-6 rounded-xl bg-card border border-border">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="p-2 rounded-lg bg-[hsl(262,83%,58%)]">
+                <Clock className="h-5 w-5 text-white" />
               </div>
-              
-              <div className="space-y-3 max-h-[300px] overflow-y-auto">
-                {notes.length === 0 ? (
-                  <div className="text-center text-muted-foreground py-6 rounded-2xl bg-muted/30">
-                    <StickyNote className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
-                    <p className="text-sm">Нет заметок</p>
-                  </div>
-                ) : (
-                  notes.map((note) => (
-                    <div key={note.id} className="p-3 rounded-2xl bg-gradient-to-br from-sky-50 to-blue-100 dark:from-sky-950 dark:to-blue-900">
-                      <p className="text-sm">{note.note}</p>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        {moment(note.createdAt).format("DD.MM.YYYY HH:mm")}
-                      </p>
-                    </div>
-                  ))
-                )}
-              </div>
+              <h3 className="font-semibold text-slate-900 dark:text-slate-100">История активности</h3>
             </div>
+            <ActivityTimeline items={timelineItems} maxItems={15} />
           </div>
         </div>
       </div>

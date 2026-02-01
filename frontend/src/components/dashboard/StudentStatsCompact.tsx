@@ -1,4 +1,4 @@
-import { Users, TrendingUp, Loader2 } from "lucide-react";
+import { Users, TrendingUp, Loader2, UserCheck, Snowflake, UserPlus } from "lucide-react";
 import { useDashboardStats } from "@/hooks/useData";
 import { useNavigate } from "react-router-dom";
 
@@ -11,35 +11,50 @@ export function StudentStatsCompact() {
 
   return (
     <div 
-      className="h-full rounded-2xl bg-gradient-to-br from-violet-50 to-purple-100 dark:from-violet-950 dark:to-purple-900 p-3 flex flex-col justify-between cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02] overflow-hidden"
+      className="h-full rounded-2xl bg-card border border-border p-4 flex flex-col cursor-pointer transition-all hover:shadow-lg hover:border-violet-200 dark:hover:border-violet-800"
       onClick={() => navigate("/students")}
     >
       {isLoading ? (
         <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="h-5 w-5 animate-spin text-violet-500" />
+          <Loader2 className="h-6 w-6 animate-spin text-violet-500" />
         </div>
       ) : (
         <>
           {/* Header */}
-          <div className="flex items-center justify-between">
-            <div className="p-1.5 rounded-lg bg-violet-500/20">
-              <Users className="h-3.5 w-3.5 text-violet-600 dark:text-violet-400" />
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-xl bg-violet-500">
+                <Users className="h-4 w-4 text-white" />
+              </div>
+              <span className="font-semibold text-foreground text-sm">Ученики</span>
             </div>
             {students.new > 0 && (
-              <div className="flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400">
+              <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                 <TrendingUp className="h-3 w-3" />
-                <span className="text-[10px] font-medium">+{students.new}</span>
+                <span className="text-xs font-medium">+{students.new}</span>
               </div>
             )}
           </div>
 
-          {/* Number */}
-          <div>
-            <div className="text-2xl font-bold text-violet-900 dark:text-violet-100 leading-none">
+          {/* Total */}
+          <div className="mb-3">
+            <div className="text-3xl font-bold text-foreground">
               {total}
             </div>
-            <div className="text-[10px] text-violet-600 dark:text-violet-400">
-              учеников
+            <div className="text-xs text-muted-foreground">
+              всего учеников
+            </div>
+          </div>
+
+          {/* Stats breakdown */}
+          <div className="flex items-center gap-4 mt-auto">
+            <div className="flex items-center gap-1.5">
+              <UserCheck className="h-3.5 w-3.5 text-emerald-500" />
+              <span className="text-xs text-muted-foreground">{students.active} актив.</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Snowflake className="h-3.5 w-3.5 text-sky-500" />
+              <span className="text-xs text-muted-foreground">{students.frozen} замор.</span>
             </div>
           </div>
         </>

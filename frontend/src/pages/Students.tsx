@@ -15,9 +15,9 @@ import {
 } from "@/hooks/useData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+// Card imports removed - using custom card divs
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Mail, Phone, Trash2, Edit, Loader2, AlertCircle, Clock, X, FileText, FileSpreadsheet, ArrowUpDown } from "lucide-react";
+import { Plus, Search, Phone, Trash2, Edit, Loader2, Clock, X, FileText, ArrowUpDown } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -110,7 +110,7 @@ const StudentsGrid = React.memo(function StudentsGrid({
 }) {
 
   return (
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
       {isFetching && (
         <div className="col-span-full flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" /> Обновление результатов...
@@ -132,133 +132,84 @@ const StudentsGrid = React.memo(function StudentsGrid({
         const nextLessonGroup = nextLesson?.groupId ? (groups || []).find((g) => g.id === nextLesson.groupId) : null;
 
         return (
-          <Card 
+          <div 
             key={student.id} 
-            className="hover:shadow-md transition-shadow cursor-pointer"
+            className="rounded-xl bg-card border border-border p-4 cursor-pointer transition-all hover:shadow-lg"
             onClick={() => onNavigate(student.id)}
           >
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 text-lg font-bold text-white shadow-soft">
-                    {student.name.charAt(0)}
-                  </div>
-                  <div>
-                    <h3 className="font-semibold">{student.name}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {student.age} лет
+            {/* Header: Avatar + Name */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-[#6366f1] to-[#a855f7] text-base font-semibold text-white">
+                {student.name.charAt(0)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-foreground truncate">{student.name}</h3>
+                <p className="text-sm text-muted-foreground">
+                  {student.age} лет
+                </p>
+              </div>
+            </div>
+
+            {/* Info: Phone + Groups */}
+            <div className="space-y-2 mb-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Phone className="h-4 w-4 shrink-0" />
+                <span>{student.phone || "—"}</span>
+              </div>
+              {studentGroups.length > 0 && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Clock className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{studentGroups.map(g => g.name).join(", ")}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Next Lesson - Lightweight */}
+            <div className="rounded-lg border border-border p-3 mb-4">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+                {nextLesson ? (
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-foreground">
+                      {moment(nextLesson.start).locale("ru").format("D MMM, dd")} в {moment(nextLesson.start).locale("ru").format("HH:mm")}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {nextLessonGroup ? nextLessonGroup.name : "Индивидуальное"}
                     </p>
                   </div>
-                </div>
+                ) : (
+                  <span className="text-sm text-muted-foreground">Нет занятий</span>
+                )}
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Mail className="h-4 w-4" />
-                  {student.email}
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Phone className="h-4 w-4" />
-                  {student.phone}
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Clock className="h-4 w-4" />
-                  {(() => {
-                    // build schedule string quickly from lessons
-                    const sl = (lessons || []).filter((l) =>
-                      (l.studentIds?.includes(student.id) || (l.groupId && student.groupIds?.includes(l.groupId))) &&
-                      l.status !== "cancelled"
-                    );
-                    if (sl.length === 0) {
-                      return <span>Отсутствует</span>;
-                    }
-                    const weekdayNames = ["ВС","ПН","ВТ","СР","ЧТ","ПТ","СБ"];
-                    const map = new Map<number, string>();
-                    sl.forEach((l) => {
-                      const d = moment(l.start);
-                      map.set(d.day(), `${d.format("HH:mm")} - ${moment(l.end).format("HH:mm")}`);
-                    });
-                    const keys = Array.from(map.keys()).sort((a,b)=> (a===0?7:a)-(b===0?7:b));
-                    const label = keys.map(k=>weekdayNames[k===0?0:k]).join(" ");
-                    const time = map.get(keys[0]);
-                    return <span>{label} {time}</span>;
-                  })()}
-                </div>
+            </div>
 
-                {/* Next Lesson Info and Actions */}
-                <div className="flex flex-col gap-3">
-                  {nextLesson ? (
-                    <div className="p-3 rounded-2xl bg-gradient-to-br from-emerald-50 to-green-100 dark:from-emerald-950 dark:to-green-900">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Clock className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                        <p className="text-sm font-medium text-emerald-800 dark:text-emerald-200">Ближайшее занятие:</p>
-                      </div>
-                      <p className="text-sm text-emerald-700 dark:text-emerald-300 font-medium">
-                        {moment(nextLesson.start).locale("ru").format("DD MMMM, dddd")} в {moment(nextLesson.start).locale("ru").format("HH:mm")}
-                      </p>
-                      {nextLesson?.teacherName && (
-                        <p className="text-xs text-green-700 dark:text-green-300 mt-1">
-                          Преподаватель: {nextLesson.teacherName}
-                        </p>
-                      )}
-                      {nextLessonGroup && (
-                        <p className="text-xs text-green-700 dark:text-green-300">
-                          Группа: {nextLessonGroup.name}
-                        </p>
-                      )}
-                      {!nextLessonGroup && (
-                        <p className="text-xs text-green-700 dark:text-green-300">
-                          Индивидуальное занятие
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-900/50">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Clock className="h-4 w-4 text-red-600 dark:text-red-400" />
-                        <p className="text-sm font-medium text-red-700 dark:text-red-300">Ближайшее занятие:</p>
-                      </div>
-                      <p className="text-sm text-red-800 dark:text-red-200">
-                        Отсутствуют
-                      </p>
-                      <p className="text-xs text-red-700 dark:text-red-300 mt-1 invisible">
-                        Преподаватель: &nbsp;
-                      </p>
-                      <p className="text-xs text-red-700 dark:text-red-300 invisible">
-                        Группа: &nbsp;
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEdit(student);
-                      }}
-                    >
-                      <Edit className="h-4 w-4 mr-1" />
-                      Изменить
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete(student.id);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+            {/* Actions - Subtle gray buttons */}
+            <div className="flex gap-2 pt-3 border-t border-border">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex-1 text-muted-foreground hover:text-foreground"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(student);
+                }}
+              >
+                <Edit className="h-4 w-4 mr-1.5" />
+                Изменить
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(student.id);
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         );
       })}
     </div>
@@ -597,65 +548,99 @@ export default function Students() {
                   <span className="sm:hidden">Добавить</span>
                 </Button>
               </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-[480px]">
             <DialogHeader>
               <DialogTitle>
                 {editingStudent ? "Редактировать ученика" : "Новый ученик"}
               </DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="name">ФИО</Label>
-                <Input
-                  id="name"
-                  name="name"
-                  defaultValue={editingStudent?.name}
-                  required
-                />
+              {/* Section: Личные данные */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Личные данные</h4>
+                
+                {/* ФИО - Full width */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="name">ФИО *</Label>
+                  <Input
+                    id="name"
+                    name="name"
+                    placeholder="Иван Иванов"
+                    defaultValue={editingStudent?.name}
+                    required
+                  />
+                </div>
+
+                {/* Возраст & Телефон - Two columns */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="age">Возраст *</Label>
+                    <Input
+                      id="age"
+                      name="age"
+                      type="number"
+                      placeholder="14"
+                      defaultValue={editingStudent?.age}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="phone">Телефон *</Label>
+                    <Input
+                      id="phone"
+                      name="phone"
+                      placeholder="+7 (777) 123-45-67"
+                      defaultValue={editingStudent?.phone}
+                      onChange={(e) => {
+                        e.currentTarget.value = formatKzPhone(e.currentTarget.value);
+                      }}
+                      required
+                    />
+                  </div>
+                </div>
               </div>
-              <div>
-                <Label htmlFor="age">Возраст</Label>
-                <Input
-                  id="age"
-                  name="age"
-                  type="number"
-                  defaultValue={editingStudent?.age}
-                  required
-                />
+
+              {/* Divider */}
+              <div className="border-t border-slate-100 dark:border-slate-800" />
+
+              {/* Section: Дополнительно */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Дополнительно</h4>
+
+                {/* Email & Предметы - Two columns */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      placeholder="ivan@mail.ru"
+                      defaultValue={editingStudent?.email}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="subjects">Предметы *</Label>
+                    <Input
+                      id="subjects"
+                      name="subjects"
+                      placeholder="Математика, Физика"
+                      defaultValue={editingStudent?.subjects.join(", ")}
+                      required
+                    />
+                  </div>
+                </div>
               </div>
-              <div>
-                <Label htmlFor="phone">Телефон</Label>
-                <Input
-                  id="phone"
-                  name="phone"
-                  defaultValue={editingStudent?.phone}
-                  onChange={(e) => {
-                    e.currentTarget.value = formatKzPhone(e.currentTarget.value);
-                  }}
-                  required
-                />
+
+              {/* Actions */}
+              <div className="space-y-2 pt-4 border-t border-slate-100 dark:border-slate-800">
+                <Button 
+                  type="submit" 
+                  className="w-full bg-gradient-to-r from-[#6366f1] via-[#8b5cf6] to-[#a855f7] hover:opacity-90 text-white shadow-md"
+                >
+                  {editingStudent ? "Сохранить изменения" : "Добавить ученика"}
+                </Button>
               </div>
-              <div>
-                <Label htmlFor="email">Email (необязательно)</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  defaultValue={editingStudent?.email}
-                />
-              </div>
-              <div>
-                <Label htmlFor="subjects">Предметы (через запятую)</Label>
-                <Input
-                  id="subjects"
-                  name="subjects"
-                  defaultValue={editingStudent?.subjects.join(", ")}
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full">
-                {editingStudent ? "Сохранить" : "Добавить"}
-              </Button>
             </form>
           </DialogContent>
             </Dialog>

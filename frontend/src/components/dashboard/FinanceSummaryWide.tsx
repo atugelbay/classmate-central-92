@@ -1,4 +1,4 @@
-import { DollarSign, TrendingUp, ArrowRight, Loader2 } from "lucide-react";
+import { DollarSign, TrendingUp, ArrowRight, Loader2, Wallet, Calendar } from "lucide-react";
 import { useDashboardStats } from "@/hooks/useData";
 import { useNavigate } from "react-router-dom";
 
@@ -10,49 +10,65 @@ export function FinanceSummaryWide() {
 
   return (
     <div 
-      className="h-full rounded-3xl bg-gradient-to-r from-emerald-50 via-green-50 to-teal-50 dark:from-emerald-950 dark:via-green-950 dark:to-teal-950 p-5 flex items-center cursor-pointer transition-all hover:shadow-lg hover:scale-[1.01]"
+      className="rounded-xl bg-card border border-border p-5 cursor-pointer transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)]"
       onClick={() => navigate("/finance")}
     >
       {isLoading ? (
-        <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-emerald-500" />
+        <div className="flex items-center justify-center py-6">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       ) : (
         <>
-          {/* Icon */}
-          <div className="p-3 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg mr-5">
-            <DollarSign className="h-6 w-6 text-white" />
-          </div>
-
-          {/* Main metric */}
-          <div className="flex-1">
-            <div className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mb-1">
-              Доход сегодня
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-emerald-500">
+                <Wallet className="h-5 w-5 text-white" />
+              </div>
+              <span className="font-semibold text-foreground">Доходы</span>
             </div>
-            <div className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">
-              {revenue.today.toLocaleString()} ₸
+            <div className="flex items-center gap-1 text-muted-foreground text-sm hover:text-foreground transition-colors">
+              Подробнее <ArrowRight className="h-4 w-4" />
             </div>
           </div>
 
-          {/* Secondary metrics */}
-          <div className="hidden sm:flex items-center gap-6">
-            <div className="text-right">
-              <div className="text-xs text-emerald-600/70 dark:text-emerald-400/70">Неделя</div>
-              <div className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
-                {revenue.thisWeek.toLocaleString()} ₸
+          {/* Main metrics grid */}
+          <div className="grid grid-cols-3 gap-4">
+            {/* Today */}
+            <div className="rounded-xl border border-border p-4 bg-emerald-50/50 dark:bg-emerald-950/20">
+              <div className="flex items-center gap-1.5 text-muted-foreground text-xs mb-2">
+                <Calendar className="h-3.5 w-3.5" />
+                Сегодня
+              </div>
+              <div className="text-2xl font-bold text-foreground">
+                {revenue.today.toLocaleString()}
+                <span className="text-base font-medium text-muted-foreground ml-1">₸</span>
               </div>
             </div>
-            <div className="text-right">
-              <div className="text-xs text-emerald-600/70 dark:text-emerald-400/70">Месяц</div>
-              <div className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
-                {revenue.thisMonth.toLocaleString()} ₸
+
+            {/* Week */}
+            <div className="rounded-xl border border-border p-4">
+              <div className="flex items-center gap-1.5 text-muted-foreground text-xs mb-2">
+                <TrendingUp className="h-3.5 w-3.5" />
+                Неделя
+              </div>
+              <div className="text-2xl font-bold text-foreground">
+                {revenue.thisWeek.toLocaleString()}
+                <span className="text-base font-medium text-muted-foreground ml-1">₸</span>
               </div>
             </div>
-          </div>
 
-          {/* Arrow */}
-          <div className="ml-4 p-2 rounded-xl bg-emerald-500/10 group-hover:bg-emerald-500/20 transition-colors">
-            <ArrowRight className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            {/* Month */}
+            <div className="rounded-xl border border-border p-4">
+              <div className="flex items-center gap-1.5 text-muted-foreground text-xs mb-2">
+                <DollarSign className="h-3.5 w-3.5" />
+                Месяц
+              </div>
+              <div className="text-2xl font-bold text-foreground">
+                {revenue.thisMonth.toLocaleString()}
+                <span className="text-base font-medium text-muted-foreground ml-1">₸</span>
+              </div>
+            </div>
           </div>
         </>
       )}

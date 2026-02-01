@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Loader2, Plus, DollarSign, TrendingUp, TrendingDown, Users, Trash2, Edit, FileText, ArrowRight, CreditCard, Wallet, AlertCircle } from "lucide-react";
 import { useTransactions, useCreateTransaction, useAllBalances, useDiscounts, useCreateDiscount, useUpdateDiscount, useDeleteDiscount, useDebts, useCreateDebt, useUpdateDebt, useStudents, useTeachers, useGroups } from "@/hooks/useData";
 import { Discount, DebtRecord } from "@/types";
@@ -16,6 +18,16 @@ import "moment/locale/ru";
 import { ExportDialog } from "@/components/ExportDialog";
 
 moment.locale("ru");
+
+// Helper to get initials from name
+const getInitials = (name: string) => {
+  return name
+    .split(' ')
+    .map(word => word[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+};
 
 export default function Finance() {
   const { data: transactions = [], isLoading: transactionsLoading } = useTransactions();
@@ -93,13 +105,21 @@ export default function Finance() {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
 
-    const debtData = {
+    const dueDateStr = formData.get("dueDate") as string;
+    // Convert date to ISO format (YYYY-MM-DDTHH:MM:SSZ) or undefined if empty
+    const dueDate = dueDateStr ? `${dueDateStr}T00:00:00Z` : undefined;
+
+    const debtData: any = {
       studentId: formData.get("studentId") as string,
       amount: parseFloat(formData.get("amount") as string),
-      dueDate: formData.get("dueDate") as string,
       status: formData.get("status") as any,
-      notes: formData.get("notes") as string,
+      notes: formData.get("notes") as string || "",
     };
+
+    // Only include dueDate if it has a value
+    if (dueDate) {
+      debtData.dueDate = dueDate;
+    }
 
     if (selectedDebt) {
       await updateDebt.mutateAsync({ id: selectedDebt.id, data: debtData });
@@ -146,52 +166,52 @@ export default function Finance() {
         description="Управление финансами и платежами"
       />
 
-      {/* Bento Statistics */}
+      {/* KPI Statistics - Clean white cards with colored accent */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-3xl bg-gradient-to-br from-emerald-50 to-green-100 dark:from-emerald-950 dark:to-green-900 p-5">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 rounded-xl bg-emerald-500/20">
-              <TrendingUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+        <div className="rounded-xl bg-card border border-border p-5 border-t-4 border-t-emerald-500">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm text-muted-foreground">Общий доход</span>
+            <div className="p-2 rounded-lg bg-emerald-500">
+              <TrendingUp className="h-4 w-4 text-white" />
             </div>
-            <span className="text-sm text-emerald-700 dark:text-emerald-300">Общий доход</span>
           </div>
-          <div className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">
+          <div className="text-2xl font-bold text-foreground">
             {totalIncome.toLocaleString()} ₸
           </div>
         </div>
 
-        <div className="rounded-3xl bg-gradient-to-br from-rose-50 to-red-100 dark:from-rose-950 dark:to-red-900 p-5">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 rounded-xl bg-rose-500/20">
-              <TrendingDown className="h-5 w-5 text-rose-600 dark:text-rose-400" />
+        <div className="rounded-xl bg-card border border-border p-5 border-t-4 border-t-rose-500">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm text-muted-foreground">Возвраты</span>
+            <div className="p-2 rounded-lg bg-rose-500">
+              <TrendingDown className="h-4 w-4 text-white" />
             </div>
-            <span className="text-sm text-rose-700 dark:text-rose-300">Возвраты</span>
           </div>
-          <div className="text-2xl font-bold text-rose-900 dark:text-rose-100">
+          <div className="text-2xl font-bold text-foreground">
             {totalRefunds.toLocaleString()} ₸
           </div>
         </div>
 
-        <div className="rounded-3xl bg-gradient-to-br from-sky-50 to-blue-100 dark:from-sky-950 dark:to-blue-900 p-5">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 rounded-xl bg-sky-500/20">
-              <Wallet className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+        <div className="rounded-xl bg-card border border-border p-5 border-t-4 border-t-blue-500">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm text-muted-foreground">Общий баланс</span>
+            <div className="p-2 rounded-lg bg-blue-500">
+              <Wallet className="h-4 w-4 text-white" />
             </div>
-            <span className="text-sm text-sky-700 dark:text-sky-300">Общий баланс</span>
           </div>
-          <div className="text-2xl font-bold text-sky-900 dark:text-sky-100">
+          <div className="text-2xl font-bold text-foreground">
             {totalBalance.toLocaleString()} ₸
           </div>
         </div>
 
-        <div className="rounded-3xl bg-gradient-to-br from-amber-50 to-orange-100 dark:from-amber-950 dark:to-orange-900 p-5">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 rounded-xl bg-amber-500/20">
-              <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+        <div className="rounded-xl bg-card border border-border p-5 border-t-4 border-t-amber-500">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm text-muted-foreground">Долги</span>
+            <div className="p-2 rounded-lg bg-amber-500">
+              <AlertCircle className="h-4 w-4 text-white" />
             </div>
-            <span className="text-sm text-amber-700 dark:text-amber-300">Долги</span>
           </div>
-          <div className="text-2xl font-bold text-amber-900 dark:text-amber-100">
+          <div className="text-2xl font-bold text-foreground">
             {pendingDebts.toLocaleString()} ₸
           </div>
         </div>
@@ -209,7 +229,7 @@ export default function Finance() {
         {/* Transactions Tab - Card Based */}
         <TabsContent value="transactions" className="space-y-4 mt-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <h2 className="text-xl font-semibold">История транзакций</h2>
+            <h2 className="text-lg font-semibold text-foreground">История транзакций</h2>
             <div className="flex gap-2 flex-wrap">
               <Button
                 variant="outline"
@@ -221,9 +241,9 @@ export default function Finance() {
               </Button>
               <Dialog open={isTransactionDialogOpen} onOpenChange={setIsTransactionDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button className="rounded-xl">
+                  <Button className="rounded-xl bg-gradient-to-r from-[#6366f1] via-[#a855f7] to-[#ec4899] hover:opacity-90 text-white border-0">
                     <Plus className="h-4 w-4 mr-2" />
-                    Добавить
+                    Добавить платеж
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="rounded-3xl">
@@ -308,36 +328,33 @@ export default function Finance() {
                       return (
                         <div
                           key={transaction.id}
-                          className={`p-4 rounded-2xl transition-all hover:scale-[1.02] cursor-pointer ${
-                            isPositive 
-                              ? "bg-emerald-50 dark:bg-emerald-950 hover:shadow-emerald-100 dark:hover:shadow-emerald-900/30" 
-                              : "bg-rose-50 dark:bg-rose-950 hover:shadow-rose-100 dark:hover:shadow-rose-900/30"
-                          } hover:shadow-lg`}
+                          className="p-4 rounded-xl bg-card border border-border transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)] cursor-pointer"
                         >
                           <div className="flex items-start justify-between">
                             <div className="flex-1 min-w-0">
                               <div className={`text-lg font-bold ${isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
                                 {isPositive ? "+" : "-"}{transaction.amount.toLocaleString()} ₸
                               </div>
-                              <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate mt-1">
+                              <div className="text-sm font-medium text-foreground truncate mt-1">
                                 {getStudentName(transaction.studentId, transaction.studentName)}
                               </div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                              <div className="text-xs text-muted-foreground mt-1">
                                 {moment(transaction.createdAt).format("HH:mm")} • {transaction.paymentMethod}
                               </div>
                             </div>
                             <Badge 
-                              className={`shrink-0 rounded-lg ${
+                              variant="outline"
+                              className={`shrink-0 ${
                                 isPositive 
-                                  ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300" 
-                                  : "bg-rose-100 text-rose-700 dark:bg-rose-900 dark:text-rose-300"
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800" 
+                                  : "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-800"
                               }`}
                             >
                               {transaction.type === "payment" ? "Платеж" : transaction.type === "refund" ? "Возврат" : "Долг"}
                             </Badge>
                           </div>
                           {transaction.description && (
-                            <div className="text-xs text-gray-400 mt-2 truncate">
+                            <div className="text-xs text-muted-foreground mt-2 truncate">
                               {transaction.description}
                             </div>
                           )}
@@ -351,9 +368,9 @@ export default function Finance() {
           </div>
         </TabsContent>
 
-        {/* Balances Tab - Card Grid */}
+        {/* Balances Tab - Modern Table */}
         <TabsContent value="balances" className="space-y-4 mt-6">
-          <h2 className="text-xl font-semibold">Балансы студентов</h2>
+          <h2 className="text-lg font-semibold text-foreground">Балансы студентов</h2>
           
           {balances.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
@@ -361,34 +378,69 @@ export default function Finance() {
               <p>Нет данных о балансах</p>
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {balances.map(balance => (
-                <div
-                  key={balance.studentId}
-                  className={`p-4 rounded-2xl transition-all hover:scale-[1.02] cursor-pointer ${
-                    balance.balance >= 0 
-                      ? "bg-gradient-to-br from-emerald-50 to-green-100 dark:from-emerald-950 dark:to-green-900" 
-                      : "bg-gradient-to-br from-rose-50 to-red-100 dark:from-rose-950 dark:to-red-900"
-                  }`}
-                >
-                  <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                    {getStudentName(balance.studentId, balance.studentName)}
-                  </div>
-                  <div className={`text-2xl font-bold mt-2 ${
-                    balance.balance >= 0 
-                      ? "text-emerald-600 dark:text-emerald-400" 
-                      : "text-rose-600 dark:text-rose-400"
-                  }`}>
-                    {balance.balance.toLocaleString()} ₸
-                  </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                    {balance.lastPaymentDate 
-                      ? `Последний платеж: ${moment(balance.lastPaymentDate).format("D MMM")}`
-                      : "Нет платежей"
-                    }
-                  </div>
-                </div>
-              ))}
+            <div className="rounded-xl border border-border bg-card overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="w-[300px]">Студент</TableHead>
+                    <TableHead>Баланс</TableHead>
+                    <TableHead>Статус</TableHead>
+                    <TableHead className="text-right">Последняя активность</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {balances.map(balance => {
+                    const studentName = getStudentName(balance.studentId, balance.studentName);
+                    const isPositive = balance.balance >= 0;
+                    const isNegative = balance.balance < 0;
+                    
+                    return (
+                      <TableRow key={balance.studentId} className="cursor-pointer">
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-9 w-9">
+                              <AvatarFallback className="bg-primary/10 text-primary text-sm font-medium">
+                                {getInitials(studentName)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium text-foreground">{studentName}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className={`font-semibold ${
+                            isPositive 
+                              ? "text-emerald-600 dark:text-emerald-400" 
+                              : "text-rose-600 dark:text-rose-400"
+                          }`}>
+                            {balance.balance.toLocaleString()} ₸
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          {isNegative ? (
+                            <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-800">
+                              Задолженность
+                            </Badge>
+                          ) : balance.balance === 0 ? (
+                            <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-900/50 dark:text-gray-400 dark:border-gray-700">
+                              Нулевой
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800">
+                              Положительный
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground">
+                          {balance.lastPaymentDate 
+                            ? moment(balance.lastPaymentDate).format("D MMM YYYY")
+                            : "—"
+                          }
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
             </div>
           )}
         </TabsContent>
@@ -396,10 +448,10 @@ export default function Finance() {
         {/* Discounts Tab */}
         <TabsContent value="discounts" className="space-y-4 mt-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <h2 className="text-xl font-semibold">Скидки</h2>
+            <h2 className="text-lg font-semibold text-foreground">Скидки</h2>
             <Dialog open={isDiscountDialogOpen} onOpenChange={(open) => { setIsDiscountDialogOpen(open); if (!open) setSelectedDiscount(null); }}>
               <DialogTrigger asChild>
-                <Button className="rounded-xl">
+                <Button variant="outline" className="rounded-xl">
                   <Plus className="h-4 w-4 mr-2" />
                   Создать скидку
                 </Button>
@@ -461,30 +513,33 @@ export default function Finance() {
               {discounts.map(discount => (
                 <div 
                   key={discount.id} 
-                  className="p-5 rounded-3xl bg-gradient-to-br from-violet-50 to-purple-100 dark:from-violet-950 dark:to-purple-900 transition-all hover:scale-[1.02]"
+                  className="p-5 rounded-xl bg-card border border-border transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.08)]"
                 >
                   <div className="flex items-center justify-between mb-3">
-                    <span className="font-semibold text-violet-900 dark:text-violet-100">{discount.name}</span>
-                    <Badge className={`rounded-lg ${discount.isActive ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-600"}`}>
+                    <span className="font-semibold text-foreground">{discount.name}</span>
+                    <Badge variant="outline" className={discount.isActive 
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800" 
+                      : "bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-900/50 dark:text-gray-400 dark:border-gray-700"
+                    }>
                       {discount.isActive ? "Активна" : "Неактивна"}
                     </Badge>
                   </div>
-                  <div className="text-3xl font-bold text-violet-600 dark:text-violet-400">
+                  <div className="text-3xl font-bold text-primary">
                     {discount.type === "percentage" ? `${discount.value}%` : `${discount.value.toLocaleString()} ₸`}
                   </div>
-                  <div className="text-xs text-violet-600/70 dark:text-violet-400/70 mt-1">
+                  <div className="text-xs text-muted-foreground mt-1">
                     {discount.type === "percentage" ? "Процентная" : "Фиксированная"}
                   </div>
                   {discount.description && (
-                    <div className="text-sm text-violet-700/80 dark:text-violet-300/80 mt-3">
+                    <div className="text-sm text-muted-foreground mt-3">
                       {discount.description}
                     </div>
                   )}
-                  <div className="flex gap-2 mt-4">
+                  <div className="flex gap-2 mt-4 pt-4 border-t border-border">
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="rounded-xl"
+                      className="rounded-lg"
                       onClick={() => {
                         setSelectedDiscount(discount);
                         setIsDiscountDialogOpen(true);
@@ -495,7 +550,7 @@ export default function Finance() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="rounded-xl text-rose-600 hover:text-rose-700"
+                      className="rounded-lg text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/50"
                       onClick={() => {
                         if (confirm("Удалить эту скидку?")) {
                           deleteDiscount.mutate(discount.id);
@@ -514,10 +569,10 @@ export default function Finance() {
         {/* Debts Tab */}
         <TabsContent value="debts" className="space-y-4 mt-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <h2 className="text-xl font-semibold">Долги</h2>
+            <h2 className="text-lg font-semibold text-foreground">Долги</h2>
             <Dialog open={isDebtDialogOpen} onOpenChange={(open) => { setIsDebtDialogOpen(open); if (!open) setSelectedDebt(null); }}>
               <DialogTrigger asChild>
-                <Button className="rounded-xl">
+                <Button variant="outline" className="rounded-xl">
                   <Plus className="h-4 w-4 mr-2" />
                   Добавить долг
                 </Button>
@@ -578,48 +633,66 @@ export default function Finance() {
               <p>Нет долгов</p>
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {debts.map(debt => (
-                <div
-                  key={debt.id}
-                  className={`p-4 rounded-2xl transition-all hover:scale-[1.02] cursor-pointer ${
-                    debt.status === "paid" 
-                      ? "bg-gradient-to-br from-emerald-50 to-green-100 dark:from-emerald-950 dark:to-green-900" 
-                      : "bg-gradient-to-br from-amber-50 to-orange-100 dark:from-amber-950 dark:to-orange-900"
-                  }`}
-                  onClick={() => { setSelectedDebt(debt); setIsDebtDialogOpen(true); }}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-gray-900 dark:text-gray-100 truncate">
-                      {getStudentName(debt.studentId)}
-                    </span>
-                    <Badge className={`rounded-lg ${
-                      debt.status === "paid" 
-                        ? "bg-emerald-100 text-emerald-700" 
-                        : "bg-amber-100 text-amber-700"
-                    }`}>
-                      {debt.status === "paid" ? "Оплачен" : "Ожидает"}
-                    </Badge>
-                  </div>
-                  <div className={`text-2xl font-bold ${
-                    debt.status === "paid" 
-                      ? "text-emerald-600 dark:text-emerald-400" 
-                      : "text-amber-600 dark:text-amber-400"
-                  }`}>
-                    {debt.amount.toLocaleString()} ₸
-                  </div>
-                  {debt.dueDate && (
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                      Срок: {moment(debt.dueDate).format("D MMM YYYY")}
-                    </div>
-                  )}
-                  {debt.notes && (
-                    <div className="text-xs text-gray-400 mt-1 truncate">
-                      {debt.notes}
-                    </div>
-                  )}
-                </div>
-              ))}
+            <div className="rounded-xl border border-border bg-card overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="w-[250px]">Студент</TableHead>
+                    <TableHead>Сумма</TableHead>
+                    <TableHead>Статус</TableHead>
+                    <TableHead>Срок</TableHead>
+                    <TableHead className="text-right">Примечание</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {debts.map(debt => {
+                    const studentName = getStudentName(debt.studentId);
+                    const isPaid = debt.status === "paid";
+                    
+                    return (
+                      <TableRow 
+                        key={debt.id} 
+                        className="cursor-pointer"
+                        onClick={() => { setSelectedDebt(debt); setIsDebtDialogOpen(true); }}
+                      >
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-9 w-9">
+                              <AvatarFallback className="bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400 text-sm font-medium">
+                                {getInitials(studentName)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium text-foreground">{studentName}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className={`font-semibold ${
+                            isPaid 
+                              ? "text-emerald-600 dark:text-emerald-400" 
+                              : "text-amber-600 dark:text-amber-400"
+                          }`}>
+                            {debt.amount.toLocaleString()} ₸
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={isPaid 
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800" 
+                            : "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800"
+                          }>
+                            {isPaid ? "Оплачен" : "Ожидает"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {debt.dueDate ? moment(debt.dueDate).format("D MMM YYYY") : "—"}
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground truncate max-w-[150px]">
+                          {debt.notes || "—"}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
             </div>
           )}
         </TabsContent>

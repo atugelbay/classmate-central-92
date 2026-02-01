@@ -4,18 +4,33 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"sync"
 	"testing"
+
+	"classmate-central/internal/database"
 
 	_ "github.com/lib/pq"
 )
 
+var (
+	migrationsApplied bool
+	migrationsMutex   sync.Mutex
+)
+
 // SetupTestDB creates a test database connection
 func SetupTestDB(t *testing.T) *sql.DB {
-	// Use test database from env or default
-	dbName := os.Getenv("DB_NAME")
+	// IMPORTANT: Use a SEPARATE test database to avoid destroying development data!
+	// Tests will TRUNCATE all tables at the end, so we must use a dedicated test DB.
+	dbName := os.Getenv("TEST_DB_NAME")
 	if dbName == "" {
-		// Try to use the same DB as in .env file, fallback to classmate_central_db
-		dbName = "classmate_central"
+		dbName = "classmate_central_test" // Separate test database!
+	}
+
+	// Safety check: prevent tests from running on production-like database names
+	if dbName == "classmate_central" || dbName == "classmate_central_db" {
+		t.Logf("WARNING: Tests should use a separate database! Set TEST_DB_NAME or use 'classmate_central_test'")
+		t.Logf("To create test database: CREATE DATABASE classmate_central_test;")
+		dbName = "classmate_central_test"
 	}
 
 	connStr := fmt.Sprintf(
@@ -38,13 +53,27 @@ func SetupTestDB(t *testing.T) *sql.DB {
 			"  1. PostgreSQL is running\n"+
 			"  2. Database '%s' exists: CREATE DATABASE %s;\n"+
 			"  3. Connection settings (DB_HOST=%s, DB_USER=%s, DB_PORT=%s)\n"+
-			"  4. Run migrations on the database\n"+
-			"Or run: ./scripts/setup-test-db.sh (Linux/macOS) or .\\scripts\\setup-test-db.ps1 (Windows)",
+			"Or run: docker exec classmate_central_db psql -U postgres -c 'CREATE DATABASE %s'",
 			dbName, err, dbName, dbName,
 			getEnvOrDefault("DB_HOST", "localhost"),
 			getEnvOrDefault("DB_USER", "postgres"),
-			getEnvOrDefault("DB_PORT", "5432"))
+			getEnvOrDefault("DB_PORT", "5432"),
+			dbName)
 	}
+
+	// Apply migrations to test database (only once per test run)
+	migrationsMutex.Lock()
+	if !migrationsApplied {
+		t.Log("Applying migrations to test database...")
+		testDB := &database.Database{DB: db}
+		if err := testDB.RunMigrations(); err != nil {
+			migrationsMutex.Unlock()
+			t.Fatalf("Failed to run migrations on test database: %v", err)
+		}
+		migrationsApplied = true
+		t.Log("Migrations applied successfully")
+	}
+	migrationsMutex.Unlock()
 
 	return db
 }

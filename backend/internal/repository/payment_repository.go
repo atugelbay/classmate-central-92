@@ -182,6 +182,27 @@ func (r *PaymentRepository) CreateTransactionWithBalance(tx *models.PaymentTrans
 		return fmt.Errorf("balance record not found for student %s", tx.StudentID)
 	}
 
+	// If this is a payment, check if balance became positive and close any pending debts
+	if tx.Type == "payment" {
+		var newBalance float64
+		err = dbTx.QueryRow(`SELECT balance FROM student_balance WHERE student_id = $1`, tx.StudentID).Scan(&newBalance)
+		if err != nil {
+			return fmt.Errorf("error getting updated balance: %w", err)
+		}
+
+		// If balance is now positive or zero, close all pending debts
+		if newBalance >= 0 {
+			_, err = dbTx.Exec(`
+				UPDATE debt_records 
+				SET status = 'paid', notes = COALESCE(notes, '') || E'\nПогашено платежом ' || TO_CHAR(CURRENT_TIMESTAMP, 'DD.MM.YYYY HH24:MI')
+				WHERE student_id = $1 AND company_id = $2 AND status = 'pending'
+			`, tx.StudentID, companyID)
+			if err != nil {
+				return fmt.Errorf("error closing debts: %w", err)
+			}
+		}
+	}
+
 	// Commit transaction
 	if err = dbTx.Commit(); err != nil {
 		return fmt.Errorf("error committing transaction: %w", err)
@@ -283,6 +304,19 @@ func (r *PaymentRepository) UpdateTransactionWithBalance(txID int, companyID str
 		}
 		if rowsAffected == 0 {
 			return nil, fmt.Errorf("balance record not found for student %s", existing.StudentID)
+		}
+
+		// If this increased the balance (payment), check if we should close debts
+		if delta > 0 && existing.Type == "payment" {
+			var newBalance float64
+			err = dbTx.QueryRow(`SELECT balance FROM student_balance WHERE student_id = $1`, existing.StudentID).Scan(&newBalance)
+			if err == nil && newBalance >= 0 {
+				_, _ = dbTx.Exec(`
+					UPDATE debt_records 
+					SET status = 'paid', notes = COALESCE(notes, '') || E'\nПогашено платежом ' || TO_CHAR(CURRENT_TIMESTAMP, 'DD.MM.YYYY HH24:MI')
+					WHERE student_id = $1 AND company_id = $2 AND status = 'pending'
+				`, existing.StudentID, companyID)
+			}
 		}
 	}
 

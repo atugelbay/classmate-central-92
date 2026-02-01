@@ -59,14 +59,14 @@ func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendan
 		// Load company timezone; fallback to Asia/Almaty
 		tz := "Asia/Almaty"
 		_ = tx.QueryRow(`SELECT timezone FROM settings WHERE company_id = $1 LIMIT 1`, companyID).Scan(&tz)
-		
+
 		var loc *time.Location
 		var locErr error
 		if loc, locErr = time.LoadLocation(tz); locErr != nil {
 			// Fallback to fixed offset for Asia/Almaty (UTC+5)
 			loc = time.FixedZone("Asia/Almaty", 5*60*60)
 		}
-		
+
 		// PostgreSQL driver returns TIMESTAMP (no tz) as UTC, but we stored it as wall-clock in company tz
 		// The raw time from DB has the correct wall-clock components but wrong timezone (UTC)
 		// We need to reinterpret those components as being in the company timezone
@@ -76,18 +76,18 @@ func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendan
 			lessonStartRaw.Hour(), lessonStartRaw.Minute(), lessonStartRaw.Second(),
 			lessonStartRaw.Nanosecond(), loc,
 		)
-		
+
 		// Get current date in company timezone (date only, no time)
 		nowInTz := time.Now().In(loc)
 		today := time.Date(nowInTz.Year(), nowInTz.Month(), nowInTz.Day(), 0, 0, 0, 0, loc)
-		
+
 		// Get lesson date (date only, no time)
 		lessonDate := time.Date(lessonStartInTz.Year(), lessonStartInTz.Month(), lessonStartInTz.Day(), 0, 0, 0, 0, loc)
-		
+
 		// Only prevent marking attendance for future lessons (tomorrow and later)
 		// Allow all lessons for today and past dates (even if lesson hasn't started yet today)
 		if lessonDate.After(today) {
-			return nil, fmt.Errorf("attendance cannot be marked for future lessons (lesson date: %s, today: %s)", 
+			return nil, fmt.Errorf("attendance cannot be marked for future lessons (lesson date: %s, today: %s)",
 				lessonDate.Format("2006-01-02"), today.Format("2006-01-02"))
 		}
 	}
@@ -122,11 +122,13 @@ func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendan
 
 	// If student attended or missed with unexcused reason, try to deduct from active subscription
 	var subscriptionID *string
+	var deductionPerformed bool // Track if actual deduction happened
 	needsDeduction := req.Status == "attended" || (req.Status == "missed" && req.Reason == "unexcused")
 	if needsDeduction && !alreadyDeducted {
 		// Get active subscription with billing type and price using transaction
+		// Use LEFT JOIN to support subscriptions created without a template (subscription_type_id can be NULL)
 		var activeSub models.StudentSubscription
-		var billingType string
+		var billingType sql.NullString
 		var pricePerLesson float64
 		query := `
 			SELECT 
@@ -134,9 +136,9 @@ func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendan
 				ss.total_lessons, ss.used_lessons, ss.remaining_lessons,
 				ss.start_date, ss.end_date, ss.status, ss.freeze_days_remaining, ss.created_at,
 				ss.price_per_lesson,
-				st.billing_type
+				COALESCE(st.billing_type, 'per_lesson') as billing_type
 			FROM student_subscriptions ss
-			JOIN subscription_types st ON ss.subscription_type_id = st.id
+			LEFT JOIN subscription_types st ON ss.subscription_type_id = st.id
 			WHERE ss.student_id = $1 AND ss.status = 'active' AND ss.remaining_lessons > 0
 			ORDER BY ss.created_at DESC
 			LIMIT 1
@@ -162,7 +164,12 @@ func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendan
 			lessonsRemaining := activeSub.LessonsRemaining
 
 			// Deduct lesson ONLY for per_lesson billing type with optimistic locking
-			if billingType == "per_lesson" {
+			// Default to per_lesson if billing_type is not set (for custom subscriptions without template)
+			billingTypeStr := "per_lesson"
+			if billingType.Valid && billingType.String != "" {
+				billingTypeStr = billingType.String
+			}
+			if billingTypeStr == "per_lesson" {
 				// Get current version first
 				var currentVersion int
 				err = tx.QueryRow("SELECT version FROM student_subscriptions WHERE id = $1", activeSub.ID).Scan(&currentVersion)
@@ -185,6 +192,9 @@ func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendan
 				if rowsAffected == 0 {
 					return nil, fmt.Errorf("subscription update failed: version mismatch or no remaining lessons")
 				}
+
+				// Mark that deduction was performed
+				deductionPerformed = true
 
 				// Get updated lessons remaining after deduction
 				err = tx.QueryRow("SELECT remaining_lessons FROM student_subscriptions WHERE id = $1", activeSub.ID).Scan(&lessonsRemaining)
@@ -226,6 +236,79 @@ func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendan
 					if err != nil {
 						return nil, fmt.Errorf("error creating deduction transaction: %w", err)
 					}
+
+					// Check if balance went negative and create debt record
+					var newBalance float64
+					err = tx.QueryRow(`SELECT balance FROM student_balance WHERE student_id = $1`, req.StudentID).Scan(&newBalance)
+					if err != nil {
+						return nil, fmt.Errorf("error getting updated balance: %w", err)
+					}
+
+					if newBalance < 0 {
+						// Check if there's already a pending debt for this student
+						var existingDebtID sql.NullInt64
+						_ = tx.QueryRow(`
+							SELECT id FROM debt_records 
+							WHERE student_id = $1 AND company_id = $2 AND status = 'pending'
+							ORDER BY created_at DESC LIMIT 1
+						`, req.StudentID, companyID).Scan(&existingDebtID)
+
+						if !existingDebtID.Valid {
+							// Create new debt record for the negative balance amount
+							debtAmount := -newBalance               // Convert negative to positive
+							dueDate := time.Now().AddDate(0, 0, 14) // Due in 14 days
+							_, err = tx.Exec(`
+								INSERT INTO debt_records (student_id, amount, due_date, status, notes, company_id)
+								VALUES ($1, $2, $3, 'pending', $4, $5)
+							`, req.StudentID, debtAmount, dueDate,
+								fmt.Sprintf("Задолженность за занятие (Урок ID: %s)", req.LessonID),
+								companyID)
+							if err != nil {
+								return nil, fmt.Errorf("error creating debt record: %w", err)
+							}
+
+							// Create debt notification
+							notification := &models.Notification{
+								StudentID: req.StudentID,
+								Type:      "debt_reminder",
+								Message:   fmt.Sprintf("Образовалась задолженность: %.0f ₸. Срок оплаты: %s", debtAmount, dueDate.Format("02.01.2006")),
+								IsRead:    false,
+							}
+							_ = s.notificationRepo.CreateNotification(notification)
+
+							// Log debt activity
+							debtMetadata := map[string]interface{}{
+								"debt_amount": debtAmount,
+								"balance":     newBalance,
+								"lesson_id":   req.LessonID,
+							}
+							debtMetadataJSON, _ := json.Marshal(debtMetadata)
+							debtMetadataStr := string(debtMetadataJSON)
+
+							debtActivityLog := &models.StudentActivityLog{
+								StudentID:    req.StudentID,
+								ActivityType: "debt_created",
+								Description:  fmt.Sprintf("Создан долг: %.0f ₸", debtAmount),
+								Metadata:     &debtMetadataStr,
+								CreatedBy:    markedBy,
+								CreatedAt:    time.Now(),
+							}
+							_ = s.activityRepo.LogActivity(debtActivityLog)
+						} else {
+							// Update existing debt amount
+							_, err = tx.Exec(`
+								UPDATE debt_records 
+								SET amount = $1, notes = notes || E'\n' || $2
+								WHERE id = $3
+							`, -newBalance,
+								fmt.Sprintf("Обновлено: списание за урок %s", req.LessonID),
+								existingDebtID.Int64)
+							if err != nil {
+								// Non-critical, log and continue
+								_ = fmt.Errorf("error updating debt record: %w", err)
+							}
+						}
+					}
 				}
 			}
 
@@ -258,24 +341,26 @@ func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendan
 				}
 			}
 
-			// Log subscription change activity
-			metadata := map[string]interface{}{
-				"subscription_id":   activeSub.ID,
-				"lessons_remaining": lessonsRemaining,
-				"lesson_id":         req.LessonID,
-			}
-			metadataJSON, _ := json.Marshal(metadata)
-			metadataStr := string(metadataJSON)
+			// Log subscription change activity ONLY if deduction was actually performed
+			if deductionPerformed {
+				metadata := map[string]interface{}{
+					"subscription_id":   activeSub.ID,
+					"lessons_remaining": lessonsRemaining,
+					"lesson_id":         req.LessonID,
+				}
+				metadataJSON, _ := json.Marshal(metadata)
+				metadataStr := string(metadataJSON)
 
-			activityLog := &models.StudentActivityLog{
-				StudentID:    req.StudentID,
-				ActivityType: "subscription_change",
-				Description:  fmt.Sprintf("Списано занятие с абонемента. Осталось: %d", lessonsRemaining),
-				Metadata:     &metadataStr,
-				CreatedBy:    markedBy,
-				CreatedAt:    time.Now(),
+				activityLog := &models.StudentActivityLog{
+					StudentID:    req.StudentID,
+					ActivityType: "subscription_change",
+					Description:  fmt.Sprintf("Списано занятие с абонемента. Осталось: %d", lessonsRemaining),
+					Metadata:     &metadataStr,
+					CreatedBy:    markedBy,
+					CreatedAt:    time.Now(),
+				}
+				_ = s.activityRepo.LogActivity(activityLog)
 			}
-			_ = s.activityRepo.LogActivity(activityLog)
 		}
 	}
 
@@ -285,22 +370,22 @@ func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendan
 	          ON CONFLICT (lesson_id, student_id) DO UPDATE 
 	          SET subscription_id = EXCLUDED.subscription_id, status = EXCLUDED.status, reason = EXCLUDED.reason, notes = EXCLUDED.notes, marked_at = CURRENT_TIMESTAMP, marked_by = EXCLUDED.marked_by, company_id = EXCLUDED.company_id
 	          RETURNING id, marked_at`
-	err = tx.QueryRow(insertQuery, 
-		attendance.LessonID, 
-		attendance.StudentID, 
-		attendance.SubscriptionID, 
-		attendance.Status, 
-		attendance.Reason, 
-		attendance.Notes, 
-		attendance.MarkedBy, 
+	err = tx.QueryRow(insertQuery,
+		attendance.LessonID,
+		attendance.StudentID,
+		attendance.SubscriptionID,
+		attendance.Status,
+		attendance.Reason,
+		attendance.Notes,
+		attendance.MarkedBy,
 		attendance.CompanyID,
 	).Scan(&attendance.ID, &attendance.MarkedAt)
 	if err != nil {
 		return nil, fmt.Errorf("error marking attendance: %w", err)
 	}
 
-	// Create subscription_consumption record if subscription was used
-	if subscriptionID != nil && needsDeduction && !alreadyDeducted {
+	// Create subscription_consumption record only if actual deduction happened
+	if subscriptionID != nil && deductionPerformed {
 		// Check if consumption already exists (to prevent double creation)
 		var existingConsumptionID sql.NullInt64
 		err = tx.QueryRow(`
@@ -447,7 +532,7 @@ func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendan
 	if err == nil {
 		// Get all student IDs for this lesson
 		studentIDs := []string{}
-		
+
 		// Get students from lesson_students table
 		studentRows, err := tx.Query(`SELECT student_id FROM lesson_students WHERE lesson_id = $1`, req.LessonID)
 		if err == nil {
@@ -459,7 +544,7 @@ func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendan
 				}
 			}
 		}
-		
+
 		// If lesson has a group, also get students from the group (from enrollment table)
 		if lessonGroupID.Valid && lessonGroupID.String != "" {
 			groupStudentRows, err := tx.Query(`SELECT student_id FROM enrollment WHERE group_id = $1 AND company_id = $2 AND left_at IS NULL`, lessonGroupID.String, companyID)
@@ -483,7 +568,7 @@ func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendan
 				}
 			}
 		}
-		
+
 		// Only proceed if lesson has students
 		if len(studentIDs) > 0 {
 			// Get all students with marked attendance for this lesson
@@ -497,7 +582,7 @@ func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendan
 						markedStudentIDs = append(markedStudentIDs, studentID)
 					}
 				}
-				
+
 				// Check if all students have attendance marked
 				allMarked := true
 				for _, studentID := range studentIDs {
@@ -513,7 +598,7 @@ func (s *AttendanceService) MarkAttendanceWithDeduction(req *models.MarkAttendan
 						break
 					}
 				}
-				
+
 				// If all students are marked, update lesson status to "completed"
 				if allMarked {
 					_, err = tx.Exec(`UPDATE lessons SET status = 'completed' WHERE id = $1 AND company_id = $2`, req.LessonID, companyID)

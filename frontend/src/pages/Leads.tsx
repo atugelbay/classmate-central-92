@@ -86,6 +86,22 @@ const statusColors: Record<LeadStatus, string> = {
   rejected: "bg-red-100 text-red-800 border-red-200",
 };
 
+// Border colors for left indicator
+const statusBorderColors: Record<LeadStatus, string> = {
+  new: "border-l-blue-500",
+  in_progress: "border-l-amber-500",
+  enrolled: "border-l-emerald-500",
+  rejected: "border-l-red-500",
+};
+
+// Column background colors
+const columnBgColors: Record<LeadStatus, string> = {
+  new: "bg-blue-50/50 dark:bg-blue-950/20",
+  in_progress: "bg-amber-50/50 dark:bg-amber-950/20",
+  enrolled: "bg-emerald-50/50 dark:bg-emerald-950/20",
+  rejected: "bg-red-50/50 dark:bg-red-950/20",
+};
+
 export default function Leads() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -333,69 +349,90 @@ export default function Leads() {
       {/* Kanban Board */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {Object.entries(groupedLeads).map(([status, statusLeads]) => (
-          <Card 
+          <div 
             key={status} 
-            className={`flex flex-col transition-colors ${
-              dragOverStatus === status ? 'ring-2 ring-primary bg-primary/5' : ''
+            className={`flex flex-col rounded-xl p-3 transition-all ${
+              columnBgColors[status as LeadStatus]
+            } ${
+              dragOverStatus === status ? 'ring-2 ring-primary' : ''
             }`}
             onDragOver={handleDragOver}
             onDragEnter={() => handleDragEnter(status as LeadStatus)}
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, status as LeadStatus)}
           >
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium flex items-center justify-between">
-                <span>{statusLabels[status as LeadStatus]}</span>
-                <Badge variant="outline">{statusLeads.length}</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 space-y-3 overflow-y-auto max-h-[600px]">
+            {/* Column Header */}
+            <div className="flex items-center justify-between mb-3 px-1">
+              <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100">
+                {statusLabels[status as LeadStatus]}
+              </h3>
+              <span className="text-xs font-semibold text-slate-500 bg-white dark:bg-slate-800 px-2 py-0.5 rounded-full shadow-sm">
+                {statusLeads.length}
+              </span>
+            </div>
+            
+            {/* Cards Container */}
+            <div className="flex-1 space-y-2 overflow-y-auto max-h-[600px]">
               {statusLeads.map((lead) => (
-                <Card
+                <div
                   key={lead.id}
                   draggable
-                  className={`cursor-move hover:shadow-md transition-all border-l-4 select-none ${
-                    statusColors[lead.status]
-                  } ${draggingLead?.id === lead.id ? 'opacity-50 scale-95' : ''}`}
+                  className={`bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 border-l-4 ${
+                    statusBorderColors[lead.status]
+                  } cursor-move hover:shadow-md transition-all select-none ${
+                    draggingLead?.id === lead.id ? 'opacity-50 scale-95' : ''
+                  }`}
                   onClick={() => openDetails(lead)}
                   onDragStart={(e) => handleDragStart(e, lead)}
                   onDragEnd={handleDragEnd}
                 >
-                  <CardContent className="p-4 space-y-2">
-                    <div className="flex items-start justify-between">
-                      <h4 className="font-semibold pointer-events-none">{lead.name}</h4>
+                  <div className="p-3 space-y-2">
+                    {/* Header with Name and Delete */}
+                    <div className="flex items-start justify-between gap-2">
+                      <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100 pointer-events-none leading-tight">
+                        {lead.name}
+                      </h4>
                       <Button
-                        size="sm"
+                        size="icon"
                         variant="ghost"
+                        className="h-6 w-6 shrink-0 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
                         onClick={(e) => {
                           e.stopPropagation();
                           setDeleteLeadId(lead.id);
                         }}
                         onDragStart={(e) => e.stopPropagation()}
                       >
-                        <Trash2 className="h-4 w-4 text-red-600" />
+                        <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
-                    <div className="space-y-1 text-sm text-muted-foreground pointer-events-none">
-                      <div className="flex items-center gap-2">
+                    
+                    {/* Contact Info */}
+                    <div className="space-y-1 pointer-events-none">
+                      <div className="flex items-center gap-1.5 text-xs text-slate-500">
                         <Phone className="h-3 w-3" />
-                        {lead.phone}
+                        <span>{lead.phone}</span>
                       </div>
                       {lead.email && (
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-3 w-3" />
-                          {lead.email}
+                        <div className="flex items-center gap-1.5 text-xs text-slate-500 truncate">
+                          <Mail className="h-3 w-3 shrink-0" />
+                          <span className="truncate">{lead.email}</span>
                         </div>
                       )}
                     </div>
-                    <Badge variant="outline" className="text-xs pointer-events-none">
-                      {sourceLabels[lead.source]}
-                    </Badge>
-                    <div className="text-xs text-muted-foreground pointer-events-none">
-                      {moment(lead.createdAt).fromNow()}
+                    
+                    {/* Footer: Source and Date */}
+                    <div className="flex items-center justify-between pt-1 pointer-events-none">
+                      <span className="text-[10px] font-medium text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                        {sourceLabels[lead.source]}
+                      </span>
+                      <span className="text-[10px] text-slate-400">
+                        {moment(lead.createdAt).fromNow()}
+                      </span>
                     </div>
+                    
+                    {/* Status Selector */}
                     {status !== "enrolled" && status !== "rejected" && (
-                      <div className="pt-2" onDragStart={(e) => e.stopPropagation()}>
+                      <div className="pt-1" onDragStart={(e) => e.stopPropagation()}>
                         <Select
                           value={lead.status}
                           onValueChange={(value) => {
@@ -403,7 +440,7 @@ export default function Leads() {
                           }}
                         >
                           <SelectTrigger
-                            className="h-8 text-xs"
+                            className="h-7 text-xs"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <SelectValue />
@@ -418,16 +455,16 @@ export default function Leads() {
                         </Select>
                       </div>
                     )}
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               ))}
               {statusLeads.length === 0 && (
-                <div className="text-center text-sm text-muted-foreground py-8">
-                  Нет лидов
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <div className="text-xs text-slate-400">Нет лидов</div>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         ))}
       </div>
 

@@ -1,19 +1,19 @@
 import { useState } from "react";
 import { Student } from "@/types";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { X, Search, User } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { X, Search, UserPlus } from "lucide-react";
 
 interface StudentSelectorProps {
   students: Student[];
   selectedStudentIds: string[];
   onSelectionChange: (studentIds: string[]) => void;
+  compact?: boolean;
 }
 
-export function StudentSelector({ students, selectedStudentIds, onSelectionChange }: StudentSelectorProps) {
+export function StudentSelector({ students, selectedStudentIds, onSelectionChange, compact = false }: StudentSelectorProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [isFocused, setIsFocused] = useState(false);
 
   const availableStudents = students.filter(
     (s) => !selectedStudentIds.includes(s.id) && s.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -31,73 +31,84 @@ export function StudentSelector({ students, selectedStudentIds, onSelectionChang
   };
 
   return (
-    <div className="space-y-3">
-      <Label>Ученики</Label>
-
-      {/* Selected Students */}
-      {selectedStudents.length > 0 && (
-        <div className="flex flex-wrap gap-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
-          {selectedStudents.map((student) => (
-            <Badge key={student.id} variant="secondary" className="flex items-center gap-1 py-1 px-2">
-              <User className="h-3 w-3" />
-              {student.name}
-              <X
-                className="h-3 w-3 cursor-pointer hover:text-destructive"
-                onClick={() => handleRemoveStudent(student.id)}
-              />
-            </Badge>
-          ))}
-        </div>
-      )}
-
-      {/* Search for Students */}
-      <div className="space-y-2">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Поиск ученика..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-
-        {/* Available Students List */}
-        {searchQuery && availableStudents.length > 0 && (
-          <ScrollArea className="h-[200px] rounded-md border p-2">
-            <div className="space-y-1">
-              {availableStudents.slice(0, 10).map((student) => (
-                <div
-                  key={student.id}
-                  onClick={() => handleAddStudent(student.id)}
-                  className="flex items-center gap-2 p-2 rounded-md hover:bg-accent cursor-pointer transition-colors"
-                >
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                    {student.name.charAt(0)}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{student.name}</p>
-                    <p className="text-xs text-muted-foreground">{student.email}</p>
-                  </div>
-                </div>
-              ))}
-              {availableStudents.length > 10 && (
-                <p className="text-xs text-muted-foreground text-center py-2">
-                  Показано 10 из {availableStudents.length} результатов
-                </p>
-              )}
-            </div>
-          </ScrollArea>
-        )}
-
-        {searchQuery && availableStudents.length === 0 && (
-          <p className="text-sm text-muted-foreground text-center py-4">Ученики не найдены</p>
-        )}
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <Label className="text-xs">Ученики *</Label>
+        <span className="text-[10px] text-muted-foreground">{selectedStudents.length} выбрано</span>
       </div>
 
-      <p className="text-sm text-muted-foreground">
-        Выбрано учеников: {selectedStudents.length}
-      </p>
+      {/* Combined Input with Chips */}
+      <div className="relative">
+        <div className={`min-h-[40px] p-2 rounded-lg border bg-background transition-all ${
+          isFocused ? 'border-[#8b5cf6] ring-2 ring-[#8b5cf6]/20' : 'border-slate-200 dark:border-slate-700'
+        }`}>
+          {/* Selected Students as Chips */}
+          <div className="flex flex-wrap gap-1.5 mb-1.5">
+            {selectedStudents.map((student) => (
+              <span 
+                key={student.id} 
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-violet-100 dark:bg-violet-900/50 text-violet-700 dark:text-violet-300 text-xs font-medium"
+              >
+                {student.name.split(' ')[0]}
+                <button
+                  type="button"
+                  onClick={() => handleRemoveStudent(student.id)}
+                  className="hover:text-red-500 transition-colors"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+
+          {/* Search Input */}
+          <div className="relative">
+            <Search className="absolute left-0 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder={selectedStudents.length > 0 ? "Добавить ещё..." : "Поиск ученика..."}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setTimeout(() => setIsFocused(false), 150)}
+              className="w-full pl-5 pr-2 py-1 text-sm bg-transparent border-0 outline-none placeholder:text-muted-foreground"
+            />
+          </div>
+        </div>
+
+        {/* Dropdown List */}
+        {isFocused && searchQuery && availableStudents.length > 0 && (
+          <div className="absolute z-50 w-full mt-1 max-h-[160px] overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-700 bg-background shadow-lg">
+            {availableStudents.slice(0, 6).map((student) => (
+              <button
+                key={student.id}
+                type="button"
+                onMouseDown={() => handleAddStudent(student.id)}
+                className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+              >
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-[#6366f1] to-[#a855f7] text-[10px] font-semibold text-white">
+                  {student.name.charAt(0)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{student.name}</p>
+                </div>
+                <UserPlus className="h-3.5 w-3.5 text-muted-foreground" />
+              </button>
+            ))}
+            {availableStudents.length > 6 && (
+              <p className="text-[10px] text-muted-foreground text-center py-1.5 border-t">
+                +{availableStudents.length - 6} ещё
+              </p>
+            )}
+          </div>
+        )}
+
+        {isFocused && searchQuery && availableStudents.length === 0 && (
+          <div className="absolute z-50 w-full mt-1 p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-background shadow-lg">
+            <p className="text-xs text-muted-foreground text-center">Не найдено</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

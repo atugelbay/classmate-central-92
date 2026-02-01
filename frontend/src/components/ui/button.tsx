@@ -9,13 +9,20 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-gradient-primary text-primary-foreground shadow-soft hover:shadow-glow hover:-translate-y-0.5 active:translate-y-0",
-        destructive: "bg-destructive text-destructive-foreground shadow-soft hover:bg-destructive/90 hover:shadow-md",
-        outline: "border-2 border-primary/20 bg-background hover:bg-primary/5 hover:border-primary/40 text-foreground",
-        secondary: "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80 hover:shadow-soft",
-        ghost: "hover:bg-primary/10 hover:text-primary",
+        // Primary - Градиент сине-фиолетовый (магнит для глаз)
+        default: "bg-gradient-primary text-white shadow-md hover:shadow-glow hover:-translate-y-0.5 active:translate-y-0",
+        // Destructive - Красный
+        destructive: "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
+        // Outline - Контурная с серым текстом
+        outline: "border border-border bg-transparent hover:bg-muted/50 text-muted-foreground hover:text-foreground",
+        // Secondary - Контурная (outline стиль)
+        secondary: "border border-border bg-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+        // Ghost - Прозрачная с серым текстом
+        ghost: "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+        // Link
         link: "text-primary underline-offset-4 hover:underline",
-        soft: "bg-primary/10 text-primary hover:bg-primary/20 shadow-sm",
+        // Soft - Мягкий фон
+        soft: "bg-primary/10 text-primary hover:bg-primary/15",
       },
       size: {
         default: "h-10 px-5 py-2",

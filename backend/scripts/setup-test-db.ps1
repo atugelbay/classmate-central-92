@@ -1,38 +1,39 @@
-# PowerShell script to setup test database for integration tests
-# Usage: .\scripts\setup-test-db.ps1
+# Script to create test database for running tests
+# Run this once to set up the test database
 
-$DB_NAME = if ($env:DB_NAME) { $env:DB_NAME } else { "classmate_central" }
-$DB_USER = if ($env:DB_USER) { $env:DB_USER } else { "postgres" }
-$DB_HOST = if ($env:DB_HOST) { $env:DB_HOST } else { "localhost" }
-$DB_PORT = if ($env:DB_PORT) { $env:DB_PORT } else { "5432" }
-$DB_PASSWORD = if ($env:DB_PASSWORD) { $env:DB_PASSWORD } else { "postgres" }
+param(
+    [string]$Host = "localhost",
+    [string]$Port = "5432",
+    [string]$User = "postgres",
+    [string]$Password = "postgres",
+    [string]$TestDbName = "classmate_central_test"
+)
 
-Write-Host "Setting up test database: $DB_NAME" -ForegroundColor Green
+Write-Host "Setting up test database: $TestDbName"
 
-# Check if psql is available
-try {
-    $null = Get-Command psql -ErrorAction Stop
-} catch {
-    Write-Host "Error: psql command not found. Please install PostgreSQL client tools." -ForegroundColor Red
-    exit 1
-}
+# Set password in environment for psql
+$env:PGPASSWORD = $Password
 
-# Set PGPASSWORD environment variable
-$env:PGPASSWORD = $DB_PASSWORD
+# Check if database exists
+$checkDb = docker exec classmate_central_db psql -U $User -tc "SELECT 1 FROM pg_database WHERE datname = '$TestDbName'" 2>$null
 
-# Create test database
-Write-Host "Creating test database..." -ForegroundColor Yellow
-& psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d postgres -c "DROP DATABASE IF EXISTS $DB_NAME;" 2>$null
-& psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d postgres -c "CREATE DATABASE $DB_NAME;"
-
-if ($LASTEXITCODE -eq 0) {
-    Write-Host "Test database created successfully!" -ForegroundColor Green
-    Write-Host ""
-    Write-Host "Next steps:" -ForegroundColor Cyan
-    Write-Host "1. Run migrations on test database (set DB_NAME=$DB_NAME and start the app)" -ForegroundColor Cyan
-    Write-Host "2. Run integration tests: `$env:DB_NAME='$DB_NAME'; make test-integration" -ForegroundColor Cyan
+if ($checkDb -match "1") {
+    Write-Host "Test database '$TestDbName' already exists"
 } else {
-    Write-Host "Failed to create test database!" -ForegroundColor Red
-    exit 1
+    Write-Host "Creating test database '$TestDbName'..."
+    docker exec classmate_central_db psql -U $User -c "CREATE DATABASE $TestDbName" 2>$null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "Test database created successfully!"
+    } else {
+        Write-Host "Failed to create test database. Make sure Docker container is running."
+        exit 1
+    }
 }
 
+Write-Host ""
+Write-Host "Test database is ready. You can now run tests with:"
+Write-Host "  cd backend"
+Write-Host "  go test ./... -v"
+Write-Host ""
+Write-Host "Tests will use database: $TestDbName"
+Write-Host "Your development data in 'classmate_central' will NOT be affected."

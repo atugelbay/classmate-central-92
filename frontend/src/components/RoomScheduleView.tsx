@@ -5,7 +5,7 @@ import "moment/dist/locale/ru";
 import { Room, Lesson, Teacher, Group, Student, StudentSubscription } from "@/types";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
-import { Edit2, X, Clock, User, Users } from "lucide-react";
+import { Edit2, X, Clock, User, Users, Plus, MapPin } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 
 interface RoomScheduleViewProps {
@@ -587,17 +587,23 @@ export default function RoomScheduleView({
               key={room.id} 
               className="flex-1 min-w-0"
             >
-              {/* Room Header */}
+              {/* Room Header - Accented with icon */}
               <div 
-                className="h-10 sm:h-12 rounded-lg flex items-center justify-center relative z-[4] border-b-2"
+                className="h-12 sm:h-14 rounded-lg flex items-center gap-2 px-3 relative z-[4] border-b-2"
                 style={{
-                  backgroundColor: `${room.color}15`,
+                  backgroundColor: `${room.color}10`,
                   borderBottomColor: room.color,
                 }}
               >
-                <div className="text-center px-1">
-                  <div className="font-semibold text-[11px] sm:text-xs truncate" style={{ color: room.color }}>{room.name}</div>
-                  <div className="text-[9px] sm:text-[10px] text-muted-foreground">
+                <div 
+                  className="p-1.5 rounded-lg shrink-0"
+                  style={{ backgroundColor: room.color }}
+                >
+                  <MapPin className="h-3.5 w-3.5 text-white" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="font-bold text-xs sm:text-sm truncate text-slate-900 dark:text-slate-100">{room.name}</div>
+                  <div className="text-[10px] sm:text-xs text-muted-foreground">
                     {room.capacity} мест
                   </div>
                 </div>
@@ -621,7 +627,7 @@ export default function RoomScheduleView({
                   }
                 }}
               >
-              {/* Time grid lines with click handlers */}
+              {/* Time grid lines with click handlers - Interactive hover */}
               {timeSlots.map((time) => {
                 const isSelected = isSlotSelected(time, room.id);
                 const [hour] = time.split(':').map(Number);
@@ -630,10 +636,10 @@ export default function RoomScheduleView({
                 return (
                   <div
                     key={time}
-                    className={`absolute w-full transition-colors select-none border-t border-gray-100 dark:border-gray-800 ${
+                    className={`absolute w-full transition-all select-none border-t border-gray-100 dark:border-gray-800 group/slot ${
                       isSelected 
-                        ? 'bg-blue-100/50 dark:bg-blue-900/30 cursor-pointer z-[1]' 
-                        : 'hover:bg-blue-50/30 dark:hover:bg-blue-950/20 cursor-pointer z-[1]'
+                        ? 'bg-primary/20 dark:bg-primary/30 cursor-pointer z-[1]' 
+                        : 'hover:bg-primary/5 dark:hover:bg-primary/10 cursor-pointer z-[1]'
                     }`}
                     style={{ 
                       top: `${position}%`,
@@ -646,7 +652,14 @@ export default function RoomScheduleView({
                       }
                     }}
                     onMouseEnter={() => handleSlotMouseEnter(time, room.id)}
-                  />
+                  >
+                    {/* Plus button appears on hover */}
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/slot:opacity-100 transition-opacity pointer-events-none">
+                      <div className="p-1.5 rounded-lg bg-primary/10 dark:bg-primary/20 border border-primary/20">
+                        <Plus className="h-3.5 w-3.5 text-primary" />
+                      </div>
+                    </div>
+                  </div>
                 );
               })}
 
@@ -711,42 +724,45 @@ export default function RoomScheduleView({
                           }}
                         />
                         
-                        {/* Lesson Card - Clean Style with border-left */}
+                        {/* Lesson Card - Room-colored left border, fully adaptive content */}
                         <div
-                          className={`h-full overflow-hidden rounded-lg border-l-4 bg-white dark:bg-gray-800 shadow-sm ${
+                          className={`h-full overflow-hidden rounded-lg border-l-4 bg-card shadow-sm transition-shadow flex flex-col ${
                             lesson.status === 'cancelled' 
                               ? 'opacity-50 grayscale' 
                               : unmarkedLessonIds.has(lesson.id)
-                              ? 'animate-pulse bg-red-50 dark:bg-red-950 border-red-500 ring-2 ring-red-400'
+                              ? 'animate-pulse bg-red-50 dark:bg-red-950/50 ring-2 ring-red-400'
                               : moment(lesson.start).isBefore(moment()) && lesson.status !== 'cancelled'
-                              ? 'opacity-60 grayscale'
-                              : 'hover:shadow-md'
+                              ? 'opacity-60'
+                              : 'hover:shadow-lg'
                           }`}
                           style={{ 
-                            borderLeftColor: unmarkedLessonIds.has(lesson.id) ? '#ef4444' : room.color,
-                            padding: showMinimalInfo ? "4px 6px" : "8px 10px",
+                            borderLeftColor: unmarkedLessonIds.has(lesson.id) 
+                              ? '#ef4444' 
+                              : lessonRoom?.color || room.color,
+                            padding: "6px 8px",
                           }}
                         >
-                          {/* Group name - always shown as title */}
+                          {/* Group name - always shown, takes priority */}
                           <div 
-                            className={`font-semibold truncate ${lesson.status === 'cancelled' ? 'line-through text-muted-foreground' : ''}`}
-                            style={{ 
-                              fontSize: showMinimalInfo ? "10px" : "12px",
-                            }}
+                            className={`font-semibold truncate text-slate-900 dark:text-slate-100 leading-tight ${lesson.status === 'cancelled' ? 'line-through text-muted-foreground' : ''}`}
+                            style={{ fontSize: "11px" }}
                           >
                             {groupName || lesson.title}
                           </div>
 
-                          {/* Teacher name - shown for 1hr+ lessons */}
-                          {showMediumInfo && (
-                            <div className="text-[10px] sm:text-xs text-muted-foreground truncate">
-                              {teacher?.name}
+                          {/* Subject - shown if space allows */}
+                          {showMediumInfo && lesson.subject && (
+                            <div className="text-[10px] text-muted-foreground truncate leading-tight mt-0.5">
+                              {lesson.subject}
                             </div>
                           )}
 
-                          {/* Time - shown for 1hr+ lessons */}
+                          {/* Spacer to push time to bottom if there's extra space */}
+                          <div className="flex-1 min-h-0" />
+
+                          {/* Time - shown at bottom if space allows */}
                           {showMediumInfo && (
-                            <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">
+                            <div className="text-[9px] text-muted-foreground truncate leading-tight">
                               {moment.utc(currentLesson.start).local().format("HH:mm")} - {moment.utc(currentLesson.end).local().format("HH:mm")}
                             </div>
                           )}
@@ -889,7 +905,7 @@ export default function RoomScheduleView({
               {/* Dragged lesson from another room (ghost preview) */}
               {draggingLesson && hoveredRoomId === room.id && draggingLesson.roomId !== room.id && tempLessonPosition && (
                 <div
-                  className="absolute left-0 right-0 mx-1 pointer-events-none opacity-70 z-[8]"
+                  className="absolute left-0 right-0 mx-1 pointer-events-none z-[8]"
                   style={{
                     top: getLessonPosition({ 
                       ...draggingLesson, 
@@ -904,18 +920,19 @@ export default function RoomScheduleView({
                     minHeight: "40px",
                   }}
                 >
-                  {/* Ghost preview */}
+                  {/* Ghost preview with target room color */}
                   <div
-                    className="h-full overflow-hidden rounded-lg border-l-4 border-dashed bg-white/80 dark:bg-gray-800/80 opacity-70"
+                    className="h-full overflow-hidden rounded-lg border-l-4 border-dashed bg-card/80 dark:bg-card/80 shadow-lg flex flex-col"
                     style={{ 
                       borderLeftColor: room.color,
                       padding: "6px 8px"
                     }}
                   >
-                    <div className="font-semibold truncate text-xs">
+                    <div className="font-semibold truncate text-[11px] text-slate-900 dark:text-slate-100 leading-tight">
                       {draggingLesson.title}
                     </div>
-                    <div className="text-[10px] text-muted-foreground">
+                    <div className="flex-1 min-h-0" />
+                    <div className="text-[9px] text-muted-foreground leading-tight">
                       {moment(tempLessonPosition.start).format("HH:mm")} - {moment(tempLessonPosition.end).format("HH:mm")}
                     </div>
                   </div>

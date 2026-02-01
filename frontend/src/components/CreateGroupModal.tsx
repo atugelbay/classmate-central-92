@@ -329,95 +329,125 @@ export function CreateGroupModal({
         </DialogHeader>
 
         <div className="space-y-4 pb-2">
-          {/* Group Name */}
-          <div>
-            <Label htmlFor="groupName">Название группы *</Label>
-            <Input
-              id="groupName"
-              value={groupName}
-              onChange={(e) => setGroupName(e.target.value)}
-              required
+          {/* Section: Основная информация */}
+          <div className="space-y-3">
+            <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Основная информация</h4>
+            
+            {/* Group Name & Subject - Two columns */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="groupName">Название группы *</Label>
+                <Input
+                  id="groupName"
+                  value={groupName}
+                  onChange={(e) => setGroupName(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="subject">Предмет *</Label>
+                <Input
+                  id="subject"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Teacher & Room - Two columns */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="teacherId">Преподаватель *</Label>
+                <Select value={teacherId} onValueChange={setTeacherId} required>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Выберите" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teachers.map((teacher) => (
+                      <SelectItem key={teacher.id} value={teacher.id}>
+                        {teacher.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="roomId">Аудитория *</Label>
+                <Select value={roomId} onValueChange={setRoomId} required>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Выберите" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {rooms.map((room) => (
+                      <SelectItem key={room.id} value={room.id}>
+                        {room.name} ({room.capacity})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-slate-100 dark:border-slate-800" />
+
+          {/* Section: Участники */}
+          <div className="space-y-3">
+            <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Участники</h4>
+            <StudentSelector
+              students={students}
+              selectedStudentIds={selectedStudentIds}
+              onSelectionChange={setSelectedStudentIds}
             />
           </div>
 
-          {/* Subject */}
-          <div>
-            <Label htmlFor="subject">Предмет *</Label>
-            <Input
-              id="subject"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              required
-            />
-          </div>
+          {/* Divider */}
+          <div className="border-t border-slate-100 dark:border-slate-800" />
 
-          {/* Teacher */}
-          <div>
-            <Label htmlFor="teacherId">Преподаватель *</Label>
-            <Select value={teacherId} onValueChange={setTeacherId} required>
-              <SelectTrigger>
-                <SelectValue placeholder="Выберите преподавателя" />
-              </SelectTrigger>
-              <SelectContent>
-                {teachers.map((teacher) => (
-                  <SelectItem key={teacher.id} value={teacher.id}>
-                    {teacher.name} - {teacher.subject}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Section: Расписание */}
+          <div className="space-y-3">
+            <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Расписание</h4>
 
-          {/* Students */}
-          <StudentSelector
-            students={students}
-            selectedStudentIds={selectedStudentIds}
-            onSelectionChange={setSelectedStudentIds}
-          />
+            {/* Start & End Date - Two columns */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="startDate">Дата начала *</Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="seriesEndDate">Дата окончания *</Label>
+                <Input
+                  id="seriesEndDate"
+                  type="date"
+                  value={seriesEndDate}
+                  onChange={(e) => setSeriesEndDate(e.target.value)}
+                  min={startDate}
+                  required
+                />
+              </div>
+            </div>
 
-          {/* Start Date */}
-          <div>
-            <Label htmlFor="startDate">Дата начала *</Label>
-            <Input
-              id="startDate"
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              required
-            />
-          </div>
-
-          {/* Room */}
-          <div>
-            <Label htmlFor="roomId">Аудитория *</Label>
-            <Select value={roomId} onValueChange={setRoomId} required>
-              <SelectTrigger>
-                <SelectValue placeholder="Выберите аудиторию" />
-              </SelectTrigger>
-              <SelectContent>
-                {rooms.map((room) => (
-                  <SelectItem key={room.id} value={room.id}>
-                    {room.name} (Вместимость: {room.capacity})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Weekdays Selection with Individual Times */}
-          <div className="p-4 rounded-2xl bg-gradient-to-br from-sky-50 to-blue-100 dark:from-sky-950 dark:to-blue-900 space-y-4">
-            <div>
-              <Label className="mb-3 block text-sky-800 dark:text-sky-200">Дни недели *</Label>
+            {/* Weekdays Selection */}
+            <div className="p-4 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 space-y-3">
+              <Label className="block">Дни недели *</Label>
               <div className="flex flex-wrap gap-2">
                 {WEEKDAYS.map((day) => (
                   <button
                     key={day.value}
                     type="button"
                     onClick={() => toggleWeekday(day.value)}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                       selectedWeekdays.includes(day.value)
-                        ? "bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-md"
-                        : "bg-white/60 dark:bg-white/10 text-sky-700 dark:text-sky-300 hover:bg-white dark:hover:bg-white/20"
+                        ? "bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white shadow-sm"
+                        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-[#8b5cf6]"
                     }`}
                   >
                     {day.label}
@@ -425,62 +455,38 @@ export function CreateGroupModal({
                 ))}
               </div>
               {selectedWeekdays.length === 0 && (
-                <p className="text-sm text-rose-600 dark:text-rose-400 mt-2">Выберите хотя бы один день недели</p>
+                <p className="text-xs text-rose-500 mt-1">Выберите хотя бы один день</p>
               )}
-            </div>
 
-            {/* Time Selection for Each Selected Day */}
-            {selectedWeekdays.length > 0 && (
-              <div className="space-y-3 pt-3 border-t border-sky-200 dark:border-sky-800">
-                <Label className="text-sm font-medium text-sky-800 dark:text-sky-200">Время занятий по дням *</Label>
-                <div className="space-y-2">
+              {/* Time Selection for Each Selected Day */}
+              {selectedWeekdays.length > 0 && (
+                <div className="space-y-2 pt-3 border-t border-slate-200 dark:border-slate-700">
                   {selectedWeekdays.map((day) => {
                     const dayTime = dayTimes[day] || { start: "10:00", end: "11:30" };
                     const dayLabel = WEEKDAYS.find(d => d.value === day)?.label || "";
                     return (
-                      <div key={day} className="p-3 rounded-xl bg-white/60 dark:bg-white/10 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-sm text-sky-900 dark:text-sky-100 w-6">{dayLabel}</span>
+                      <div key={day} className="grid grid-cols-[40px_1fr_1fr] gap-2 items-end">
+                        <span className="font-semibold text-sm text-slate-700 dark:text-slate-300 pb-2">{dayLabel}</span>
+                        <div className="space-y-1">
+                          <Label className="text-[10px]">Начало</Label>
+                          <TimePicker
+                            value={dayTime.start}
+                            onChange={(value) => updateDayTime(day, "start", value)}
+                          />
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <Label htmlFor={`start-${day}`} className="text-xs text-sky-600 dark:text-sky-400">
-                              Начало
-                            </Label>
-                            <TimePicker
-                              value={dayTime.start}
-                              onChange={(value) => updateDayTime(day, "start", value)}
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor={`end-${day}`} className="text-xs text-sky-600 dark:text-sky-400">
-                              Окончание
-                            </Label>
-                            <TimePicker
-                              value={dayTime.end}
-                              onChange={(value) => updateDayTime(day, "end", value)}
-                            />
-                          </div>
+                        <div className="space-y-1">
+                          <Label className="text-[10px]">Окончание</Label>
+                          <TimePicker
+                            value={dayTime.end}
+                            onChange={(value) => updateDayTime(day, "end", value)}
+                          />
                         </div>
                       </div>
                     );
                   })}
                 </div>
-              </div>
-            )}
-          </div>
-
-          {/* Series End Date */}
-          <div>
-            <Label htmlFor="seriesEndDate">Дата окончания серии уроков *</Label>
-            <Input
-              id="seriesEndDate"
-              type="date"
-              value={seriesEndDate}
-              onChange={(e) => setSeriesEndDate(e.target.value)}
-              min={startDate}
-              required
-            />
+              )}
+            </div>
           </div>
 
           {/* Conflict Warning */}
@@ -551,15 +557,7 @@ export function CreateGroupModal({
           )}
 
           {/* Actions */}
-          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4 border-t border-border/50">
-            <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto rounded-xl">
-              Отмена
-            </Button>
-            {conflicts?.hasConflicts && (
-              <Button variant="secondary" onClick={() => handleSubmit(true)} className="w-full sm:w-auto rounded-xl">
-                Создать несмотря на конфликты
-              </Button>
-            )}
+          <div className="space-y-2 pt-4 border-t border-slate-100 dark:border-slate-800">
             <Button
               onClick={() => handleSubmit(false)}
               disabled={
@@ -572,9 +570,17 @@ export function CreateGroupModal({
                 !seriesEndDate ||
                 !selectedWeekdays.every(day => dayTimes[day]?.start && dayTimes[day]?.end)
               }
-              className="w-full sm:w-auto rounded-xl"
+              className="w-full bg-gradient-to-r from-[#6366f1] via-[#8b5cf6] to-[#a855f7] hover:opacity-90 text-white shadow-md"
             >
-              Создать
+              Создать группу
+            </Button>
+            {conflicts?.hasConflicts && (
+              <Button variant="outline" onClick={() => handleSubmit(true)} className="w-full">
+                Создать несмотря на конфликты
+              </Button>
+            )}
+            <Button variant="ghost" onClick={() => onOpenChange(false)} className="w-full text-muted-foreground">
+              Отмена
             </Button>
           </div>
         </div>

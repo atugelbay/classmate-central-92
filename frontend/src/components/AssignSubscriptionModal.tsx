@@ -262,14 +262,14 @@ export default function AssignSubscriptionModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
         <DialogHeader className="flex-shrink-0">
-          <DialogTitle className="text-xl sm:text-2xl">
-            Назначить абонемент: {student.name}
+          <DialogTitle>
+            Абонемент: {student.name}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 sm:space-y-6 overflow-y-auto flex-1 pr-2 -mr-2">
+        <div className="space-y-4 overflow-y-auto flex-1 pr-2 -mr-2">
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
@@ -278,164 +278,110 @@ export default function AssignSubscriptionModal({
           )}
 
           {/* Custom Mode Toggle */}
-          <div className="flex items-center space-x-3 p-4 rounded-2xl bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-950 dark:to-purple-950">
+          <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
+            <Label htmlFor="custom-mode" className="cursor-pointer text-sm">
+              Индивидуальный (без шаблона)
+            </Label>
             <Switch
               id="custom-mode"
               checked={customMode}
               onCheckedChange={setCustomMode}
             />
-            <Label htmlFor="custom-mode" className="cursor-pointer text-violet-700 dark:text-violet-300 font-medium">
-              Создать индивидуальный абонемент (без шаблона)
-            </Label>
           </div>
 
-          {/* Select Subscription Type */}
+          {/* Select template */}
           {!customMode && (
-            <div className="space-y-2">
-              <Label htmlFor="subscription-type">Тип абонемента *</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="subscription-type">Шаблон абонемента *</Label>
               <Select value={selectedTypeId} onValueChange={setSelectedTypeId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Выберите тип абонемента" />
+                  <SelectValue placeholder="Выберите тип" />
                 </SelectTrigger>
                 <SelectContent>
                   {subscriptionTypes.map((type) => (
                     <SelectItem key={type.id} value={type.id}>
                       <div className="flex items-center gap-2">
-                        <span className={`px-2 py-1 rounded text-xs ${billingTypeColors[type.billingType]}`}>
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] ${billingTypeColors[type.billingType]}`}>
                           {billingTypeLabels[type.billingType]}
                         </span>
                         <span>{type.name}</span>
-                        <span className="text-gray-500">
-                          ({type.lessonsCount} занятий - {type.price.toLocaleString()} ₸)
+                        <span className="text-muted-foreground text-xs">
+                          {type.lessonsCount} × {(type.price / type.lessonsCount).toFixed(0)} ₸
                         </span>
                       </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              
-              {selectedType && (
-                <div className="p-3 bg-blue-50 rounded-lg text-sm">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className={`px-2 py-1 rounded text-xs ${billingTypeColors[selectedType.billingType]}`}>
-                      {billingTypeLabels[selectedType.billingType]}
-                    </span>
-                    <span className="font-medium">{selectedType.name}</span>
-                  </div>
-                  <p className="text-gray-600">{selectedType.description}</p>
-                  <div className="mt-2 space-y-1">
-                    <p>• Занятий: {selectedType.lessonsCount}</p>
-                    <p>• Стоимость: {selectedType.price.toLocaleString()} ₸</p>
-                    <p>• Цена за занятие: {(selectedType.price / selectedType.lessonsCount).toFixed(0)} ₸</p>
-                    {selectedType.validityDays && <p>• Срок действия: {selectedType.validityDays} дней</p>}
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
-          {/* Customization Section */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            {/* Total Lessons */}
-            <div className="space-y-2">
-              <Label htmlFor="total-lessons">
-                <BookOpen className="inline w-4 h-4 mr-1" />
-                Количество занятий *
-              </Label>
+          {/* Lessons & Price - One row */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="total-lessons">Кол-во занятий *</Label>
               <Input
                 id="total-lessons"
                 type="number"
                 min="1"
-                value={totalLessons}
+                placeholder="8"
+                value={totalLessons || ""}
                 onChange={(e) => setTotalLessons(parseInt(e.target.value) || 0)}
                 disabled={!customMode && !selectedTypeId}
               />
             </div>
-
-            {/* Total Price */}
-            <div className="space-y-2">
-              <Label htmlFor="total-price">
-                <DollarSign className="inline w-4 h-4 mr-1" />
-                Общая стоимость *
-              </Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="total-price">Общая стоимость *</Label>
               <Input
                 id="total-price"
                 type="number"
                 min="0"
                 step="100"
-                value={totalPrice}
+                placeholder="40000"
+                value={totalPrice || ""}
                 onChange={(e) => setTotalPrice(parseFloat(e.target.value) || 0)}
                 disabled={!customMode && !selectedTypeId}
               />
             </div>
-
-            {/* Price Per Lesson (Read-only) */}
-            <div className="space-y-2">
-              <Label>
-                <DollarSign className="inline w-4 h-4 mr-1" />
-                Цена за занятие
-              </Label>
-              <Input
-                value={pricePerLesson.toFixed(2)}
-                disabled
-                className="bg-gray-50"
-              />
-            </div>
-
-            {/* Validity Days */}
-            <div className="space-y-2">
-              <Label htmlFor="validity-days">
-                <Clock className="inline w-4 h-4 mr-1" />
-                Срок действия (дней)
-              </Label>
-              <Input
-                id="validity-days"
-                type="number"
-                min="0"
-                value={validityDays}
-                onChange={(e) => setValidityDays(parseInt(e.target.value) || 0)}
-              />
-            </div>
           </div>
 
-          {/* Assignment */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            {/* Group */}
-            <div className="space-y-2">
-              <Label htmlFor="group">
-                <Users className="inline w-4 h-4 mr-1" />
-                Группа (опционально)
-              </Label>
+          {/* Price per lesson - Readonly computed field */}
+          <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800/50">
+            <span className="text-xs text-slate-500">Цена за занятие (авто)</span>
+            <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
+              {totalLessons > 0 ? `${pricePerLesson.toFixed(0)} ₸` : "—"}
+            </span>
+          </div>
+
+          {/* Group & Teacher - One row */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="group">Группа</Label>
               <Select value={groupId || "none"} onValueChange={(val) => setGroupId(val === "none" ? "" : val)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Без группы" />
+                  <SelectValue placeholder="Не выбрана" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Без группы</SelectItem>
+                  <SelectItem value="none">Не выбрана</SelectItem>
                   {groups.map((group) => (
                     <SelectItem key={group.id} value={group.id}>
-                      {group.name} ({group.subject})
+                      {group.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-
-            {/* Teacher */}
-            <div className="space-y-2">
-              <Label htmlFor="teacher">
-                <User className="inline w-4 h-4 mr-1" />
-                Преподаватель (опционально)
-              </Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="teacher">Преподаватель</Label>
               <Select value={teacherId || "none"} onValueChange={(val) => setTeacherId(val === "none" ? "" : val)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Без преподавателя" />
+                  <SelectValue placeholder="Не выбран" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Без преподавателя</SelectItem>
+                  <SelectItem value="none">Не выбран</SelectItem>
                   {teachers.filter(t => t.status === "active").map((teacher) => (
                     <SelectItem key={teacher.id} value={teacher.id}>
-                      {teacher.name} ({teacher.subject})
+                      {teacher.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -443,14 +389,10 @@ export default function AssignSubscriptionModal({
             </div>
           </div>
 
-          {/* Dates */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            {/* Start Date */}
-            <div className="space-y-2">
-              <Label htmlFor="start-date">
-                <Calendar className="inline w-4 h-4 mr-1" />
-                Дата начала *
-              </Label>
+          {/* Start & End Date - One row */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="start-date">Начало *</Label>
               <Input
                 id="start-date"
                 type="date"
@@ -458,13 +400,8 @@ export default function AssignSubscriptionModal({
                 onChange={(e) => setStartDate(e.target.value)}
               />
             </div>
-
-            {/* End Date */}
-            <div className="space-y-2">
-              <Label htmlFor="end-date">
-                <Calendar className="inline w-4 h-4 mr-1" />
-                Дата окончания
-              </Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="end-date">Окончание</Label>
               <Input
                 id="end-date"
                 type="date"
@@ -474,64 +411,65 @@ export default function AssignSubscriptionModal({
             </div>
           </div>
 
-          {/* Summary */}
-          <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-50 to-green-100 dark:from-emerald-950 dark:to-green-900">
-            <h4 className="font-semibold mb-3 text-emerald-800 dark:text-emerald-200">Итого:</h4>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between items-center p-2 rounded-xl bg-white/50 dark:bg-white/10">
-                <span className="text-emerald-700 dark:text-emerald-300">Занятий</span>
-                <span className="font-bold text-emerald-900 dark:text-emerald-100">{totalLessons}</span>
-              </div>
-              {priceCalculation.discountAmount > 0 ? (
-                <>
-                  <div className="flex justify-between items-center p-2 rounded-xl bg-white/50 dark:bg-white/10">
-                    <span className="text-emerald-700 dark:text-emerald-300">Стоимость</span>
-                    <div className="text-right">
-                      <span className="line-through text-muted-foreground text-xs mr-2">{totalPrice.toLocaleString()} ₸</span>
-                      <span className="font-bold text-emerald-900 dark:text-emerald-100">{priceCalculation.finalPrice.toLocaleString()} ₸</span>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center p-2 rounded-xl bg-emerald-200/50 dark:bg-emerald-800/30">
-                    <span className="text-emerald-700 dark:text-emerald-300">Скидка</span>
-                    <span className="font-bold text-emerald-600 dark:text-emerald-400">-{priceCalculation.discountAmount.toLocaleString()} ₸</span>
-                  </div>
-                  <div className="flex justify-between items-center p-2 rounded-xl bg-white/50 dark:bg-white/10">
-                    <span className="text-emerald-700 dark:text-emerald-300">За занятие</span>
-                    <span className="font-bold text-emerald-900 dark:text-emerald-100">{(priceCalculation.finalPrice / (totalLessons || 1)).toFixed(0)} ₸</span>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="flex justify-between items-center p-2 rounded-xl bg-white/50 dark:bg-white/10">
-                    <span className="text-emerald-700 dark:text-emerald-300">Стоимость</span>
-                    <span className="font-bold text-emerald-900 dark:text-emerald-100">{totalPrice.toLocaleString()} ₸</span>
-                  </div>
-                  <div className="flex justify-between items-center p-2 rounded-xl bg-white/50 dark:bg-white/10">
-                    <span className="text-emerald-700 dark:text-emerald-300">За занятие</span>
-                    <span className="font-bold text-emerald-900 dark:text-emerald-100">{pricePerLesson.toFixed(0)} ₸</span>
-                  </div>
-                </>
-              )}
-              {selectedType && (
-                <div className="flex justify-between items-center p-2 rounded-xl bg-white/50 dark:bg-white/10">
-                  <span className="text-emerald-700 dark:text-emerald-300">Тип</span>
-                  <span className={`px-3 py-1 rounded-xl text-xs font-medium ${billingTypeColors[selectedType.billingType]}`}>
-                    {billingTypeLabels[selectedType.billingType]}
-                  </span>
-                </div>
-              )}
-            </div>
+          {/* Validity days */}
+          <div className="space-y-1.5">
+            <Label htmlFor="validity-days">Срок действия (дней)</Label>
+            <Input
+              id="validity-days"
+              type="number"
+              min="0"
+              placeholder="30"
+              value={validityDays || ""}
+              onChange={(e) => setValidityDays(parseInt(e.target.value) || 0)}
+            />
           </div>
+
+          {/* Modern Summary - Just text, no heavy blocks */}
+          {(totalLessons > 0 || totalPrice > 0) && (
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Итого к оплате</p>
+                  {priceCalculation.discountAmount > 0 && (
+                    <p className="text-xs text-emerald-600">
+                      Скидка: -{priceCalculation.discountAmount.toLocaleString()} ₸
+                    </p>
+                  )}
+                </div>
+                <div className="text-right">
+                  {priceCalculation.discountAmount > 0 ? (
+                    <>
+                      <p className="text-xs text-muted-foreground line-through">{totalPrice.toLocaleString()} ₸</p>
+                      <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                        {priceCalculation.finalPrice.toLocaleString()} ₸
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                      {totalPrice.toLocaleString()} ₸
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    {totalLessons} занятий
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
-        <DialogFooter className="flex-shrink-0 border-t border-border/50 pt-4 mt-4">
-          <Button variant="outline" onClick={onClose} disabled={loading} className="w-full sm:w-auto rounded-xl">
-            Отмена
-          </Button>
-          <Button onClick={handleSubmit} disabled={loading} className="w-full sm:w-auto rounded-xl">
+        <div className="flex-shrink-0 space-y-2 pt-4 mt-2 border-t border-slate-100 dark:border-slate-800">
+          <Button 
+            onClick={handleSubmit} 
+            disabled={loading} 
+            className="w-full bg-gradient-to-r from-[#6366f1] via-[#8b5cf6] to-[#a855f7] hover:opacity-90 text-white shadow-md"
+          >
             {loading ? "Создание..." : "Создать абонемент"}
           </Button>
-        </DialogFooter>
+          <Button variant="ghost" onClick={onClose} disabled={loading} className="w-full text-muted-foreground">
+            Отмена
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );

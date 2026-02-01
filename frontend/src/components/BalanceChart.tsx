@@ -1,4 +1,4 @@
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { PaymentTransaction } from "@/types";
 import moment from "moment";
 
@@ -22,50 +22,64 @@ export function BalanceChart({ transactions, currentBalance }: BalanceChartProps
       return acc;
     }, [] as Array<{ date: string; balance: number; fullDate: string }>);
 
-  // Take last 10 transactions for cleaner chart
-  const chartData = balanceHistory.slice(-10);
+  // Take last 12 transactions for cleaner chart
+  const chartData = balanceHistory.slice(-12);
 
   if (chartData.length === 0) {
     return (
-      <div className="flex items-center justify-center h-48">
+      <div className="flex items-center justify-center h-52">
         <p className="text-sm text-muted-foreground">Нет истории транзакций</p>
       </div>
     );
   }
 
   return (
-    <div className="h-48">
+    <div className="h-52">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={chartData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+        <AreaChart data={chartData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+          <defs>
+            <linearGradient id="balanceGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.3} />
+              <stop offset="50%" stopColor="#8b5cf6" stopOpacity={0.1} />
+              <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.02} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
           <XAxis
             dataKey="date"
-            tick={{ fontSize: 12 }}
-            stroke="#94a3b8"
+            tick={{ fontSize: 11, fill: '#94a3b8' }}
+            axisLine={{ stroke: '#e2e8f0' }}
+            tickLine={false}
           />
           <YAxis
-            tick={{ fontSize: 12 }}
-            stroke="#94a3b8"
-            tickFormatter={(value) => `${value.toLocaleString()}₸`}
+            tick={{ fontSize: 11, fill: '#94a3b8' }}
+            axisLine={false}
+            tickLine={false}
+            tickFormatter={(value) => `${(value / 1000).toFixed(0)}к`}
+            width={40}
           />
           <Tooltip
             contentStyle={{
               backgroundColor: "white",
               border: "1px solid #e2e8f0",
-              borderRadius: "8px",
+              borderRadius: "12px",
               fontSize: "12px",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+              padding: "8px 12px",
             }}
             formatter={(value: number) => [`${value.toLocaleString()} ₸`, "Баланс"]}
+            labelStyle={{ color: '#64748b', marginBottom: '4px' }}
           />
-          <Line
+          <Area
             type="monotone"
             dataKey="balance"
             stroke="#8b5cf6"
             strokeWidth={2}
-            dot={{ fill: "#8b5cf6", r: 4 }}
-            activeDot={{ r: 6 }}
+            fill="url(#balanceGradient)"
+            dot={false}
+            activeDot={{ fill: "#8b5cf6", r: 5, strokeWidth: 2, stroke: "#fff" }}
           />
-        </LineChart>
+        </AreaChart>
       </ResponsiveContainer>
     </div>
   );

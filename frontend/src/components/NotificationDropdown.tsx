@@ -90,119 +90,146 @@ export function NotificationDropdown() {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="end">
-        <div className="flex items-center justify-between p-4 border-b">
-          <h3 className="font-semibold">Уведомления</h3>
+      <PopoverContent className="w-80 p-0 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg" align="end">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800">
+          <h3 className="font-bold text-slate-900 dark:text-slate-100">Уведомления</h3>
           {notificationCount > 0 && (
-            <Badge variant="secondary">{notificationCount}</Badge>
+            <span className="text-xs font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">
+              {notificationCount}
+            </span>
           )}
         </div>
         <ScrollArea className="h-[400px]">
           {notificationCount === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <Bell className="h-8 w-8 text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground">
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="p-3 rounded-full bg-slate-100 dark:bg-slate-800 mb-3">
+                <Bell className="h-6 w-6 text-slate-400" />
+              </div>
+              <p className="text-sm text-slate-500">
                 Нет уведомлений
               </p>
             </div>
           ) : (
-            <div className="divide-y">
+            <div>
               {/* One Lesson Left Section */}
               {oneLessonLeftStudents.length > 0 && (
-                <>
+                <div>
+                  {/* Group Header */}
                   <div 
-                    className="p-3 bg-blue-50 border-b cursor-pointer hover:bg-blue-100 transition-colors"
+                    className="px-4 py-3 bg-violet-50/50 dark:bg-violet-950/30 cursor-pointer hover:bg-violet-50 dark:hover:bg-violet-950/50 transition-colors border-b border-slate-100 dark:border-slate-800"
                     onClick={() => setExpandedOneLesson(!expandedOneLesson)}
                   >
-                    <div className="flex items-center gap-2">
-                      {expandedOneLesson ? (
-                        <ChevronDown className="h-4 w-4 text-blue-600" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4 text-blue-600" />
-                      )}
-                      <Bell className="h-4 w-4 text-blue-600" />
-                      <span className="text-sm font-semibold text-blue-900">
-                        Осталось 1 урок
-                      </span>
-                      <Badge variant="secondary" className="ml-auto">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 dark:bg-violet-900/50">
+                        <Bell className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                      </div>
+                      <div className="flex-1">
+                        <span className="font-bold text-sm text-slate-900 dark:text-slate-100">
+                          Осталось 1 урок
+                        </span>
+                      </div>
+                      <span className="text-xs font-semibold text-violet-600 dark:text-violet-400 bg-violet-100 dark:bg-violet-900/50 px-2 py-0.5 rounded-full">
                         {oneLessonLeftStudents.length}
-                      </Badge>
+                      </span>
+                      {expandedOneLesson ? (
+                        <ChevronDown className="h-4 w-4 text-slate-400" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 text-slate-400" />
+                      )}
                     </div>
                   </div>
-                  {expandedOneLesson && oneLessonLeftStudents.map((notification) => (
-                    <div
-                      key={notification.id}
-                      className="p-4 hover:bg-accent/50 cursor-pointer transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleNotificationClick(notification);
-                      }}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-                          <Bell className="h-4 w-4" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-sm truncate">
-                            {notification.studentName}
+                  {/* Items */}
+                  {expandedOneLesson && (
+                    <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {oneLessonLeftStudents.map((notification) => (
+                        <div
+                          key={notification.id}
+                          className="px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleNotificationClick(notification);
+                          }}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400">
+                              <Bell className="h-4 w-4" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-sm text-slate-900 dark:text-slate-100 truncate">
+                                {notification.studentName}
+                              </div>
+                              <div className="text-xs text-slate-500 mt-0.5">
+                                {notification.message}
+                              </div>
+                            </div>
+                            <ChevronRight className="h-4 w-4 text-slate-300" />
                           </div>
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {notification.message}
-                          </div>
                         </div>
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </>
+                  )}
+                </div>
               )}
               
               {/* Debts Section */}
               {debtStudents.length > 0 && (
-                <>
+                <div>
+                  {/* Group Header */}
                   <div 
-                    className="p-3 bg-red-50 border-b cursor-pointer hover:bg-red-100 transition-colors"
+                    className="px-4 py-3 bg-red-50/50 dark:bg-red-950/30 cursor-pointer hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors border-b border-slate-100 dark:border-slate-800"
                     onClick={() => setExpandedDebts(!expandedDebts)}
                   >
-                    <div className="flex items-center gap-2">
-                      {expandedDebts ? (
-                        <ChevronDown className="h-4 w-4 text-red-600" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4 text-red-600" />
-                      )}
-                      <AlertCircle className="h-4 w-4 text-red-600" />
-                      <span className="text-sm font-semibold text-red-900">
-                        Должники
-                      </span>
-                      <Badge variant="secondary" className="ml-auto">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/50">
+                        <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                      </div>
+                      <div className="flex-1">
+                        <span className="font-bold text-sm text-slate-900 dark:text-slate-100">
+                          Должники
+                        </span>
+                      </div>
+                      <span className="text-xs font-semibold text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/50 px-2 py-0.5 rounded-full">
                         {debtStudents.length}
-                      </Badge>
+                      </span>
+                      {expandedDebts ? (
+                        <ChevronDown className="h-4 w-4 text-slate-400" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 text-slate-400" />
+                      )}
                     </div>
                   </div>
-                  {expandedDebts && debtStudents.map((notification) => (
-                    <div
-                      key={notification.id}
-                      className="p-4 hover:bg-accent/50 cursor-pointer transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleNotificationClick(notification);
-                      }}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100 text-red-600">
-                          <AlertCircle className="h-4 w-4" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-sm truncate">
-                            {notification.studentName}
+                  {/* Items */}
+                  {expandedDebts && (
+                    <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {debtStudents.map((notification) => (
+                        <div
+                          key={notification.id}
+                          className="px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleNotificationClick(notification);
+                          }}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400">
+                              <AlertCircle className="h-4 w-4" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-sm text-slate-900 dark:text-slate-100 truncate">
+                                {notification.studentName}
+                              </div>
+                              <div className="text-xs text-red-600 dark:text-red-400 font-medium mt-0.5">
+                                {notification.message}
+                              </div>
+                            </div>
+                            <ChevronRight className="h-4 w-4 text-slate-300" />
                           </div>
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {notification.message}
-                          </div>
                         </div>
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </>
+                  )}
+                </div>
               )}
             </div>
           )}

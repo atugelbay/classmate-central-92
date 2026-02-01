@@ -8,158 +8,179 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Soft UI Color Palette - Purple/Lavender Theme */
-    --background: 270 20% 99%;
-    --foreground: 262 40% 20%;
+    /* ============================================
+       CORE UI RULES - Typography & Colors
+       ============================================ */
+    
+    /* Typography Scale */
+    --text-xs: 0.75rem;     /* 12px */
+    --text-sm: 0.875rem;    /* 14px - base text */
+    --text-base: 0.875rem;  /* 14px - base text */
+    --text-lg: 1rem;        /* 16px - block headers */
+    --text-xl: 1.125rem;    /* 18px - block headers */
+    --text-2xl: 1.5rem;     /* 24px - page titles */
+    --text-3xl: 1.875rem;   /* 30px */
+    
+    /* Colors - High Contrast */
+    --background: 0 0% 98.5%;
+    --foreground: 0 0% 10%;  /* #1A1A1B - почти черный для заголовков */
 
     --card: 0 0% 100%;
-    --card-foreground: 262 40% 20%;
+    --card-foreground: 0 0% 10%;  /* #1A1A1B */
 
     --popover: 0 0% 100%;
-    --popover-foreground: 262 40% 20%;
+    --popover-foreground: 0 0% 10%;
 
-    /* Primary - Vibrant Purple */
-    --primary: 262 83% 58%;
+    /* Primary - Blue-Violet Gradient (из логотипа) */
+    --primary: 250 84% 54%;       /* Синий из логотипа */
     --primary-foreground: 0 0% 100%;
-    --primary-light: 270 60% 85%;
-    --primary-dark: 263 70% 50%;
+    --primary-light: 250 80% 70%;
+    --primary-dark: 262 83% 50%;  /* Фиолетовый из логотипа */
 
-    /* Secondary - Soft lavender */
-    --secondary: 270 30% 96%;
-    --secondary-foreground: 262 40% 25%;
+    /* Secondary - Нейтральный */
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 220 9% 46%;  /* #6B7280 - мягкий серый */
 
-    /* Muted - Warm gray with lavender hint */
-    --muted: 270 15% 95%;
-    --muted-foreground: 262 20% 45%;
+    /* Muted - Для вторичного текста */
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;  /* #6B7280 - мягкий серый */
 
-    /* Accent - Warm Peach/Coral */
-    --accent: 25 95% 70%;
-    --accent-foreground: 25 80% 20%;
-    --accent-light: 30 100% 85%;
+    /* Accent - Фиолетовый акцент */
+    --accent: 262 83% 58%;
+    --accent-foreground: 0 0% 100%;
+    --accent-light: 262 60% 85%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Borders - Soft and subtle */
-    --border: 270 20% 92%;
-    --input: 270 20% 92%;
-    --ring: 262 83% 58%;
+    /* Borders - Тонкая рамка #F3F4F6 */
+    --border: 220 13% 95%;  /* #F3F4F6 */
+    --input: 220 13% 95%;
+    --ring: 250 84% 54%;
 
-    /* Increased radius for softer look */
-    --radius: 1rem;
+    /* Border radius */
+    --radius: 0.75rem;  /* 12px */
     
-    /* Semantic colors - Softer variants */
-    --success: 158 64% 52%;
-    --warning: 38 92% 65%;
-    --info: 199 89% 48%;
+    /* Semantic colors */
+    --success: 158 64% 45%;
+    --warning: 38 92% 55%;
+    --info: 217 91% 60%;
 
-    /* Sidebar - Light gradient theme */
-    --sidebar-background: 270 30% 98%;
-    --sidebar-foreground: 262 40% 30%;
-    --sidebar-primary: 262 83% 58%;
+    /* Sidebar */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 0 0% 10%;
+    --sidebar-primary: 250 84% 54%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 270 40% 95%;
-    --sidebar-accent-foreground: 262 40% 30%;
-    --sidebar-border: 270 20% 92%;
-    --sidebar-ring: 262 83% 58%;
+    --sidebar-accent: 250 80% 97%;
+    --sidebar-accent-foreground: 0 0% 10%;
+    --sidebar-border: 220 13% 95%;
+    --sidebar-ring: 250 84% 54%;
     
-    /* Gradients - Purple to Indigo */
-    --gradient-primary: linear-gradient(135deg, hsl(262 83% 58%) 0%, hsl(270 70% 50%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(25 95% 70%) 0%, hsl(15 90% 65%) 100%);
-    --gradient-soft: linear-gradient(135deg, hsl(270 60% 98%) 0%, hsl(25 60% 97%) 100%);
+    /* Gradients - Blue to Violet (из логотипа) */
+    --gradient-primary: linear-gradient(135deg, hsl(250 84% 54%) 0%, hsl(262 83% 58%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(262 83% 58%) 0%, hsl(280 70% 50%) 100%);
+    --gradient-soft: linear-gradient(135deg, hsl(250 80% 98%) 0%, hsl(262 60% 97%) 100%);
     
-    /* Soft Shadows - Purple-tinted */
-    --shadow-sm: 0 1px 3px 0 rgba(139, 92, 246, 0.04), 0 1px 2px -1px rgba(139, 92, 246, 0.06);
-    --shadow-md: 0 4px 6px -1px rgba(139, 92, 246, 0.06), 0 2px 4px -2px rgba(139, 92, 246, 0.08);
-    --shadow-lg: 0 10px 15px -3px rgba(139, 92, 246, 0.08), 0 4px 6px -4px rgba(139, 92, 246, 0.1);
-    --shadow-soft: 0 4px 20px -2px rgba(139, 92, 246, 0.08), 0 2px 8px -2px rgba(139, 92, 246, 0.04);
-    --shadow-soft-lg: 0 10px 40px -8px rgba(139, 92, 246, 0.12), 0 4px 16px -4px rgba(139, 92, 246, 0.06);
-    --shadow-inner: inset 0 2px 4px rgba(139, 92, 246, 0.04);
-    --shadow-glow: 0 0 20px rgba(139, 92, 246, 0.15);
+    /* Soft Shadows - Нейтральные, мягкие */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+    --shadow-md: 0 2px 4px -1px rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.03);
+    --shadow-lg: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+    --shadow-soft: 0 2px 8px -2px rgba(0, 0, 0, 0.06);
+    --shadow-soft-lg: 0 8px 24px -4px rgba(0, 0, 0, 0.08);
+    --shadow-inner: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+    --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.2);
     
-    /* Dashboard-specific colors - Soft pastels */
+    /* Card shadow - очень мягкая */
+    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04);
+    --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.08);
+    
+    /* Dashboard-specific colors */
     --dashboard-card-bg: 0 0% 100%;
-    --dashboard-stat-positive: 158 55% 45%;
-    --dashboard-stat-positive-bg: 158 40% 96%;
-    --dashboard-stat-negative: 0 60% 55%;
-    --dashboard-stat-negative-bg: 0 40% 97%;
-    --dashboard-stat-neutral: 262 20% 50%;
-    --dashboard-stat-neutral-bg: 270 30% 97%;
-    --dashboard-accent-subtle: 262 40% 96%;
-    --dashboard-icon-muted: 262 20% 60%;
+    --dashboard-stat-positive: 158 64% 40%;
+    --dashboard-stat-positive-bg: 158 50% 96%;
+    --dashboard-stat-negative: 0 72% 50%;
+    --dashboard-stat-negative-bg: 0 50% 97%;
+    --dashboard-stat-neutral: 220 9% 46%;
+    --dashboard-stat-neutral-bg: 220 14% 97%;
+    --dashboard-accent-subtle: 250 80% 97%;
+    --dashboard-icon-muted: 220 9% 60%;
   }
 
   .dark {
-    /* Dark mode - Deep slate/purple theme */
-    --background: 224 71% 4%;
-    --foreground: 213 31% 91%;
+    /* Dark mode - Clean slate theme */
+    --background: 222 47% 8%;
+    --foreground: 210 40% 96%;
 
-    --card: 224 71% 6%;
-    --card-foreground: 213 31% 91%;
+    --card: 222 47% 10%;
+    --card-foreground: 210 40% 96%;
 
-    --popover: 224 71% 6%;
-    --popover-foreground: 213 31% 91%;
+    --popover: 222 47% 10%;
+    --popover-foreground: 210 40% 96%;
 
-    --primary: 262 83% 65%;
+    --primary: 250 84% 65%;
     --primary-foreground: 0 0% 100%;
-    --primary-light: 270 50% 70%;
-    --primary-dark: 263 70% 55%;
+    --primary-light: 250 70% 75%;
+    --primary-dark: 262 70% 55%;
 
-    --secondary: 215 28% 17%;
-    --secondary-foreground: 213 31% 91%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 215 20% 65%;
 
-    --muted: 215 28% 17%;
+    --muted: 217 33% 17%;
     --muted-foreground: 215 20% 65%;
 
-    --accent: 25 80% 60%;
+    --accent: 262 83% 65%;
     --accent-foreground: 0 0% 100%;
-    --accent-light: 30 70% 50%;
+    --accent-light: 262 50% 50%;
 
-    --destructive: 0 63% 50%;
+    --destructive: 0 63% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 215 28% 17%;
-    --input: 215 28% 17%;
-    --ring: 262 83% 65%;
+    --border: 217 33% 18%;
+    --input: 217 33% 18%;
+    --ring: 250 84% 65%;
 
     /* Semantic colors dark */
-    --success: 158 64% 45%;
+    --success: 158 64% 50%;
     --warning: 38 92% 55%;
-    --info: 199 89% 48%;
+    --info: 217 91% 65%;
 
     /* Sidebar dark mode */
-    --sidebar-background: 224 71% 5%;
-    --sidebar-foreground: 213 31% 91%;
-    --sidebar-primary: 262 83% 65%;
+    --sidebar-background: 222 47% 7%;
+    --sidebar-foreground: 210 40% 96%;
+    --sidebar-primary: 250 84% 65%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 215 28% 14%;
-    --sidebar-accent-foreground: 213 31% 91%;
-    --sidebar-border: 215 28% 14%;
-    --sidebar-ring: 262 83% 65%;
+    --sidebar-accent: 217 33% 14%;
+    --sidebar-accent-foreground: 210 40% 96%;
+    --sidebar-border: 217 33% 15%;
+    --sidebar-ring: 250 84% 65%;
     
     /* Gradients dark mode */
-    --gradient-primary: linear-gradient(135deg, hsl(262 83% 60%) 0%, hsl(270 60% 50%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(25 80% 55%) 0%, hsl(15 75% 50%) 100%);
-    --gradient-soft: linear-gradient(135deg, hsl(224 71% 6%) 0%, hsl(215 28% 10%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(250 84% 60%) 0%, hsl(262 83% 55%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(262 83% 55%) 0%, hsl(280 60% 50%) 100%);
+    --gradient-soft: linear-gradient(135deg, hsl(222 47% 10%) 0%, hsl(217 33% 14%) 100%);
     
     /* Soft shadows dark mode */
-    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px -1px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
-    --shadow-soft: 0 4px 20px -2px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05);
-    --shadow-soft-lg: 0 10px 40px -8px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
-    --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.2);
-    --shadow-glow: 0 0 30px rgba(139, 92, 246, 0.3);
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 2px 4px -1px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+    --shadow-soft: 0 2px 8px -2px rgba(0, 0, 0, 0.5);
+    --shadow-soft-lg: 0 8px 24px -4px rgba(0, 0, 0, 0.6);
+    --shadow-inner: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-glow: 0 0 24px rgba(99, 102, 241, 0.3);
+    
+    /* Card shadow - dark mode */
+    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.4);
     
     /* Dashboard-specific colors - dark mode */
-    --dashboard-card-bg: 224 71% 6%;
+    --dashboard-card-bg: 222 47% 10%;
     --dashboard-stat-positive: 158 55% 50%;
     --dashboard-stat-positive-bg: 158 40% 12%;
-    --dashboard-stat-negative: 0 60% 50%;
+    --dashboard-stat-negative: 0 60% 55%;
     --dashboard-stat-negative-bg: 0 40% 12%;
     --dashboard-stat-neutral: 215 20% 60%;
-    --dashboard-stat-neutral-bg: 215 28% 14%;
-    --dashboard-accent-subtle: 262 35% 18%;
+    --dashboard-stat-neutral-bg: 217 33% 14%;
+    --dashboard-accent-subtle: 250 35% 18%;
     --dashboard-icon-muted: 215 20% 55%;
   }
 }
@@ -169,8 +190,49 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  html {
+    font-size: 14px;  /* Base font size */
+  }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.5;
+  }
+
+  /* Typography - Headlines почти черные */
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-foreground font-semibold tracking-tight;
+  }
+
+  h1 {
+    font-size: 1.5rem;  /* 24px - заголовок страницы */
+    line-height: 1.25;
+  }
+
+  h2 {
+    font-size: 1.25rem;  /* 18px */
+    line-height: 1.3;
+  }
+
+  h3 {
+    font-size: 1.125rem;  /* 16px - заголовок блока */
+    line-height: 1.4;
+  }
+
+  h4, h5, h6 {
+    font-size: 1rem;  /* 14px */
+    line-height: 1.5;
+  }
+
+  /* Secondary text - мягкий серый */
+  .text-secondary {
+    @apply text-muted-foreground;
+  }
+
+  /* Technical/meta information */
+  .text-meta {
+    @apply text-muted-foreground text-xs;
   }
 }
 
@@ -474,7 +536,20 @@ All colors MUST be HSL.
     border: 1px solid rgba(139, 92, 246, 0.15);
   }
 
-  /* Soft Card - No borders, soft shadows */
+  /* Clean Card - Белый фон, тонкая рамка, мягкая тень */
+  .clean-card {
+    background: hsl(var(--card));
+    border-radius: var(--radius);
+    border: 1px solid hsl(var(--border));
+    box-shadow: var(--shadow-card);
+    transition: all 0.2s ease;
+  }
+
+  .clean-card:hover {
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  /* Soft Card - No borders, soft shadows (legacy) */
   .soft-card {
     background: hsl(var(--card));
     border-radius: var(--radius);
@@ -486,6 +561,86 @@ All colors MUST be HSL.
   .soft-card:hover {
     box-shadow: var(--shadow-soft-lg);
     transform: translateY(-2px);
+  }
+
+  /* Stat Card - Для аналитики */
+  .stat-card {
+    background: hsl(var(--card));
+    border-radius: var(--radius);
+    border: 1px solid hsl(var(--border));
+    box-shadow: var(--shadow-card);
+    padding: 1rem;
+    transition: all 0.2s ease;
+  }
+
+  .stat-card:hover {
+    border-color: hsl(var(--primary) / 0.3);
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  /* Page Title */
+  .page-title {
+    font-size: 1.5rem;  /* 24px */
+    font-weight: 600;
+    color: hsl(var(--foreground));
+    letter-spacing: -0.025em;
+  }
+
+  /* Block Header */
+  .block-header {
+    font-size: 1rem;  /* 16px */
+    font-weight: 600;
+    color: hsl(var(--foreground));
+  }
+
+  /* Category Icons - Цвета из логотипа */
+  .icon-primary {
+    color: hsl(250 84% 54%);  /* Синий */
+  }
+
+  .icon-accent {
+    color: hsl(262 83% 58%);  /* Фиолетовый */
+  }
+
+  .icon-success {
+    color: hsl(158 64% 45%);  /* Зеленый */
+  }
+
+  .icon-warning {
+    color: hsl(38 92% 55%);  /* Оранжевый */
+  }
+
+  .icon-danger {
+    color: hsl(0 72% 51%);  /* Красный */
+  }
+
+  .icon-info {
+    color: hsl(217 91% 60%);  /* Голубой */
+  }
+
+  /* Icon backgrounds */
+  .icon-bg-primary {
+    background: hsl(250 84% 54%);
+  }
+
+  .icon-bg-accent {
+    background: hsl(262 83% 58%);
+  }
+
+  .icon-bg-success {
+    background: hsl(158 64% 45%);
+  }
+
+  .icon-bg-warning {
+    background: hsl(38 92% 55%);
+  }
+
+  .icon-bg-danger {
+    background: hsl(0 72% 51%);
+  }
+
+  .icon-bg-info {
+    background: hsl(217 91% 60%);
   }
 
   /* Gradient text */

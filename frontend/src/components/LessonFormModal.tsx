@@ -5,11 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { StudentSelector } from "@/components/StudentSelector";
 import { Teacher, Group, Room, Student, Lesson, CheckConflictsResponse } from "@/types";
-import { AlertTriangle, Loader2, CheckCircle } from "lucide-react";
+import { AlertTriangle, Loader2, CheckCircle, Calendar, Clock, Repeat } from "lucide-react";
 import { useCheckConflicts, useCreateLesson, useCreateBulkLessons, useUpdateLesson } from "@/hooks/useData";
 import { toast } from "sonner";
 
@@ -272,185 +272,217 @@ export function LessonFormModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{mode === "edit" ? "Редактировать урок" : "Новый урок"}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-5 pb-2">
-          {/* Series Mode Toggle */}
+        <div className="space-y-4 pb-2">
+          {/* Series Mode Toggle - Prominent Switch */}
           {mode === "create" && (
-            <div className="flex items-center space-x-3 p-3 rounded-2xl bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-950 dark:to-purple-950">
-              <Checkbox id="seriesMode" checked={seriesMode} onCheckedChange={(checked) => setSeriesMode(!!checked)} className="rounded-lg" />
-              <Label htmlFor="seriesMode" className="cursor-pointer text-violet-700 dark:text-violet-300 font-medium">
-                Создать серию уроков (повторяющиеся)
-              </Label>
+            <div className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-violet-500/10 to-purple-500/10 border border-violet-200 dark:border-violet-800">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-gradient-to-br from-[#6366f1] to-[#a855f7]">
+                  <Repeat className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <p className="font-medium text-sm text-slate-900 dark:text-slate-100">Серия уроков</p>
+                  <p className="text-xs text-muted-foreground">Повторяющиеся занятия</p>
+                </div>
+              </div>
+              <Switch
+                checked={seriesMode}
+                onCheckedChange={setSeriesMode}
+                className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-[#6366f1] data-[state=checked]:to-[#a855f7]"
+              />
             </div>
           )}
 
-          {/* Title */}
-          <div>
+          {/* Title - Full width */}
+          <div className="space-y-1.5">
             <Label htmlFor="title">Название урока *</Label>
-            <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required />
+            <Input 
+              id="title" 
+              placeholder="Математика - 5 класс"
+              value={title} 
+              onChange={(e) => setTitle(e.target.value)} 
+              required 
+            />
           </div>
 
-          {/* Subject */}
-          <div>
-            <Label htmlFor="subject">Предмет *</Label>
-            <Input id="subject" value={subject} onChange={(e) => setSubject(e.target.value)} required />
-          </div>
-
-          {/* Teacher */}
-          <div>
-            <Label htmlFor="teacherId">Преподаватель *</Label>
-            {initialData?.teacherId && mode === "create" ? (
+          {/* Subject & Teacher - One row */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="subject">Предмет *</Label>
               <Input 
-                value={teachers.find(t => t.id === teacherId)?.name || ""} 
-                disabled 
-                className="bg-muted"
+                id="subject" 
+                placeholder="Математика"
+                value={subject} 
+                onChange={(e) => setSubject(e.target.value)} 
+                required 
               />
-            ) : (
-              <Select value={teacherId} onValueChange={setTeacherId} required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Выберите преподавателя" />
-                </SelectTrigger>
-                <SelectContent>
-                  {teachers.map((teacher) => (
-                    <SelectItem key={teacher.id} value={teacher.id}>
-                      {teacher.name} - {teacher.subject}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="teacherId">Преподаватель *</Label>
+              {initialData?.teacherId && mode === "create" ? (
+                <Input 
+                  value={teachers.find(t => t.id === teacherId)?.name || ""} 
+                  disabled 
+                  className="bg-muted"
+                />
+              ) : (
+                <Select value={teacherId} onValueChange={setTeacherId} required>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Выберите" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teachers.map((teacher) => (
+                      <SelectItem key={teacher.id} value={teacher.id}>
+                        {teacher.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          </div>
+
+          {/* Group & Lesson Type - One row */}
+          <div className="grid grid-cols-2 gap-3">
+            {lessonType !== "special" && (
+              <div className="space-y-1.5">
+                <Label htmlFor="groupId">Группа</Label>
+                <Select value={groupId || "none"} onValueChange={(value) => setGroupId(value === "none" ? "" : value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Индивидуальный" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Индивидуальный</SelectItem>
+                    {groups.map((group) => (
+                      <SelectItem key={group.id} value={group.id}>
+                        {group.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {!groupId && (
+              <div className="space-y-1.5">
+                <Label htmlFor="lessonType">Тип</Label>
+                <Select
+                  value={manualLessonType || "individual"}
+                  onValueChange={(value: "group" | "individual" | "special") =>
+                    setManualLessonType(value)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="individual">Индивидуальный</SelectItem>
+                    <SelectItem value="special">Специальный</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             )}
           </div>
 
-          {/* Group selection (optional) */}
-          {lessonType !== "special" && (
-            <div>
-              <Label htmlFor="groupId">Группа (опционально)</Label>
-              <Select value={groupId || "none"} onValueChange={(value) => setGroupId(value === "none" ? "" : value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Не выбрана (индивидуальный урок)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Не выбрана (индивидуальный урок)</SelectItem>
-                  {groups.map((group) => (
-                    <SelectItem key={group.id} value={group.id}>
-                      {group.name} - {group.subject}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground mt-1">
-                Если выбрана группа, урок будет считаться групповым
-              </p>
-            </div>
-          )}
-
-          {/* Lesson Type - Special lessons option */}
-          {!groupId && (
-            <div>
-              <Label htmlFor="lessonType">Тип урока</Label>
-              <Select
-                value={manualLessonType || "individual"}
-                onValueChange={(value: "group" | "individual" | "special") =>
-                  setManualLessonType(value)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="individual">Индивидуальный</SelectItem>
-                  <SelectItem value="special">Специальный</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground mt-1">
-                Текущий тип: {lessonType === "group" ? "Групповой" : lessonType === "special" ? "Специальный" : "Индивидуальный"}
-              </p>
-            </div>
-          )}
-
-          {/* Students - только для индивидуальных и специальных уроков */}
+          {/* Students - Compact chips */}
           {(lessonType === "individual" || lessonType === "special") && (
             <StudentSelector
               students={students}
               selectedStudentIds={selectedStudentIds}
               onSelectionChange={setSelectedStudentIds}
+              compact
             />
           )}
 
-          {/* Date */}
-          <div>
-            <Label htmlFor="date">Дата *</Label>
-            <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
-          </div>
+          {/* Date & Time Section - Gray background block */}
+          <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 space-y-3">
+            <div className="flex items-center gap-2 mb-1">
+              <Calendar className="h-4 w-4 text-slate-500" />
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Дата и время</span>
+            </div>
 
-          {/* Time */}
-          <div className="p-4 rounded-2xl bg-muted/30 space-y-3">
-            <Label className="text-sm font-medium">Время урока *</Label>
+            {/* Date & Room - One row */}
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label htmlFor="startTime" className="text-xs text-muted-foreground">Начало</Label>
-                <Input id="startTime" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} required className="mt-1" />
+              <div className="space-y-1.5">
+                <Label htmlFor="date">Дата *</Label>
+                <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
               </div>
-              <div>
-                <Label htmlFor="endTime" className="text-xs text-muted-foreground">Окончание</Label>
-                <Input id="endTime" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} required className="mt-1" />
+              <div className="space-y-1.5">
+                <Label htmlFor="roomId">Аудитория *</Label>
+                <Select value={roomId} onValueChange={setRoomId} required>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Выберите" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {rooms.map((room) => (
+                      <SelectItem key={room.id} value={room.id}>
+                        {room.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-          </div>
 
-          {/* Room */}
-          <div>
-            <Label htmlFor="roomId">Аудитория *</Label>
-            <Select value={roomId} onValueChange={setRoomId} required>
-              <SelectTrigger>
-                <SelectValue placeholder="Выберите аудиторию" />
-              </SelectTrigger>
-              <SelectContent>
-                {rooms.map((room) => (
-                  <SelectItem key={room.id} value={room.id}>
-                    {room.name} (Вместимость: {room.capacity})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Status - only for edit mode */}
-          {mode === "edit" && (
-            <div>
-              <Label htmlFor="status">Статус</Label>
-              <Select value={status} onValueChange={(value: "scheduled" | "completed" | "cancelled") => setStatus(value)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="scheduled">Запланирован</SelectItem>
-                  <SelectItem value="completed">Проведен</SelectItem>
-                  <SelectItem value="cancelled">Отменен</SelectItem>
-                </SelectContent>
-              </Select>
+            {/* Start & End Time - One row */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="startTime" className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" /> Начало *
+                </Label>
+                <Input id="startTime" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} required />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="endTime" className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" /> Окончание *
+                </Label>
+                <Input id="endTime" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} required />
+              </div>
             </div>
-          )}
 
-          {/* Series Options */}
+            {/* Status - only for edit mode */}
+            {mode === "edit" && (
+              <div className="space-y-1.5 pt-2 border-t border-slate-200 dark:border-slate-700">
+                <Label htmlFor="status">Статус</Label>
+                <Select value={status} onValueChange={(value: "scheduled" | "completed" | "cancelled") => setStatus(value)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="scheduled">Запланирован</SelectItem>
+                    <SelectItem value="completed">Проведен</SelectItem>
+                    <SelectItem value="cancelled">Отменен</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+
+          {/* Series Options - Collapsible */}
           {seriesMode && (
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-violet-50 to-purple-100 dark:from-violet-950 dark:to-purple-900 space-y-4">
+            <div className="p-4 rounded-xl bg-violet-50 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-800 space-y-3">
+              <div className="flex items-center gap-2 mb-1">
+                <Repeat className="h-4 w-4 text-violet-500" />
+                <span className="text-xs font-semibold text-violet-600 dark:text-violet-400 uppercase tracking-wide">Повторение</span>
+              </div>
+
               <div>
-                <Label className="mb-3 block text-violet-800 dark:text-violet-200">Дни недели *</Label>
-                <div className="flex flex-wrap gap-2">
+                <Label className="text-xs mb-2 block">Дни недели *</Label>
+                <div className="flex flex-wrap gap-1.5">
                   {WEEKDAYS.map((day) => (
                     <button
                       key={day.value}
                       type="button"
                       onClick={() => toggleWeekday(day.value)}
-                      className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                         selectedWeekdays.includes(day.value)
-                          ? "bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-md"
-                          : "bg-white/60 dark:bg-white/10 text-violet-700 dark:text-violet-300 hover:bg-white dark:hover:bg-white/20"
+                          ? "bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white shadow-sm"
+                          : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-violet-400"
                       }`}
                     >
                       {day.label}
@@ -459,8 +491,8 @@ export function LessonFormModal({
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="seriesEndDate" className="text-violet-800 dark:text-violet-200">Дата окончания серии *</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="seriesEndDate">До какой даты *</Label>
                 <Input
                   id="seriesEndDate"
                   type="date"
@@ -468,7 +500,6 @@ export function LessonFormModal({
                   onChange={(e) => setSeriesEndDate(e.target.value)}
                   min={date}
                   required={seriesMode}
-                  className="mt-1"
                 />
               </div>
             </div>
@@ -523,15 +554,7 @@ export function LessonFormModal({
           )}
 
           {/* Actions */}
-          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-4 border-t border-border/50">
-            <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto rounded-xl">
-              Отмена
-            </Button>
-            {conflicts?.hasConflicts && (
-              <Button variant="secondary" onClick={() => handleSubmit(true)} className="w-full sm:w-auto rounded-xl">
-                Создать несмотря на конфликты
-              </Button>
-            )}
+          <div className="space-y-2 pt-4 border-t border-slate-100 dark:border-slate-800">
             <Button
               onClick={() => handleSubmit(false)}
               disabled={
@@ -542,9 +565,17 @@ export function LessonFormModal({
                 selectedStudentIds.length === 0 ||
                 (seriesMode && (selectedWeekdays.length === 0 || !seriesEndDate))
               }
-              className="w-full sm:w-auto rounded-xl"
+              className="w-full bg-gradient-to-r from-[#6366f1] via-[#8b5cf6] to-[#a855f7] hover:opacity-90 text-white shadow-md"
             >
-              {mode === "edit" ? "Сохранить" : "Создать"}
+              {mode === "edit" ? "Сохранить изменения" : "Создать урок"}
+            </Button>
+            {conflicts?.hasConflicts && (
+              <Button variant="outline" onClick={() => handleSubmit(true)} className="w-full">
+                Создать несмотря на конфликты
+              </Button>
+            )}
+            <Button variant="ghost" onClick={() => onOpenChange(false)} className="w-full text-muted-foreground">
+              Отмена
             </Button>
           </div>
         </div>

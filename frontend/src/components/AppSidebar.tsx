@@ -145,21 +145,22 @@ export function AppSidebar({ onRestartOnboarding }: AppSidebarProps) {
 
   return (
     <Sidebar className={isCollapsed ? "w-16" : "w-64"} collapsible="icon">
-      <SidebarHeader className={`py-4 ${isCollapsed ? "px-2" : "px-4"}`}>
-        <div className={`flex items-center ${isCollapsed ? "justify-center" : "gap-2.5"}`}>
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg">
+      {/* Logo with more breathing room */}
+      <SidebarHeader className={`pt-6 pb-4 ${isCollapsed ? "px-3" : "px-5"}`}>
+        <div className={`flex items-center ${isCollapsed ? "justify-center" : "gap-3"}`}>
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl">
             <img 
               src="/Neosmart/logo.png" 
               alt="Neosmart Logo" 
-              className="h-8 w-8 object-contain"
+              className="h-9 w-9 object-contain"
             />
           </div>
           {!isCollapsed && (
             <div className="min-w-0 flex-1">
-              <h2 className="text-sm font-semibold text-foreground truncate">
+              <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
                 {settings?.centerName || "Neosmart"}
               </h2>
-              <p className="text-[10px] text-muted-foreground">Учебный центр</p>
+              <p className="text-[10px] text-slate-400">Учебный центр</p>
             </div>
           )}
         </div>
@@ -208,31 +209,48 @@ export function AppSidebar({ onRestartOnboarding }: AppSidebarProps) {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className={`mt-auto ${isCollapsed ? "p-2" : "p-4"}`}>
+      {/* Minimalist profile footer */}
+      <SidebarFooter className={`mt-auto border-t border-slate-200 dark:border-slate-800 ${isCollapsed ? "p-2" : "p-4"}`}>
         {!isCollapsed && user && (
-          <div className="mb-3 p-3 rounded-xl bg-gradient-to-r from-primary/5 to-accent/5">
-            <p className="text-sm font-medium text-foreground">{user.name}</p>
-            <p className="text-xs text-muted-foreground">{user.email}</p>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#6366f1] to-[#a855f7] text-xs font-semibold text-white">
+              {user.name?.charAt(0) || "U"}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">{user.name}</p>
+              <p className="text-[10px] text-slate-400 truncate">{user.email}</p>
+            </div>
           </div>
         )}
-        {onRestartOnboarding && (
+        {isCollapsed && user && (
+          <div className="flex justify-center mb-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-[#6366f1] to-[#a855f7] text-xs font-semibold text-white">
+              {user.name?.charAt(0) || "U"}
+            </div>
+          </div>
+        )}
+        <div className={`flex ${isCollapsed ? "flex-col" : ""} gap-1`}>
+          {onRestartOnboarding && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`${isCollapsed ? "w-full justify-center" : "flex-1 justify-center"} text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800`}
+              onClick={onRestartOnboarding}
+            >
+              <RefreshCcw className="h-4 w-4" />
+              {!isCollapsed && <span className="sr-only">Онбординг</span>}
+            </Button>
+          )}
           <Button
             variant="ghost"
-            className={`${isCollapsed ? "w-full justify-center" : "w-full justify-start gap-3 mb-2"} rounded-xl hover:bg-primary/10`}
-            onClick={onRestartOnboarding}
+            size="sm"
+            className={`${isCollapsed ? "w-full justify-center" : "flex-1 justify-center"} text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30`}
+            onClick={handleLogout}
           >
-            <RefreshCcw className="h-5 w-5" />
-            {!isCollapsed && <span>Пройти онбординг заново</span>}
+            <LogOut className="h-4 w-4" />
+            {!isCollapsed && <span className="sr-only">Выйти</span>}
           </Button>
-        )}
-        <Button
-          variant="ghost"
-          className={`${isCollapsed ? "w-full justify-center" : "w-full justify-start gap-3"} rounded-xl hover:bg-destructive/10 hover:text-destructive`}
-          onClick={handleLogout}
-        >
-          <LogOut className="h-5 w-5" />
-          {!isCollapsed && <span>Выйти</span>}
-        </Button>
+        </div>
       </SidebarFooter>
     </Sidebar>
   );

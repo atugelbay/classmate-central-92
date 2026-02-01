@@ -61,81 +61,114 @@ export function EditStudentDialog({ open, onOpenChange, student }: EditStudentDi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
           <DialogTitle>Редактировать студента</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="name">ФИО *</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              required
-            />
+          {/* Section: Личные данные */}
+          <div className="space-y-3">
+            <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Личные данные</h4>
+            
+            {/* Name - Full width */}
+            <div className="space-y-1.5">
+              <Label htmlFor="name">ФИО *</Label>
+              <Input
+                id="name"
+                placeholder="Иван Иванов"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                required
+              />
+            </div>
+
+            {/* Age & Phone - Two columns */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="age">Возраст *</Label>
+                <Input
+                  id="age"
+                  type="number"
+                  placeholder="14"
+                  value={formData.age}
+                  onChange={(e) => setFormData({ ...formData, age: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="phone">Телефон *</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="+7 (777) 123-45-67"
+                  value={formatKzPhone(formData.phone)}
+                  onChange={(e) => {
+                    const normalized = normalizeKzPhone(e.target.value);
+                    setFormData({ ...formData, phone: normalized });
+                  }}
+                  required
+                />
+              </div>
+            </div>
           </div>
-          <div>
-            <Label htmlFor="age">Возраст *</Label>
-            <Input
-              id="age"
-              type="number"
-              value={formData.age}
-              onChange={(e) => setFormData({ ...formData, age: e.target.value })}
-              required
-            />
+
+          {/* Divider */}
+          <div className="border-t border-slate-100 dark:border-slate-800" />
+
+          {/* Section: Контакты */}
+          <div className="space-y-3">
+            <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Контакты</h4>
+            
+            {/* Email & Address - Two columns */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="ivan@mail.ru"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="address">Адрес</Label>
+                <Input
+                  id="address"
+                  placeholder="ул. Абая, 10"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                />
+              </div>
+            </div>
           </div>
-          <div>
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            />
-          </div>
-          <div>
-            <Label htmlFor="phone">Телефон *</Label>
-            <Input
-              id="phone"
-              type="tel"
-              placeholder="+7 (777) 123-45-67"
-              value={formatKzPhone(formData.phone)}
-              onChange={(e) => {
-                const normalized = normalizeKzPhone(e.target.value);
-                setFormData({ ...formData, phone: normalized });
-              }}
-              required
-            />
-          </div>
-          <div>
-            <Label htmlFor="address">Адрес</Label>
-            <Input
-              id="address"
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
+
+          {/* Actions */}
+          <div className="space-y-2 pt-4 border-t border-slate-100 dark:border-slate-800">
+            <Button 
+              type="submit" 
               disabled={updateStudent.isPending}
+              className="w-full bg-gradient-to-r from-[#6366f1] via-[#8b5cf6] to-[#a855f7] hover:opacity-90 text-white shadow-md"
             >
-              Отмена
-            </Button>
-            <Button type="submit" disabled={updateStudent.isPending}>
               {updateStudent.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Сохранение...
                 </>
               ) : (
-                "Сохранить"
+                "Сохранить изменения"
               )}
             </Button>
-          </DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => onOpenChange(false)}
+              disabled={updateStudent.isPending}
+              className="w-full text-muted-foreground"
+            >
+              Отмена
+            </Button>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
