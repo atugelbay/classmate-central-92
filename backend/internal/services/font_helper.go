@@ -21,9 +21,14 @@ func SetupCyrillicFonts(pdf *gofpdf.Fpdf) {
 		regular string
 		bold    string
 	}{
+		// Local project fonts
 		{"fonts/DejaVuSans.ttf", "fonts/DejaVuSans-Bold.ttf"},
 		{"./fonts/DejaVuSans.ttf", "./fonts/DejaVuSans-Bold.ttf"},
+		// Alpine Linux (Docker)
+		{"/usr/share/fonts/ttf-dejavu/DejaVuSans.ttf", "/usr/share/fonts/ttf-dejavu/DejaVuSans-Bold.ttf"},
+		// Debian/Ubuntu
 		{"/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"},
+		// Windows
 		{"C:/Windows/Fonts/arial.ttf", "C:/Windows/Fonts/arialbd.ttf"},
 	}
 

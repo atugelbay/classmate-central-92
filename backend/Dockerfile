@@ -21,8 +21,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/api
 # Runtime stage
 FROM alpine:latest
 
-# Install runtime dependencies
-RUN apk --no-cache add ca-certificates tzdata
+# Install runtime dependencies including fonts for PDF generation with Cyrillic support
+RUN apk --no-cache add ca-certificates tzdata ttf-dejavu
 
 WORKDIR /root/
 
