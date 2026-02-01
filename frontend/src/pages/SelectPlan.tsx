@@ -47,7 +47,8 @@ export default function SelectPlan() {
   const loadPlans = async () => {
     try {
       const data = await licenseAPI.getPlans();
-      setPlans(data);
+      // Ensure data is an array
+      setPlans(Array.isArray(data) ? data : []);
     } catch (error) {
       toast.error("Не удалось загрузить тарифы");
     } finally {

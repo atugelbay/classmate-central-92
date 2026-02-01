@@ -5,7 +5,8 @@ export const lessonsAPI = {
   getAll: async (): Promise<Lesson[]> => {
     const response = await apiClient.get('/lessons');
     // Keep original ISO strings with offset to avoid client timezone shifts
-    return response.data.map((lesson: any) => ({
+    const data = Array.isArray(response.data) ? response.data : [];
+    return data.map((lesson: any) => ({
       ...lesson,
       start: lesson.start,
       end: lesson.end,
@@ -14,7 +15,8 @@ export const lessonsAPI = {
 
   getIndividual: async (): Promise<Lesson[]> => {
     const response = await apiClient.get('/lessons/individual');
-    return response.data.map((lesson: any) => ({
+    const data = Array.isArray(response.data) ? response.data : [];
+    return data.map((lesson: any) => ({
       ...lesson,
       start: lesson.start,
       end: lesson.end,
@@ -36,7 +38,8 @@ export const lessonsAPI = {
     if (endDate) params.append('endDate', endDate);
     
     const response = await apiClient.get(`/lessons/teacher/${teacherId}?${params.toString()}`);
-    return response.data.map((lesson: any) => ({
+    const data = Array.isArray(response.data) ? response.data : [];
+    return data.map((lesson: any) => ({
       ...lesson,
       // Keep original ISO strings with offset to avoid client timezone shifts
       start: lesson.start,
@@ -73,9 +76,10 @@ export const lessonsAPI = {
   checkConflicts: async (data: CheckConflictsRequest): Promise<CheckConflictsResponse> => {
     const response = await apiClient.post('/lessons/check-conflicts', data);
     // Convert date strings to Date objects in conflicts
+    const conflicts = Array.isArray(response.data?.conflicts) ? response.data.conflicts : [];
     return {
       ...response.data,
-      conflicts: response.data.conflicts.map((conflict: any) => ({
+      conflicts: conflicts.map((conflict: any) => ({
         ...conflict,
         // Keep as strings to avoid implicit local TZ shifts in UI
         start: conflict.start,

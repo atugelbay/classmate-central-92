@@ -13,7 +13,8 @@ export const leadsApi = {
     if (filters?.source) params.append("source", filters.source);
     
     const response = await apiClient.get(`/leads?${params.toString()}`);
-    return response.data.map((lead: any) => ({
+    const data = Array.isArray(response.data) ? response.data : [];
+    return data.map((lead: any) => ({
       ...lead,
       createdAt: new Date(lead.createdAt),
       updatedAt: new Date(lead.updatedAt),
@@ -59,7 +60,8 @@ export const leadsApi = {
   // Activities
   getActivities: async (leadId: string): Promise<LeadActivity[]> => {
     const response = await apiClient.get(`/leads/${leadId}/activities`);
-    return response.data.map((activity: any) => ({
+    const data = Array.isArray(response.data) ? response.data : [];
+    return data.map((activity: any) => ({
       ...activity,
       createdAt: new Date(activity.createdAt),
     }));
@@ -79,7 +81,8 @@ export const leadsApi = {
   // Tasks
   getTasks: async (leadId: string): Promise<LeadTask[]> => {
     const response = await apiClient.get(`/leads/${leadId}/tasks`);
-    return response.data.map((task: any) => ({
+    const data = Array.isArray(response.data) ? response.data : [];
+    return data.map((task: any) => ({
       ...task,
       createdAt: new Date(task.createdAt),
       dueDate: task.dueDate ? new Date(task.dueDate) : undefined,

@@ -47,7 +47,8 @@ export function BillingSettings() {
         licenseAPI.getPlans(),
       ]);
       setLicenseData(licenseResponse);
-      setPlans(plansResponse);
+      // Ensure plansResponse is an array
+      setPlans(Array.isArray(plansResponse) ? plansResponse : []);
       if (licenseResponse.license) {
         setSelectedPlanId(licenseResponse.license.planId);
       }
