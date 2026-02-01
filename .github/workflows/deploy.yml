@@ -17,8 +17,8 @@ jobs:
         with:
           node-version: 20
 
-      # ---------- Build App ----------
-      - name: Build app
+      # ---------- Build Main App ----------
+      - name: Build main app
         working-directory: ./frontend
         run: |
           npm install
@@ -35,15 +35,15 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -p ${{ secrets.DEPLOY_PORT }} ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
 
-      # ---------- Deploy App ----------
-      - name: Deploy app to server
+      # ---------- Deploy Main App ----------
+      - name: Deploy main app to server
         run: |
           rsync -az --delete \
             ./frontend/dist/ \
             ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/home/ubuntu/site/app/
 
-      # ---------- Deploy Backend ----------
-      - name: Deploy backend via docker-compose
+      # ---------- Deploy Backend + Admin ----------
+      - name: Deploy backend and admin via docker-compose
         run: |
           ssh -p ${{ secrets.DEPLOY_PORT }} ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'SSH'
             set -e
@@ -55,13 +55,16 @@ jobs:
             echo "▶ Ensure docker network exists"
             docker network create neosmart-net >/dev/null 2>&1 || true
 
-            echo "▶ Update backend"
+            echo "▶ Update backend repo"
             cd /home/ubuntu/services/api
             git pull
 
-            echo "▶ Build & run backend"
+            echo "▶ Build & run all services (backend + admin)"
             docker-compose -f docker-compose.prod.yml up -d --build
 
             echo "▶ Restart nginx (safe)"
             docker restart neosmart-nginx || true
+
+            echo "▶ Show running containers"
+            docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
           SSH

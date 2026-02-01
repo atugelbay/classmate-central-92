@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  admin-backend:
+    build: ./backend
+    container_name: classmate_admin_api
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/classmate_central}
+      - MAIN_API_URL=${MAIN_API_URL:-http://backend:8080}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-superadmin}
+      - ADMIN_PASSWORD_HASH=${ADMIN_PASSWORD_HASH}
+      - ADMIN_JWT_SECRET=${ADMIN_JWT_SECRET:-change-this-in-production}
+      - ADMIN_JWT_EXPIRES_IN=${ADMIN_JWT_EXPIRES_IN:-24h}
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:5174}
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - neosmart-net
+
+  admin-frontend:
+    build: ./frontend
+    container_name: classmate_admin_ui
+    ports:
+      - "5174:80"
+    depends_on:
+      admin-backend:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - neosmart-net
+
+networks:
+  neosmart-net:
+    external: true

@@ -42,6 +42,40 @@ services:
     networks:
       - neosmart-net
 
+  # ============ ADMIN PANEL ============
+  admin-backend:
+    build:
+      context: ./admin/backend
+      dockerfile: Dockerfile
+    container_name: classmate_admin_api_prod
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@postgres:5432/${DB_NAME:-classmate_central}
+      MAIN_API_URL: http://backend:8080
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-superadmin}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH}
+      ADMIN_JWT_SECRET: ${ADMIN_JWT_SECRET}
+      ADMIN_JWT_EXPIRES_IN: 24h
+      CORS_ORIGIN: https://admin.neosmart.kz
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: always
+    networks:
+      - neosmart-net
+
+  admin-frontend:
+    build:
+      context: ./admin/frontend
+      dockerfile: Dockerfile
+    container_name: classmate_admin_ui_prod
+    depends_on:
+      - admin-backend
+    restart: always
+    networks:
+      - neosmart-net
+
 volumes:
   postgres_data_prod:
 
