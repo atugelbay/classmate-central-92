@@ -105,7 +105,7 @@ export function MigrationSettings() {
   useEffect(() => {
     if (isMigrating && migrationStatus) {
       const originalTitle = document.title;
-      document.title = `[${migrationStatus.progress}%] Миграция... - ${originalTitle.split(' - ').pop() || 'Classmate Central'}`;
+      document.title = `[${migrationStatus.progress}%] Миграция... - ${originalTitle.split(' - ').pop() || 'Neosmart'}`;
       
       return () => {
         document.title = originalTitle;

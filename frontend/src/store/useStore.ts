@@ -7,7 +7,7 @@ interface Store {
 
 export const useStore = create<Store>()(() => ({
   settings: {
-    centerName: "Образовательный Центр",
+    centerName: "Neosmart",
     themeColor: "#8B5CF6",
   },
 }));

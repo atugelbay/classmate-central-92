@@ -149,15 +149,15 @@ export function AppSidebar({ onRestartOnboarding }: AppSidebarProps) {
         <div className={`flex items-center ${isCollapsed ? "justify-center" : "gap-2.5"}`}>
           <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden">
             <img 
-              src="/SmartCRM/4.svg" 
-              alt="SmartCRM Logo" 
+              src="/Neosmart/logo.png" 
+              alt="Neosmart Logo" 
               className="h-full w-full object-contain"
             />
           </div>
           {!isCollapsed && (
             <div className="min-w-0 flex-1">
               <h2 className="text-sm font-semibold text-sidebar-foreground truncate">
-                {settings?.centerName || "Образовательный Центр"}
+                {settings?.centerName || "Neosmart"}
               </h2>
             </div>
           )}
