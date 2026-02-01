@@ -21,18 +21,22 @@ app.use(cors({
 }));
 
 // Rate limiting
+const isDev = config.nodeEnv === 'development';
+
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  windowMs: 1 * 60 * 1000, // 1 minute window
+  max: isDev ? 0 : 300, // 300 requests per minute in prod
   message: { error: 'Too many requests, please try again later.' },
+  skip: () => isDev, // Skip rate limiting entirely in dev
 });
 app.use(limiter);
 
-// Stricter rate limiting for auth routes
+// Rate limiting for auth routes (protect against brute force)
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 5,
-  message: { error: 'Too many login attempts, please try again later.' },
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: isDev ? 0 : 10, // 10 login attempts per 5 min
+  message: { error: 'Too many login attempts, please try again in 5 minutes.' },
+  skip: () => isDev, // Skip rate limiting entirely in dev
 });
 
 // Body parsing

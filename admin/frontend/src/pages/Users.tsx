@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { usersApi } from '@/api/client';
+import { usersApi, companiesApi } from '@/api/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,23 +20,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2, ChevronLeft, ChevronRight, Search, CheckCircle, XCircle } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight, Search, CheckCircle, XCircle, X } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function Users() {
   const [page, setPage] = useState(1);
   const [emailFilter, setEmailFilter] = useState('');
   const [verifiedFilter, setVerifiedFilter] = useState<string>('all');
+  const [companyFilter, setCompanyFilter] = useState<string>('all');
   const limit = 50;
 
+  // Fetch companies for filter dropdown
+  const { data: companiesData } = useQuery({
+    queryKey: ['companies', 'all'],
+    queryFn: () => companiesApi.getAll(1, 1000),
+  });
+
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['users', page, limit, emailFilter, verifiedFilter],
+    queryKey: ['users', page, limit, emailFilter, verifiedFilter, companyFilter],
     queryFn: () =>
       usersApi.getAll({
         page,
         limit,
         email: emailFilter || undefined,
         is_verified: verifiedFilter === 'all' ? undefined : verifiedFilter === 'true',
+        company_id: companyFilter === 'all' ? undefined : companyFilter,
       }),
   });
 
@@ -112,8 +120,8 @@ export default function Users() {
         </CardHeader>
         <CardContent>
           {/* Filters */}
-          <div className="flex gap-4 mb-4">
-            <div className="flex-1 flex gap-2">
+          <div className="flex flex-wrap gap-4 mb-4">
+            <div className="flex-1 min-w-[200px] flex gap-2">
               <Input
                 placeholder="Search by email..."
                 value={emailFilter}
@@ -124,17 +132,69 @@ export default function Users() {
                 <Search className="h-4 w-4" />
               </Button>
             </div>
-            <Select value={verifiedFilter} onValueChange={setVerifiedFilter}>
+            <Select value={companyFilter} onValueChange={(v) => { setCompanyFilter(v); setPage(1); }}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="All Companies" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Companies</SelectItem>
+                {companiesData?.data?.map((company: { id: string; name: string }) => (
+                  <SelectItem key={company.id} value={company.id}>
+                    {company.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={verifiedFilter} onValueChange={(v) => { setVerifiedFilter(v); setPage(1); }}>
               <SelectTrigger className="w-40">
                 <SelectValue placeholder="Verification" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="true">Verified</SelectItem>
                 <SelectItem value="false">Unverified</SelectItem>
               </SelectContent>
             </Select>
+            {(companyFilter !== 'all' || verifiedFilter !== 'all' || emailFilter) && (
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => {
+                  setCompanyFilter('all');
+                  setVerifiedFilter('all');
+                  setEmailFilter('');
+                  setPage(1);
+                }}
+              >
+                <X className="h-4 w-4 mr-1" />
+                Clear filters
+              </Button>
+            )}
           </div>
+
+          {/* Active filters display */}
+          {(companyFilter !== 'all' || verifiedFilter !== 'all') && (
+            <div className="flex gap-2 mb-4">
+              {companyFilter !== 'all' && (
+                <Badge variant="secondary" className="gap-1">
+                  Company: {companiesData?.data?.find((c: { id: string }) => c.id === companyFilter)?.name}
+                  <X 
+                    className="h-3 w-3 cursor-pointer" 
+                    onClick={() => { setCompanyFilter('all'); setPage(1); }}
+                  />
+                </Badge>
+              )}
+              {verifiedFilter !== 'all' && (
+                <Badge variant="secondary" className="gap-1">
+                  {verifiedFilter === 'true' ? 'Verified' : 'Unverified'}
+                  <X 
+                    className="h-3 w-3 cursor-pointer" 
+                    onClick={() => { setVerifiedFilter('all'); setPage(1); }}
+                  />
+                </Badge>
+              )}
+            </div>
+          )}
 
           <Table>
             <TableHeader>

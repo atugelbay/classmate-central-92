@@ -205,11 +205,22 @@ export class DatabaseService {
       throw new Error('Only SELECT queries are allowed');
     }
 
-    // Check for potentially dangerous keywords
-    const dangerousKeywords = ['insert', 'update', 'delete', 'drop', 'truncate', 'alter', 'create', 'grant', 'revoke'];
-    for (const keyword of dangerousKeywords) {
-      if (trimmedSql.includes(keyword)) {
-        throw new Error(`Query contains forbidden keyword: ${keyword}`);
+    // Check for potentially dangerous SQL statements (whole words only)
+    // Word boundary \b ensures we don't match "created_at" when checking for "create"
+    const dangerousPatterns = [
+      /\binsert\s+into\b/i,
+      /\bupdate\s+\w+\s+set\b/i,
+      /\bdelete\s+from\b/i,
+      /\bdrop\s+(table|database|index)\b/i,
+      /\btruncate\b/i,
+      /\balter\s+table\b/i,
+      /\bcreate\s+(table|database|index)\b/i,
+      /\bgrant\b/i,
+      /\brevoke\b/i,
+    ];
+    for (const pattern of dangerousPatterns) {
+      if (pattern.test(trimmedSql)) {
+        throw new Error('Query contains forbidden SQL statement');
       }
     }
 
