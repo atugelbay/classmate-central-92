@@ -3,6 +3,12 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
+// Get base URL without /api suffix for public endpoints
+const getBaseURL = () => {
+  const url = API_URL.replace(/\/api\/?$/, ''); // Remove /api or /api/ from end
+  return url;
+};
+
 // Types for billing/license
 export interface Plan {
   id: string;
@@ -64,8 +70,10 @@ export const licenseAPI = {
   // Get all available plans (public endpoint, no auth required)
   getPlans: async (): Promise<Plan[]> => {
     // Use plain axios without auth interceptor for public endpoint
-    const response = await axios.get(`${API_URL.replace('/api', '')}/api/plans`);
-    return response.data;
+    const baseURL = getBaseURL();
+    const response = await axios.get(`${baseURL}/api/plans`);
+    // Ensure we return an array
+    return Array.isArray(response.data) ? response.data : [];
   },
 
   // Get current company license (requires auth)
