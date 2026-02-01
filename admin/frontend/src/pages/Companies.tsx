@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Loader2, ChevronLeft, ChevronRight, Building2, Users, GraduationCap } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight, Users, GraduationCap } from 'lucide-react';
 import { format } from 'date-fns';
 
 export default function Companies() {
