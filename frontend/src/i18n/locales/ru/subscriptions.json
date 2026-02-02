@@ -1,0 +1,79 @@
+{
+  "title": "Абонементы",
+  "description": "Управление абонементами и посещаемостью",
+  "tabs": {
+    "subscriptions": "Абонементы студентов",
+    "types": "Типы абонементов"
+  },
+  "stats": {
+    "active": "Активные",
+    "expired": "Истекшие",
+    "frozen": "Заморожено",
+    "lessonsRemaining": "Осталось уроков",
+    "subscriptions": "Абонементов",
+    "total": "Всего"
+  },
+  "studentSubscriptions": "Абонементы студентов",
+  "issueSubscription": "Выдать абонемент",
+  "issue": "Выдать",
+  "subscriptionTypes": "Типы абонементов",
+  "createType": "Создать тип",
+  "allTypes": "Все типы",
+  "billingTypes": {
+    "per_lesson": "Поурочный",
+    "monthly": "Помесячный",
+    "unlimited": "Безлимитный"
+  },
+  "table": {
+    "student": "Студент",
+    "type": "Тип",
+    "lessonsRemaining": "Уроков осталось",
+    "prices": "Цены",
+    "period": "Период",
+    "status": "Статус",
+    "freeze": "Заморозка",
+    "actions": "Действия",
+    "pricePerLesson": "{{price}} ₸/урок"
+  },
+  "noSubscriptions": "Нет абонементов",
+  "noTypes": "Нет типов абонементов",
+  "noTypesWithFilter": "Нет типов с выбранной тарификацией",
+  "dialog": {
+    "newSubscription": "Новый абонемент",
+    "editSubscription": "Редактировать абонемент",
+    "newType": "Новый тип абонемента",
+    "editType": "Редактировать тип",
+    "student": "Студент",
+    "selectStudent": "Выберите студента",
+    "subscriptionType": "Тип абонемента",
+    "selectType": "Выберите тип",
+    "autoFilledFromTemplate": "Автоматически заполнено из шаблона",
+    "totalLessons": "Всего уроков",
+    "usedLessons": "Использовано уроков",
+    "totalPrice": "Общая стоимость",
+    "pricePerLesson": "Цена за урок",
+    "lessonsRemaining": "Осталось уроков",
+    "calculatedAuto": "(вычисляется автоматически)",
+    "startDate": "Дата начала",
+    "endDate": "Дата окончания (необязательно)",
+    "status": "Статус",
+    "freezeDaysRemaining": "Осталось дней заморозки",
+    "name": "Название",
+    "description": "Описание",
+    "lessonsCount": "Количество уроков",
+    "price": "Цена (₸)",
+    "validityDays": "Срок действия (дней, необязательно)",
+    "unlimited": "Неограничено",
+    "canFreeze": "Можно замораживать"
+  },
+  "status": {
+    "active": "Активный",
+    "frozen": "Заморожен",
+    "expired": "Истёк"
+  },
+  "days": "дней",
+  "lessons": "уроков",
+  "pricePerLessonLabel": "Цена за урок",
+  "validity": "Срок",
+  "deleteConfirm": "Вы уверены, что хотите удалить этот абонемент?"
+}

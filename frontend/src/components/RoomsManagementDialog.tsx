@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,18 +31,20 @@ interface RoomFormData {
   status: "active" | "inactive";
 }
 
-const colorOptions = [
-  { value: "#3b82f6", label: "Синий" },
-  { value: "#10b981", label: "Зеленый" },
-  { value: "#f59e0b", label: "Оранжевый" },
-  { value: "#ef4444", label: "Красный" },
-  { value: "#8b5cf6", label: "Фиолетовый" },
-  { value: "#ec4899", label: "Розовый" },
-  { value: "#6366f1", label: "Индиго" },
-  { value: "#14b8a6", label: "Бирюзовый" },
-];
-
 export function RoomsManagementDialog({ open, onOpenChange }: RoomsManagementDialogProps) {
+  const { t, i18n } = useTranslation(["schedule", "common"]);
+  
+  const colorOptions = [
+    { value: "#3b82f6", label: i18n.language === 'kk' ? 'Көк' : i18n.language === 'en' ? 'Blue' : 'Синий' },
+    { value: "#10b981", label: i18n.language === 'kk' ? 'Жасыл' : i18n.language === 'en' ? 'Green' : 'Зеленый' },
+    { value: "#f59e0b", label: i18n.language === 'kk' ? 'Қызғылт сары' : i18n.language === 'en' ? 'Orange' : 'Оранжевый' },
+    { value: "#ef4444", label: i18n.language === 'kk' ? 'Қызыл' : i18n.language === 'en' ? 'Red' : 'Красный' },
+    { value: "#8b5cf6", label: i18n.language === 'kk' ? 'Күлгін' : i18n.language === 'en' ? 'Purple' : 'Фиолетовый' },
+    { value: "#ec4899", label: i18n.language === 'kk' ? 'Қызғылт' : i18n.language === 'en' ? 'Pink' : 'Розовый' },
+    { value: "#6366f1", label: i18n.language === 'kk' ? 'Индиго' : i18n.language === 'en' ? 'Indigo' : 'Индиго' },
+    { value: "#14b8a6", label: i18n.language === 'kk' ? 'Көгілдір' : i18n.language === 'en' ? 'Teal' : 'Бирюзовый' },
+  ];
+
   const { data: rooms = [] } = useRooms();
   const createRoom = useCreateRoom();
   const updateRoom = useUpdateRoom();
@@ -90,11 +93,11 @@ export function RoomsManagementDialog({ open, onOpenChange }: RoomsManagementDia
 
     try {
       await deleteRoom.mutateAsync(roomToDelete.id);
-      toast.success("Аудитория удалена");
+      toast.success(i18n.language === 'kk' ? 'Аудитория жойылды' : i18n.language === 'en' ? 'Room deleted' : 'Аудитория удалена');
       setDeleteConfirmOpen(false);
       setRoomToDelete(null);
     } catch (error: any) {
-      toast.error(`Ошибка: ${error.response?.data?.error || error.message}`);
+      toast.error(`${t("common:error")}: ${error.response?.data?.error || error.message}`);
     }
   };
 
@@ -107,14 +110,14 @@ export function RoomsManagementDialog({ open, onOpenChange }: RoomsManagementDia
           id: editingRoom.id,
           data: formData,
         });
-        toast.success("Аудитория обновлена");
+        toast.success(i18n.language === 'kk' ? 'Аудитория жаңартылды' : i18n.language === 'en' ? 'Room updated' : 'Аудитория обновлена');
       } else {
         await createRoom.mutateAsync(formData);
-        toast.success("Аудитория создана");
+        toast.success(i18n.language === 'kk' ? 'Аудитория құрылды' : i18n.language === 'en' ? 'Room created' : 'Аудитория создана');
       }
       resetForm();
     } catch (error: any) {
-      toast.error(`Ошибка: ${error.response?.data?.error || error.message}`);
+      toast.error(`${t("common:error")}: ${error.response?.data?.error || error.message}`);
     }
   };
 
@@ -125,7 +128,7 @@ export function RoomsManagementDialog({ open, onOpenChange }: RoomsManagementDia
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Building2 className="h-5 w-5" />
-              Управление аудиториями
+              {i18n.language === 'kk' ? 'Аудиторияларды басқару' : i18n.language === 'en' ? 'Room Management' : 'Управление аудиториями'}
             </DialogTitle>
           </DialogHeader>
 
@@ -137,7 +140,7 @@ export function RoomsManagementDialog({ open, onOpenChange }: RoomsManagementDia
                 className="w-full rounded-xl"
               >
                 <Plus className="mr-2 h-4 w-4" />
-                Добавить аудиторию
+                {t("rooms.add")}
               </Button>
             )}
 
@@ -146,18 +149,18 @@ export function RoomsManagementDialog({ open, onOpenChange }: RoomsManagementDia
               <div className="p-5 rounded-2xl bg-gradient-to-br from-violet-50 to-purple-100 dark:from-violet-950 dark:to-purple-900">
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                      <Label htmlFor="name">Название *</Label>
+                      <Label htmlFor="name">{t("rooms.name")} *</Label>
                       <Input
                         id="name"
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        placeholder="Например: Аудитория 101"
+                        placeholder={i18n.language === 'kk' ? 'Мысалы: Аудитория 101' : i18n.language === 'en' ? 'E.g.: Room 101' : 'Например: Аудитория 101'}
                         required
                       />
                     </div>
 
                     <div>
-                      <Label htmlFor="capacity">Вместимость *</Label>
+                      <Label htmlFor="capacity">{t("rooms.capacity")} *</Label>
                       <Input
                         id="capacity"
                         type="number"
@@ -169,7 +172,7 @@ export function RoomsManagementDialog({ open, onOpenChange }: RoomsManagementDia
                     </div>
 
                     <div>
-                      <Label>Цвет</Label>
+                      <Label>{t("rooms.color")}</Label>
                       <div className="grid grid-cols-4 gap-3 mt-2">
                         {colorOptions.map((option) => (
                           <button
@@ -196,7 +199,7 @@ export function RoomsManagementDialog({ open, onOpenChange }: RoomsManagementDia
                         className="flex-1 rounded-xl"
                         disabled={createRoom.isPending || updateRoom.isPending}
                       >
-                        Отмена
+                        {t("common:cancel")}
                       </Button>
                       <Button
                         type="submit"
@@ -206,10 +209,10 @@ export function RoomsManagementDialog({ open, onOpenChange }: RoomsManagementDia
                         {createRoom.isPending || updateRoom.isPending ? (
                           <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Сохранение...
+                            {t("common:saving")}
                           </>
                         ) : (
-                          <>{editingRoom ? "Обновить" : "Создать"}</>
+                          <>{editingRoom ? t("common:update") : t("common:create")}</>
                         )}
                       </Button>
                     </div>
@@ -220,12 +223,12 @@ export function RoomsManagementDialog({ open, onOpenChange }: RoomsManagementDia
             {/* Rooms List */}
             <div className="space-y-2">
               <h3 className="text-sm font-medium text-muted-foreground">
-                Аудитории ({rooms.length})
+                {t("rooms.title")} ({rooms.length})
               </h3>
               {rooms.length === 0 ? (
                 <Card>
                   <CardContent className="py-8 text-center text-muted-foreground">
-                    Нет аудиторий. Добавьте первую аудиторию.
+                    {i18n.language === 'kk' ? 'Аудиториялар жоқ. Бірінші аудиторияны қосыңыз.' : i18n.language === 'en' ? 'No rooms. Add the first room.' : 'Нет аудиторий. Добавьте первую аудиторию.'}
                   </CardContent>
                 </Card>
               ) : (
@@ -250,7 +253,7 @@ export function RoomsManagementDialog({ open, onOpenChange }: RoomsManagementDia
                           <div>
                             <p className="font-semibold">{room.name}</p>
                             <p className="text-sm text-muted-foreground">
-                              Вместимость: {room.capacity} чел.
+                              {t("rooms.capacity")}: {room.capacity} {i18n.language === 'kk' ? 'адам' : i18n.language === 'en' ? 'people' : 'чел.'}
                             </p>
                           </div>
                         </div>
@@ -292,19 +295,24 @@ export function RoomsManagementDialog({ open, onOpenChange }: RoomsManagementDia
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Удалить аудиторию?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {i18n.language === 'kk' ? 'Аудиторияны жою керек пе?' : i18n.language === 'en' ? 'Delete room?' : 'Удалить аудиторию?'}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Вы уверены, что хотите удалить аудиторию "{roomToDelete?.name}"?
-              Это действие нельзя отменить.
+              {i18n.language === 'kk' 
+                ? `"${roomToDelete?.name}" аудиториясын жоюға сенімдісіз бе? Бұл әрекетті қайтару мүмкін емес.`
+                : i18n.language === 'en'
+                ? `Are you sure you want to delete room "${roomToDelete?.name}"? This action cannot be undone.`
+                : `Вы уверены, что хотите удалить аудиторию "${roomToDelete?.name}"? Это действие нельзя отменить.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogCancel>{t("common:cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConfirm}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Удалить
+              {t("common:delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

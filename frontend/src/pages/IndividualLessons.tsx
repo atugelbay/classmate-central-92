@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import moment from "moment";
 import { PageHeader } from "@/components/PageHeader";
 import "moment/locale/ru";
+import "moment/locale/kk";
 import { useIndividualLessons, useTeachers, useStudents, useRooms, useUpdateLesson, useDeleteLesson } from "@/hooks/useData";
 import { LessonFormModal } from "@/components/LessonFormModal";
 import { Button } from "@/components/ui/button";
@@ -17,8 +19,6 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-
-moment.locale("ru");
 
 const ITEMS_PER_PAGE = 39;
 import {
@@ -57,6 +57,9 @@ interface IndividualSchedule {
 }
 
 export default function IndividualLessons() {
+  const { t, i18n } = useTranslation("individual");
+  moment.locale(i18n.language);
+  
   const { data: lessons = [], isLoading: lessonsLoading } = useIndividualLessons();
   const { data: teachers = [], isLoading: teachersLoading } = useTeachers();
   const { data: students = [], isLoading: studentsLoading } = useStudents();
@@ -249,10 +252,10 @@ export default function IndividualLessons() {
     
     try {
       await deleteLesson.mutateAsync(deletingLesson.id);
-      toast.success("Занятие успешно удалено");
+      toast.success(t("deleted"));
       setDeletingLesson(null);
     } catch (error) {
-      toast.error("Ошибка при удалении занятия");
+      toast.error(t("deleteError"));
     }
   };
 
@@ -274,15 +277,13 @@ export default function IndividualLessons() {
   };
 
   const getDayName = (dayOfWeek: number) => {
-    const days = ["Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"];
+    const days = t("days.full", { returnObjects: true }) as string[];
     return days[dayOfWeek];
   };
 
   const formatDaysOfWeek = (daysOfWeek: number[]) => {
-    const dayNames = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
-    // Сортируем дни недели (0 = воскресенье, 1-6 = понедельник-суббота)
+    const dayNames = t("days.short", { returnObjects: true }) as string[];
     const sortedDays = [...daysOfWeek].sort((a, b) => {
-      // Преобразуем воскресенье (0) в 7 для правильной сортировки
       const aAdj = a === 0 ? 7 : a;
       const bAdj = b === 0 ? 7 : b;
       return aAdj - bAdj;
@@ -305,7 +306,7 @@ export default function IndividualLessons() {
             </div>
             <div className="flex gap-2">
               <Badge variant={schedule.upcomingCount > 0 ? "default" : "secondary"}>
-                {schedule.upcomingCount > 0 ? "Активно" : "Завершено"}
+                {schedule.upcomingCount > 0 ? t("status.active") : t("status.completed")}
               </Badge>
             </div>
           </div>
@@ -315,7 +316,7 @@ export default function IndividualLessons() {
           <div className="p-3 bg-blue-50 rounded-lg">
             <div className="flex items-center gap-2 text-sm font-medium text-blue-900 mb-2">
               <CalendarDays className="h-4 w-4" />
-              <span>Расписание</span>
+              <span>{t("schedule")}</span>
             </div>
             <div className="text-sm text-blue-800 space-y-1">
               {schedule.scheduleSlots.map((slot, idx) => (
@@ -343,7 +344,7 @@ export default function IndividualLessons() {
           {/* Next lesson */}
           {schedule.nextLesson && (
             <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-              <p className="text-xs font-medium text-green-900 mb-1">Ближайшее занятие:</p>
+              <p className="text-xs font-medium text-green-900 mb-1">{t("nextLesson")}:</p>
               <p className="text-sm text-green-800">
                 {moment(schedule.nextLesson.start).format("DD MMMM, dddd")} в {moment(schedule.nextLesson.start).format("HH:mm")}
               </p>
@@ -353,11 +354,11 @@ export default function IndividualLessons() {
           {/* Stats */}
           <div className="grid grid-cols-2 gap-2 pt-2">
             <div className="p-2 bg-orange-50 rounded text-center">
-              <p className="text-xs text-muted-foreground">Запланировано</p>
+              <p className="text-xs text-muted-foreground">{t("planned")}</p>
               <p className="text-lg font-bold text-orange-900">{schedule.upcomingCount}</p>
             </div>
             <div className="p-2 bg-green-50 rounded text-center">
-              <p className="text-xs text-muted-foreground">Проведено</p>
+              <p className="text-xs text-muted-foreground">{t("conducted")}</p>
               <p className="text-lg font-bold text-green-900">{schedule.completedCount}</p>
             </div>
           </div>
@@ -373,12 +374,12 @@ export default function IndividualLessons() {
               {isExpanded ? (
                 <>
                   <ChevronUp className="h-4 w-4 mr-1" />
-                  Скрыть даты ({upcomingLessons.length})
+                  {t("hideDates")} ({upcomingLessons.length})
                 </>
               ) : (
                 <>
                   <ChevronDown className="h-4 w-4 mr-1" />
-                  Показать даты ({upcomingLessons.length})
+                  {t("showDates")} ({upcomingLessons.length})
                 </>
               )}
             </Button>
@@ -418,7 +419,7 @@ export default function IndividualLessons() {
               ))}
               {upcomingLessons.length > 10 && (
                 <p className="text-xs text-muted-foreground text-center">
-                  и еще {upcomingLessons.length - 10} занятий...
+                  {t("andMore", { count: upcomingLessons.length - 10 })}
                 </p>
               )}
             </div>
@@ -433,7 +434,7 @@ export default function IndividualLessons() {
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Загрузка занятий...</p>
+          <p className="mt-4 text-muted-foreground">{t("loading")}</p>
         </div>
       </div>
     );
@@ -442,13 +443,13 @@ export default function IndividualLessons() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Индивидуальные занятия"
-        description="Управление индивидуальными уроками"
+        title={t("title")}
+        description={t("description")}
         actions={
           <Button onClick={handleCreateLesson} size="sm" className="sm:size-default">
             <Plus className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Создать занятие</span>
-            <span className="sm:hidden">Создать</span>
+            <span className="hidden sm:inline">{t("createLesson")}</span>
+            <span className="sm:hidden">{t("create")}</span>
           </Button>
         }
       />
@@ -457,7 +458,7 @@ export default function IndividualLessons() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
         <Input
-          placeholder="Поиск по названию, предмету, учителю или студенту..."
+          placeholder={t("searchPlaceholder")}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-10"
@@ -468,19 +469,19 @@ export default function IndividualLessons() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="pb-3">
-            <p className="text-sm text-muted-foreground">Расписаний</p>
+            <p className="text-sm text-muted-foreground">{t("stats.schedules")}</p>
             <p className="text-2xl font-bold">{totalSchedules}</p>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader className="pb-3">
-            <p className="text-sm text-muted-foreground">Запланировано уроков</p>
+            <p className="text-sm text-muted-foreground">{t("stats.scheduledLessons")}</p>
             <p className="text-2xl font-bold">{totalUpcoming}</p>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader className="pb-3">
-            <p className="text-sm text-muted-foreground">Проведено уроков</p>
+            <p className="text-sm text-muted-foreground">{t("stats.completedLessons")}</p>
             <p className="text-2xl font-bold">{totalCompleted}</p>
           </CardHeader>
         </Card>
@@ -489,7 +490,7 @@ export default function IndividualLessons() {
       {/* Schedules List */}
       {filteredSchedules.length > 0 ? (
         <div>
-          <h2 className="text-xl font-semibold mb-4">Индивидуальные расписания</h2>
+          <h2 className="text-xl font-semibold mb-4">{t("schedulesList")}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {paginatedSchedules.map(renderScheduleCard)}
           </div>
@@ -540,16 +541,16 @@ export default function IndividualLessons() {
       ) : (
         <div className="text-center py-12">
           <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Нет индивидуальных занятий</h3>
+          <h3 className="text-lg font-semibold mb-2">{t("noLessons")}</h3>
           <p className="text-muted-foreground mb-4">
             {searchQuery
-              ? "По вашему запросу ничего не найдено"
-              : "Создайте первое индивидуальное занятие"}
+              ? t("noSearchResults")
+              : t("createFirst")}
           </p>
           {!searchQuery && (
             <Button onClick={handleCreateLesson}>
               <Plus className="mr-2 h-4 w-4" />
-              Создать занятие
+              {t("createLesson")}
             </Button>
           )}
         </div>
@@ -575,15 +576,15 @@ export default function IndividualLessons() {
       <AlertDialog open={!!deletingLesson} onOpenChange={() => setDeletingLesson(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Удалить занятие?</AlertDialogTitle>
+            <AlertDialogTitle>{t("deleteLesson")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Вы уверены, что хотите удалить это занятие? Это действие нельзя отменить.
+              {t("deleteConfirm")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogCancel>{t("common:cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteLesson} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Удалить
+              {t("common:delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

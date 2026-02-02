@@ -1,5 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import moment from "moment";
+import "moment/locale/ru";
+import "moment/locale/kk";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,15 +34,23 @@ interface LessonFormModalProps {
   onSuccess?: () => void;
 }
 
-const WEEKDAYS = [
-  { value: 1, label: "Пн" },
-  { value: 2, label: "Вт" },
-  { value: 3, label: "Ср" },
-  { value: 4, label: "Чт" },
-  { value: 5, label: "Пт" },
-  { value: 6, label: "Сб" },
-  { value: 0, label: "Вс" },
-];
+const getWeekdays = (lang: string) => {
+  const labels: Record<string, string[]> = {
+    ru: ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"],
+    kk: ["Дс", "Сс", "Ср", "Бс", "Жм", "Сн", "Жк"],
+    en: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+  };
+  const l = labels[lang] || labels.ru;
+  return [
+    { value: 1, label: l[0] },
+    { value: 2, label: l[1] },
+    { value: 3, label: l[2] },
+    { value: 4, label: l[3] },
+    { value: 5, label: l[4] },
+    { value: 6, label: l[5] },
+    { value: 0, label: l[6] },
+  ];
+};
 
 export function LessonFormModal({
   open,
@@ -52,6 +63,10 @@ export function LessonFormModal({
   mode = "create",
   onSuccess,
 }: LessonFormModalProps) {
+  const { t, i18n } = useTranslation(["schedule", "common"]);
+  moment.locale(i18n.language);
+  const WEEKDAYS = getWeekdays(i18n.language);
+
   // Lesson type - auto-determined by groupId if provided, or manually selectable
   const [groupId, setGroupId] = useState(initialData?.groupId || "");
   const [manualLessonType, setManualLessonType] = useState<"group" | "individual" | "special" | "">(
@@ -274,7 +289,7 @@ export function LessonFormModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{mode === "edit" ? "Редактировать урок" : "Новый урок"}</DialogTitle>
+          <DialogTitle>{mode === "edit" ? t("editLesson") : t("newLesson")}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 pb-2">
@@ -286,8 +301,8 @@ export function LessonFormModal({
                   <Repeat className="h-4 w-4 text-white" />
                 </div>
                 <div>
-                  <p className="font-medium text-sm text-slate-900 dark:text-slate-100">Серия уроков</p>
-                  <p className="text-xs text-muted-foreground">Повторяющиеся занятия</p>
+                  <p className="font-medium text-sm text-slate-900 dark:text-slate-100">{t("series.title")}</p>
+                  <p className="text-xs text-muted-foreground">{i18n.language === 'kk' ? 'Қайталанатын сабақтар' : i18n.language === 'en' ? 'Repeating lessons' : 'Повторяющиеся занятия'}</p>
                 </div>
               </div>
               <Switch
@@ -300,10 +315,10 @@ export function LessonFormModal({
 
           {/* Title - Full width */}
           <div className="space-y-1.5">
-            <Label htmlFor="title">Название урока *</Label>
+            <Label htmlFor="title">{t("lesson.title")} *</Label>
             <Input 
               id="title" 
-              placeholder="Математика - 5 класс"
+              placeholder={i18n.language === 'kk' ? 'Математика - 5 сынып' : i18n.language === 'en' ? 'Math - Grade 5' : 'Математика - 5 класс'}
               value={title} 
               onChange={(e) => setTitle(e.target.value)} 
               required 
@@ -313,17 +328,17 @@ export function LessonFormModal({
           {/* Subject & Teacher - One row */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="subject">Предмет *</Label>
+              <Label htmlFor="subject">{t("lesson.subject")} *</Label>
               <Input 
                 id="subject" 
-                placeholder="Математика"
+                placeholder={i18n.language === 'kk' ? 'Математика' : i18n.language === 'en' ? 'Mathematics' : 'Математика'}
                 value={subject} 
                 onChange={(e) => setSubject(e.target.value)} 
                 required 
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="teacherId">Преподаватель *</Label>
+              <Label htmlFor="teacherId">{t("lesson.teacher")} *</Label>
               {initialData?.teacherId && mode === "create" ? (
                 <Input 
                   value={teachers.find(t => t.id === teacherId)?.name || ""} 
@@ -351,10 +366,10 @@ export function LessonFormModal({
           <div className="grid grid-cols-2 gap-3">
             {lessonType !== "special" && (
               <div className="space-y-1.5">
-                <Label htmlFor="groupId">Группа</Label>
+                <Label htmlFor="groupId">{t("lesson.group")}</Label>
                 <Select value={groupId || "none"} onValueChange={(value) => setGroupId(value === "none" ? "" : value)}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Индивидуальный" />
+                    <SelectValue placeholder={t("lesson.individual")} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Индивидуальный</SelectItem>
@@ -370,7 +385,7 @@ export function LessonFormModal({
 
             {!groupId && (
               <div className="space-y-1.5">
-                <Label htmlFor="lessonType">Тип</Label>
+                <Label htmlFor="lessonType">{t("lesson.type")}</Label>
                 <Select
                   value={manualLessonType || "individual"}
                   onValueChange={(value: "group" | "individual" | "special") =>
@@ -409,14 +424,14 @@ export function LessonFormModal({
             {/* Date & Room - One row */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="date">Дата *</Label>
+                <Label htmlFor="date">{t("lesson.date")} *</Label>
                 <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="roomId">Аудитория *</Label>
+                <Label htmlFor="roomId">{t("lesson.room")} *</Label>
                 <Select value={roomId} onValueChange={setRoomId} required>
                   <SelectTrigger>
-                    <SelectValue placeholder="Выберите" />
+                    <SelectValue placeholder={t("modal.select")} />
                   </SelectTrigger>
                   <SelectContent>
                     {rooms.map((room) => (
@@ -433,13 +448,13 @@ export function LessonFormModal({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="startTime" className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" /> Начало *
+                  <Clock className="h-3 w-3" /> {t("lesson.start")} *
                 </Label>
                 <Input id="startTime" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} required />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="endTime" className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" /> Окончание *
+                  <Clock className="h-3 w-3" /> {t("lesson.end")} *
                 </Label>
                 <Input id="endTime" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} required />
               </div>
@@ -567,15 +582,15 @@ export function LessonFormModal({
               }
               className="w-full bg-gradient-to-r from-[#6366f1] via-[#8b5cf6] to-[#a855f7] hover:opacity-90 text-white shadow-md"
             >
-              {mode === "edit" ? "Сохранить изменения" : "Создать урок"}
+              {mode === "edit" ? t("modal.saveChanges") : t("modal.createLesson")}
             </Button>
             {conflicts?.hasConflicts && (
               <Button variant="outline" onClick={() => handleSubmit(true)} className="w-full">
-                Создать несмотря на конфликты
+                {t("modal.createAnyway")}
               </Button>
             )}
             <Button variant="ghost" onClick={() => onOpenChange(false)} className="w-full text-muted-foreground">
-              Отмена
+              {t("modal.cancel")}
             </Button>
           </div>
         </div>

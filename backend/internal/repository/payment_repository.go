@@ -101,13 +101,14 @@ func (r *PaymentRepository) GetStudentBalance(studentID string) (*models.Student
 }
 
 func (r *PaymentRepository) CreateStudentBalance(studentID string) (*models.StudentBalance, error) {
+	// Use ON CONFLICT DO UPDATE to always return a row (avoids infinite recursion)
 	query := `INSERT INTO student_balance (student_id, balance, version) VALUES ($1, 0.00, 0) 
-	          ON CONFLICT (student_id) DO NOTHING RETURNING student_id, balance, last_payment_date, version`
+	          ON CONFLICT (student_id) DO UPDATE SET student_id = EXCLUDED.student_id
+	          RETURNING student_id, balance, last_payment_date, version`
 	var balance models.StudentBalance
 	err := r.db.QueryRow(query, studentID).Scan(&balance.StudentID, &balance.Balance, &balance.LastPaymentDate, &balance.Version)
 	if err != nil {
-		// If conflict occurred, get the existing balance
-		return r.GetStudentBalance(studentID)
+		return nil, fmt.Errorf("failed to create/get student balance: %w", err)
 	}
 	return &balance, nil
 }

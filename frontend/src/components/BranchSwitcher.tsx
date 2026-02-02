@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Check, ChevronsUpDown, Building2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,6 +13,17 @@ import { useBranchContext } from '@/context/BranchContext';
 
 export function BranchSwitcher() {
   const { branches, currentBranch, switchBranch, isSwitching, isLoading } = useBranchContext();
+  const { i18n } = useTranslation();
+  
+  const getBranchLabel = () => {
+    const labels = { ru: 'Филиал', kk: 'Филиал', en: 'Branch' };
+    return labels[i18n.language as 'ru' | 'kk' | 'en'] || labels.ru;
+  };
+  
+  const getSelectBranchLabel = () => {
+    const labels = { ru: 'Выберите филиал', kk: 'Филиалды таңдаңыз', en: 'Select branch' };
+    return labels[i18n.language as 'ru' | 'kk' | 'en'] || labels.ru;
+  };
   const [open, setOpen] = useState(false);
 
   const handleSwitchBranch = async (branchId: string) => {
@@ -37,7 +49,7 @@ export function BranchSwitcher() {
     return (
       <div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
         <Building2 className="h-4 w-4" />
-        <span>{currentBranch?.name || 'Филиал'}</span>
+        <span>{currentBranch?.name || getBranchLabel()}</span>
       </div>
     );
   }
@@ -54,7 +66,7 @@ export function BranchSwitcher() {
         >
           <div className="flex items-center gap-2">
             <Building2 className="h-4 w-4" />
-            <span className="truncate">{currentBranch?.name || 'Выберите филиал'}</span>
+            <span className="truncate">{currentBranch?.name || getSelectBranchLabel()}</span>
           </div>
           {isSwitching ? (
             <Loader2 className="ml-2 h-4 w-4 shrink-0 animate-spin" />

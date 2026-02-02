@@ -1,0 +1,21 @@
+{
+  "dashboard": "Басты бет",
+  "students": "Оқушылар",
+  "teachers": "Мұғалімдер",
+  "groups": "Топтар",
+  "schedule": "Кесте",
+  "individualLessons": "Жеке сабақтар",
+  "finance": "Қаржы",
+  "subscriptions": "Абонементтер",
+  "leads": "Лидтер",
+  "settings": "Баптаулар",
+  "roles": "Рөлдер",
+  "logout": "Шығу",
+  "profile": "Профиль",
+  "notifications": "Хабарламалар",
+  "help": "Көмек",
+  "search": "Іздеу...",
+  "menu": "Мәзір",
+  "collapse": "Жию",
+  "expand": "Жаю"
+}

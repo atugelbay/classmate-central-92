@@ -1,0 +1,66 @@
+{
+  "title": "Роли и права доступа",
+  "description": "Управление ролями и разрешениями пользователей",
+  "createRole": "Создать роль",
+  "create": "Создать",
+  "editRole": "Редактировать роль",
+  "dialog": {
+    "roleName": "Название роли",
+    "description": "Описание",
+    "permissions": "Разрешения"
+  },
+  "roleNames": {
+    "admin": "Администратор",
+    "manager": "Менеджер",
+    "teacher": "Учитель",
+    "accountant": "Бухгалтер",
+    "view_only": "Только просмотр"
+  },
+  "roleDescriptions": {
+    "admin": "Полный доступ ко всем функциям системы",
+    "manager": "Доступ ко всем функциям кроме управления ролями",
+    "teacher": "Ограниченный доступ к ученикам и расписанию",
+    "accountant": "Доступ к финансовым данным",
+    "view_only": "Только просмотр без возможности изменений"
+  },
+  "invite": {
+    "title": "Пригласить пользователя",
+    "name": "Имя",
+    "namePlaceholder": "Имя пользователя",
+    "email": "Email",
+    "emailPlaceholder": "user@example.com",
+    "role": "Роль",
+    "selectRole": "Выберите роль",
+    "branches": "Доступ к филиалам",
+    "noBranches": "Нет доступных филиалов",
+    "sending": "Отправляем...",
+    "send": "Отправить приглашение",
+    "selectBranch": "Выберите хотя бы один филиал",
+    "selectRoleError": "Выберите роль"
+  },
+  "systemRoles": "Роли системы",
+  "table": {
+    "name": "Название",
+    "description": "Описание",
+    "permissions": "Разрешения",
+    "actions": "Действия"
+  },
+  "noRoles": "Нет ролей",
+  "noPermissions": "Нет разрешений",
+  "systemRole": "Системная роль",
+  "companyUsers": "Пользователи компании",
+  "usersTable": {
+    "name": "Имя",
+    "email": "Email",
+    "roles": "Роли",
+    "status": "Статус"
+  },
+  "noUsers": "Нет пользователей",
+  "noUserRoles": "Нет ролей",
+  "userStatus": {
+    "verified": "Подтвержден",
+    "unverified": "Не подтвержден"
+  },
+  "deleteRole": "Удалить роль",
+  "deleteConfirm": "Вы уверены, что хотите удалить роль \"{{name}}\"? Это действие нельзя отменить."
+}

@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import moment from "moment";
 import "moment/locale/ru";
+import "moment/locale/kk";
 import { useQueryClient } from "@tanstack/react-query";
 import { useGroups, useCreateGroup, useUpdateGroup, useDeleteGroup, useTeachers, useStudents, useRooms, useCheckConflicts, useLessons, useExtendGroup, useCreateBulkLessons } from "@/hooks/useData";
 import { useConfirmDelete } from "@/hooks/useConfirmDelete";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
-
-moment.locale("ru");
 import { CreateGroupModal } from "@/components/CreateGroupModal";
 import { GroupScheduleForm } from "@/components/GroupScheduleForm";
 import { Button } from "@/components/ui/button";
@@ -51,6 +51,9 @@ const formatTimeRu = (input: string | Date) =>
   moment.parseZone(input as any).format("HH:mm");
 
 export default function Groups() {
+  const { t, i18n } = useTranslation(["groups", "common"]);
+  moment.locale(i18n.language);
+  
   const queryClient = useQueryClient();
   const { data: groups = [], isLoading } = useGroups();
   const { data: teachers = [] } = useTeachers();
@@ -260,7 +263,13 @@ export default function Groups() {
       return aAdj - bAdj;
     });
     
-    const weekdayNames = ["ВС", "ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ"];
+    // Use localized weekday names
+    const weekdayNamesMap: Record<string, string[]> = {
+      ru: ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"],
+      kk: ["Жс", "Дс", "Сс", "Ср", "Бс", "Жм", "Сб"],
+      en: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    };
+    const weekdayNames = weekdayNamesMap[i18n.language] || weekdayNamesMap.ru;
     const weekdayLabels = sortedWeekdays.map(day => weekdayNames[day === 0 ? 0 : day]).join(" ");
     
     if (allSameTime) {
@@ -578,13 +587,13 @@ export default function Groups() {
   return (
     <div className="space-y-6 animate-fade-in-up">
       <PageHeader
-        title="Группы"
-        description="Управление учебными группами"
+        title={t("title")}
+        description={t("searchPlaceholder")}
         actions={
           <Button onClick={() => setIsCreateGroupModalOpen(true)} size="sm" className="sm:size-default">
             <Plus className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Создать группу</span>
-            <span className="sm:hidden">Создать</span>
+            <span className="hidden sm:inline">{t("addGroup")}</span>
+            <span className="sm:hidden">{t("common:create")}</span>
           </Button>
         }
       />
@@ -610,12 +619,12 @@ export default function Groups() {
           <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[calc(100vh-2rem)] sm:max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
-                {editingGroup ? "Редактировать группу" : "Новая группа"}
+                {editingGroup ? t("editGroup") : t("newGroup")}
               </DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <Label htmlFor="name">Название группы</Label>
+                <Label htmlFor="name">{t("groupName")}</Label>
                 <Input
                   id="name"
                   name="name"
@@ -624,7 +633,7 @@ export default function Groups() {
                 />
               </div>
               <div>
-                <Label htmlFor="subject">Предмет</Label>
+                <Label htmlFor="subject">{t("subject")}</Label>
                 <Input
                   id="subject"
                   name="subject"
@@ -633,7 +642,7 @@ export default function Groups() {
                 />
               </div>
               <div>
-                <Label htmlFor="teacherId">Преподаватель</Label>
+                <Label htmlFor="teacherId">{t("teacher")}</Label>
                 <Select
                   name="teacherId"
                   value={selectedTeacherId}
@@ -641,7 +650,7 @@ export default function Groups() {
                   required
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Выберите преподавателя" />
+                    <SelectValue placeholder={t("selectTeacher")} />
                   </SelectTrigger>
                   <SelectContent>
                     {teachers.map((teacher) => (
@@ -666,7 +675,7 @@ export default function Groups() {
                 <Alert>
                   <Loader2 className="h-4 w-4 animate-spin" />
                   <AlertDescription>
-                    Проверка конфликтов расписания...
+                    {t("checkingConflicts")}
                   </AlertDescription>
                 </Alert>
               )}
@@ -675,17 +684,17 @@ export default function Groups() {
                 <Alert variant="destructive">
                   <AlertTriangle className="h-4 w-4" />
                   <AlertDescription>
-                    <p className="font-semibold mb-2">Обнаружены конфликты в расписании:</p>
+                    <p className="font-semibold mb-2">{t("conflictsFound")}</p>
                     {conflicts.conflicts.map((conflict, idx) => (
                       <p key={idx} className="text-sm">
                         - {conflict.title} ({moment(conflict.start).format("HH:mm")} - {moment(conflict.end).format("HH:mm")})
-                        {conflict.conflictType === "teacher" && ` - Учитель занят`}
-                        {conflict.conflictType === "room" && ` - Аудитория занята`}
+                        {conflict.conflictType === "teacher" && ` - ${t("teacherBusy")}`}
+                        {conflict.conflictType === "room" && ` - ${t("roomBusy")}`}
                       </p>
                     ))}
                     {conflicts.suggestedTimes && conflicts.suggestedTimes.length > 0 && (
                       <div className="mt-3">
-                        <p className="font-semibold text-sm mb-1">Предложенное время:</p>
+                        <p className="font-semibold text-sm mb-1">{t("suggestedTime")}</p>
                         {conflicts.suggestedTimes.map((time, idx) => (
                           <Button
                             key={idx}
@@ -722,7 +731,7 @@ export default function Groups() {
                       </div>
                     )}
                     <p className="text-sm mt-2">
-                      Вы все равно можете создать группу, конфликты будут учтены при генерации уроков.
+                      {t("canCreateAnyway")}
                     </p>
                   </AlertDescription>
                 </Alert>
@@ -730,7 +739,7 @@ export default function Groups() {
               
               {/* Students Selection */}
               <div className="space-y-3">
-                <Label>Студенты группы</Label>
+                <Label>{t("students")}</Label>
                 
                 {/* Selected Students */}
                 {selectedStudents.length > 0 && (
@@ -753,7 +762,7 @@ export default function Groups() {
                 {/* Student Selector */}
                 <Select onValueChange={toggleStudent}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Добавить студента" />
+                    <SelectValue placeholder={t("addStudent")} />
                   </SelectTrigger>
                   <SelectContent>
                     {students
@@ -768,12 +777,12 @@ export default function Groups() {
                 </Select>
                 
                 <p className="text-sm text-muted-foreground">
-                  Выбрано студентов: {selectedStudents.length}
+                  {t("selectedStudents")}: {selectedStudents.length}
                 </p>
               </div>
               
               <Button type="submit" className="w-full">
-                {editingGroup ? "Сохранить" : "Создать"}
+                {editingGroup ? t("actions.save") : t("actions.create")}
               </Button>
             </form>
           </DialogContent>
@@ -783,7 +792,7 @@ export default function Groups() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Поиск по названию или предмету..."
+            placeholder={t("search")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9"
@@ -791,7 +800,7 @@ export default function Groups() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-medium hidden sm:inline">Статус:</span>
+          <span className="text-sm font-medium hidden sm:inline">{t("status.label")}:</span>
           <button
             onClick={() => setActivityFilter("active")}
             className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
@@ -800,8 +809,7 @@ export default function Groups() {
                 : "bg-muted/50 hover:bg-muted"
             }`}
           >
-            <span className="hidden sm:inline">Активные ({groups.filter(g => getGroupActivity(g).isActive).length})</span>
-            <span className="sm:hidden">Активн. ({groups.filter(g => getGroupActivity(g).isActive).length})</span>
+            {t("status.active")} ({groups.filter(g => getGroupActivity(g).isActive).length})
           </button>
           <button
             onClick={() => setActivityFilter("inactive")}
@@ -811,8 +819,7 @@ export default function Groups() {
                 : "bg-muted/50 hover:bg-muted"
             }`}
           >
-            <span className="hidden sm:inline">Неактивные ({groups.filter(g => !getGroupActivity(g).isActive).length})</span>
-            <span className="sm:hidden">Неакт. ({groups.filter(g => !getGroupActivity(g).isActive).length})</span>
+            {t("status.inactive")} ({groups.filter(g => !getGroupActivity(g).isActive).length})
           </button>
           <button
             onClick={() => setActivityFilter("all")}
@@ -822,7 +829,7 @@ export default function Groups() {
                 : "bg-muted/50 hover:bg-muted"
             }`}
           >
-            Все ({groups.length})
+            {t("status.all")} ({groups.length})
           </button>
         </div>
       </div>
@@ -851,7 +858,7 @@ export default function Groups() {
                         {group.subject}
                       </Badge>
                       <Badge variant={activity.isActive ? "default" : "outline"}>
-                        {activity.isActive ? "Активна" : "Неактивна"}
+                        {activity.isActive ? t("status.active") : t("status.inactive")}
                       </Badge>
                     </div>
                   </div>
@@ -863,7 +870,7 @@ export default function Groups() {
                   {activity.isActive && activity.nextLesson && (
                     <div className="p-3 rounded-2xl bg-gradient-to-br from-emerald-50 to-green-100 dark:from-emerald-950 dark:to-green-900">
                       <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300 mb-1">
-                        Следующее занятие:
+                        {t("nextLesson")}:
                       </p>
                       <p className="text-sm text-emerald-800 dark:text-emerald-200">
                         {formatDateRu(activity.nextLesson.start)}
@@ -878,20 +885,20 @@ export default function Groups() {
                   {activity.totalLessons > 0 && (
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div className="p-3 rounded-xl bg-gradient-to-br from-sky-50 to-blue-100 dark:from-sky-950 dark:to-blue-900">
-                        <p className="text-sky-600 dark:text-sky-400 text-xs">Запланировано</p>
+                        <p className="text-sky-600 dark:text-sky-400 text-xs">{t("stats.scheduled")}</p>
                         <p className="font-bold text-lg text-sky-900 dark:text-sky-100">{activity.upcomingLessons}</p>
                       </div>
                       <div className="p-3 rounded-xl bg-gradient-to-br from-violet-50 to-purple-100 dark:from-violet-950 dark:to-purple-900">
-                        <p className="text-violet-600 dark:text-violet-400 text-xs">Проведено</p>
+                        <p className="text-violet-600 dark:text-violet-400 text-xs">{t("stats.completed")}</p>
                         <p className="font-bold text-lg text-violet-900 dark:text-violet-100">{activity.completedLessons}</p>
                       </div>
                     </div>
                   )}
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">
-                      Преподаватель
+                      {t("teacher")}
                     </p>
-                    <p className="font-medium">{group.teacherName || "Не назначен"}</p>
+                    <p className="font-medium">{group.teacherName || t("notAssigned")}</p>
                   </div>
                   {getGroupSchedule(group) && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -908,11 +915,11 @@ export default function Groups() {
                   <div className="flex items-center gap-2 text-sm">
                     <Users className="h-4 w-4 text-muted-foreground" />
                     <span className="font-medium">{groupStudents.length}</span>
-                    <span className="text-muted-foreground">учеников</span>
+                    <span className="text-muted-foreground">{t("students")}</span>
                   </div>
                   {groupStudents.length > 0 && (
                     <div>
-                      <p className="mb-2 text-sm font-medium">Ученики:</p>
+                      <p className="mb-2 text-sm font-medium">{t("students")}:</p>
                       <div className="flex flex-wrap gap-2">
                         {groupStudents.slice(0, 3).map((student) => (
                           <Badge key={student.id} variant="outline">
@@ -943,7 +950,7 @@ export default function Groups() {
                       ) : (
                         <Clock className="h-4 w-4 mr-2" />
                       )}
-                      Продлить
+                      {t("actions.extend")}
                     </Button>
                     <Button
                       variant="outline"
@@ -955,7 +962,7 @@ export default function Groups() {
                       }}
                     >
                       <Edit className="mr-2 h-4 w-4" />
-                      Изменить
+                      {t("actions.edit")}
                     </Button>
                     <Button
                       variant="ghost"
@@ -1045,7 +1052,7 @@ export default function Groups() {
                       {selectedGroupForDetails.subject}
                     </Badge>
                     <Badge variant={activity.isActive ? "default" : "outline"} className="text-sm sm:text-base px-2 sm:px-3 py-1">
-                      {activity.isActive ? "Активна" : "Неактивна"}
+                      {activity.isActive ? t("status.active") : t("status.inactive")}
                     </Badge>
                   </div>
 
@@ -1053,23 +1060,23 @@ export default function Groups() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2 sm:space-y-3">
                       <div>
-                        <p className="text-xs sm:text-sm text-muted-foreground">Преподаватель</p>
-                        <p className="font-semibold text-sm sm:text-base truncate">{selectedGroupForDetails.teacherName || "Не назначен"}</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">{t("teacher")}</p>
+                        <p className="font-semibold text-sm sm:text-base truncate">{selectedGroupForDetails.teacherName || t("notAssigned")}</p>
                       </div>
                       <div>
-                        <p className="text-xs sm:text-sm text-muted-foreground">Расписание</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">{t("schedule")}</p>
                         {getGroupSchedule(selectedGroupForDetails) ? (
                           <div className="flex items-center gap-2 min-w-0">
                             <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
                             <p className="font-medium text-sm sm:text-base truncate">{getGroupSchedule(selectedGroupForDetails)}</p>
                           </div>
                         ) : (
-                          <p className="font-medium text-sm sm:text-base text-muted-foreground">Не установлено</p>
+                          <p className="font-medium text-sm sm:text-base text-muted-foreground">{t("scheduleNotSet")}</p>
                         )}
                       </div>
                       {room && (
                         <div>
-                          <p className="text-xs sm:text-sm text-muted-foreground">Аудитория</p>
+                          <p className="text-xs sm:text-sm text-muted-foreground">{t("room")}</p>
                           <div className="flex items-center gap-2 min-w-0">
                             <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
                             <p className="font-medium text-sm sm:text-base truncate">{room.name}</p>
@@ -1080,16 +1087,16 @@ export default function Groups() {
 
                     <div className="space-y-2 sm:space-y-3">
                       <div className="p-3 sm:p-4 bg-blue-50 rounded-lg">
-                        <p className="text-xs sm:text-sm text-muted-foreground mb-1">Всего занятий</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground mb-1">{t("stats.total")}</p>
                         <p className="text-xl sm:text-2xl font-bold text-blue-900">{activity.totalLessons}</p>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         <div className="p-2 sm:p-3 bg-green-50 rounded-lg">
-                          <p className="text-[10px] sm:text-xs text-muted-foreground">Проведено</p>
+                          <p className="text-[10px] sm:text-xs text-muted-foreground">{t("stats.completed")}</p>
                           <p className="text-base sm:text-xl font-semibold text-green-900">{activity.completedLessons}</p>
                         </div>
                         <div className="p-2 sm:p-3 bg-orange-50 rounded-lg">
-                          <p className="text-[10px] sm:text-xs text-muted-foreground">Запланировано</p>
+                          <p className="text-[10px] sm:text-xs text-muted-foreground">{t("stats.scheduled")}</p>
                           <p className="text-base sm:text-xl font-semibold text-orange-900">{activity.upcomingLessons}</p>
                         </div>
                       </div>
@@ -1099,7 +1106,7 @@ export default function Groups() {
                   {/* Next Lesson */}
                   {activity.nextLesson && (
                     <div className="p-3 sm:p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
-                      <p className="text-xs sm:text-sm font-medium text-green-900 mb-2">Ближайшее занятие:</p>
+                      <p className="text-xs sm:text-sm font-medium text-green-900 mb-2">{t("nextLesson")}:</p>
                       <p className="text-base sm:text-lg font-semibold text-green-800">
                         {new Date(activity.nextLesson.start).toLocaleDateString("ru-RU", {
                           day: "numeric",
@@ -1125,7 +1132,7 @@ export default function Groups() {
                   <div>
                     <div className="flex items-center gap-2 mb-3">
                       <Users className="h-5 w-5 text-muted-foreground" />
-                      <h3 className="font-semibold text-base sm:text-lg">Студенты ({groupStudents.length})</h3>
+                      <h3 className="font-semibold text-base sm:text-lg">{t("students")} ({groupStudents.length})</h3>
                     </div>
                     {groupStudents.length > 0 ? (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1139,14 +1146,14 @@ export default function Groups() {
                         ))}
                       </div>
                     ) : (
-                      <p className="text-sm text-muted-foreground">Нет студентов в группе</p>
+                      <p className="text-sm text-muted-foreground">{t("noStudents")}</p>
                     )}
                   </div>
 
                   {/* Upcoming Lessons */}
                   {upcomingLessons.length > 0 && (
                     <div>
-                      <h3 className="font-semibold text-base sm:text-lg mb-3">Предстоящие занятия</h3>
+                      <h3 className="font-semibold text-base sm:text-lg mb-3">{t("upcomingLessons")}</h3>
                       <div className="space-y-2 max-h-60 overflow-y-auto">
                         {upcomingLessons.slice(0, 10).map((lesson) => (
                           <div key={lesson.id} className="p-2 sm:p-3 border rounded-lg flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
@@ -1196,10 +1203,10 @@ export default function Groups() {
       <ConfirmDialog
         open={deleteConfirm.isOpen}
         onOpenChange={(open) => !open && deleteConfirm.close()}
-        title="Удалить группу"
-        description="Вы уверены, что хотите удалить эту группу? Это действие нельзя отменить."
-        confirmText="Удалить"
-        cancelText="Отмена"
+        title={t("deleteConfirm.title")}
+        description={t("deleteConfirm.description")}
+        confirmText={t("deleteConfirm.confirm")}
+        cancelText={t("deleteConfirm.cancel")}
         variant="destructive"
         onConfirm={deleteConfirm.confirm}
       />

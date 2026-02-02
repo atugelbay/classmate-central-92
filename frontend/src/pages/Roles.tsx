@@ -1,5 +1,6 @@
 import { useState } from "react";
 import * as React from "react";
+import { useTranslation } from "react-i18next";
 import { 
   useRoles,
   usePermissions,
@@ -41,33 +42,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { PageHeader } from "@/components/PageHeader";
 
-// Helper function to translate role names
-const translateRoleName = (name: string): string => {
-  const translations: Record<string, string> = {
-    admin: "Администратор",
-    manager: "Менеджер",
-    teacher: "Учитель",
-    accountant: "Бухгалтер",
-    view_only: "Только просмотр",
-  };
-  return translations[name.toLowerCase()] || name;
-};
-
-// Helper function to translate role descriptions
-const translateRoleDescription = (name: string, description: string): string => {
-  if (description) return description;
-  const translations: Record<string, string> = {
-    admin: "Полный доступ ко всем функциям системы",
-    manager: "Доступ ко всем функциям кроме управления ролями",
-    teacher: "Ограниченный доступ к ученикам и расписанию",
-    accountant: "Доступ к финансовым данным",
-    view_only: "Только просмотр без возможности изменений",
-  };
-  return translations[name.toLowerCase()] || description;
-};
-
 export default function Roles() {
+  const { t } = useTranslation("roles");
   const { hasPermission } = useAuth();
+  
+  // Helper function to translate role names
+  const translateRoleName = (name: string): string => {
+    const key = name.toLowerCase();
+    const translated = t(`roleNames.${key}`, { defaultValue: "" });
+    return translated || name;
+  };
+
+  // Helper function to translate role descriptions
+  const translateRoleDescription = (name: string, description: string): string => {
+    if (description) return description;
+    const key = name.toLowerCase();
+    const translated = t(`roleDescriptions.${key}`, { defaultValue: "" });
+    return translated || description;
+  };
   const { data: roles = [], isLoading } = useRoles();
   const { data: permissions = [] } = usePermissions();
   const { data: users = [], isLoading: usersLoading } = useUsers();
@@ -169,27 +161,27 @@ export default function Roles() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Роли и права доступа"
-        description="Управление ролями и разрешениями пользователей"
+        title={t("title")}
+        description={t("description")}
         actions={
           canManage ? (
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
                 <Button onClick={() => setEditingRole(null)} size="sm" className="sm:size-default">
                   <Plus className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Создать роль</span>
-                  <span className="sm:hidden">Создать</span>
+                  <span className="hidden sm:inline">{t("createRole")}</span>
+                  <span className="sm:hidden">{t("create")}</span>
                 </Button>
               </DialogTrigger>
             <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
-                  {editingRole ? "Редактировать роль" : "Создать роль"}
+                  {editingRole ? t("editRole") : t("createRole")}
                 </DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Название роли *</Label>
+                  <Label htmlFor="name">{t("dialog.roleName")} *</Label>
                   <Input
                     id="name"
                     name="name"
@@ -198,7 +190,7 @@ export default function Roles() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="description">Описание</Label>
+                  <Label htmlFor="description">{t("dialog.description")}</Label>
                   <Textarea
                     id="description"
                     name="description"
@@ -207,7 +199,7 @@ export default function Roles() {
                   />
                 </div>
                 <div className="space-y-4">
-                  <Label>Разрешения</Label>
+                  <Label>{t("dialog.permissions")}</Label>
                   <div className="space-y-4 border rounded-lg p-4 max-h-96 overflow-y-auto">
                     {Object.entries(permissionsByResource).map(([resource, perms]) => (
                       <div key={resource} className="space-y-2">
@@ -235,10 +227,10 @@ export default function Roles() {
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={handleClose}>
-                    Отмена
+                    {t("common:cancel")}
                   </Button>
                   <Button type="submit" disabled={createRole.isPending || updateRole.isPending}>
-                    {editingRole ? "Сохранить" : "Создать"}
+                    {editingRole ? t("common:save") : t("create")}
                   </Button>
                 </div>
               </form>
@@ -251,7 +243,7 @@ export default function Roles() {
       {canManage && (
         <Card>
           <CardHeader>
-            <CardTitle>Пригласить пользователя</CardTitle>
+            <CardTitle>{t("invite.title")}</CardTitle>
           </CardHeader>
           <CardContent>
             <form
@@ -259,11 +251,11 @@ export default function Roles() {
               onSubmit={async (e) => {
                 e.preventDefault();
                 if (!inviteRoleId) {
-                  toast.error("Выберите роль");
+                  toast.error(t("invite.selectRoleError"));
                   return;
                 }
                 if (inviteBranchIds.length === 0) {
-                  toast.error("Выберите хотя бы один филиал");
+                  toast.error(t("invite.selectBranch"));
                   return;
                 }
                 try {
@@ -283,29 +275,29 @@ export default function Roles() {
               }}
             >
               <div className="space-y-2">
-                <Label>Имя</Label>
+                <Label>{t("invite.name")}</Label>
                 <Input
                   required
-                  placeholder="Имя пользователя"
+                  placeholder={t("invite.namePlaceholder")}
                   value={inviteName}
                   onChange={(e) => setInviteName(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Email</Label>
+                <Label>{t("invite.email")}</Label>
                 <Input
                   required
                   type="email"
-                  placeholder="user@example.com"
+                  placeholder={t("invite.emailPlaceholder")}
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Роль</Label>
+                <Label>{t("invite.role")}</Label>
                 <Select value={inviteRoleId} onValueChange={setInviteRoleId}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Выберите роль" />
+                    <SelectValue placeholder={t("invite.selectRole")} />
                   </SelectTrigger>
                   <SelectContent>
                     {roles.map((role) => (
@@ -317,10 +309,10 @@ export default function Roles() {
                 </Select>
               </div>
               <div className="md:col-span-3 space-y-2">
-                <Label>Доступ к филиалам *</Label>
+                <Label>{t("invite.branches")} *</Label>
                 <div className="grid grid-cols-2 gap-2 border rounded-lg p-4 max-h-48 overflow-y-auto">
                   {branches.length === 0 ? (
-                    <p className="text-sm text-muted-foreground col-span-2">Нет доступных филиалов</p>
+                    <p className="text-sm text-muted-foreground col-span-2">{t("invite.noBranches")}</p>
                   ) : (
                     branches.map((branch) => (
                       <div key={branch.id} className="flex items-center space-x-2">
@@ -348,7 +340,7 @@ export default function Roles() {
               </div>
               <div className="md:col-span-3 flex justify-end">
                 <Button type="submit" disabled={inviteUser.isPending}>
-                  {inviteUser.isPending ? "Отправляем..." : "Отправить приглашение"}
+                  {inviteUser.isPending ? t("invite.sending") : t("invite.send")}
                 </Button>
               </div>
             </form>
@@ -360,24 +352,24 @@ export default function Roles() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5" />
-            Роли системы
+            {t("systemRoles")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Название</TableHead>
-                <TableHead>Описание</TableHead>
-                <TableHead>Разрешения</TableHead>
-                <TableHead className="text-right">Действия</TableHead>
+                <TableHead>{t("table.name")}</TableHead>
+                <TableHead>{t("table.description")}</TableHead>
+                <TableHead>{t("table.permissions")}</TableHead>
+                <TableHead className="text-right">{t("table.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {roles.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center text-muted-foreground">
-                    Нет ролей
+                    {t("noRoles")}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -394,7 +386,7 @@ export default function Roles() {
                             </Badge>
                           ))
                         ) : (
-                          <span className="text-muted-foreground text-sm">Нет разрешений</span>
+                          <span className="text-muted-foreground text-sm">{t("noPermissions")}</span>
                         )}
                         {role.permissions && role.permissions.length > 3 && (
                           <Badge variant="outline" className="text-xs">
@@ -432,7 +424,7 @@ export default function Roles() {
                         role.id.endsWith("_teacher") || 
                         role.id.endsWith("_accountant") || 
                         role.id.endsWith("_view_only")) && (
-                        <span className="text-xs text-muted-foreground">Системная роль</span>
+                        <span className="text-xs text-muted-foreground">{t("systemRole")}</span>
                       )}
                     </TableCell>
                   </TableRow>
@@ -448,7 +440,7 @@ export default function Roles() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Пользователи компании
+              {t("companyUsers")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -457,15 +449,15 @@ export default function Roles() {
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
               </div>
             ) : users.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">Нет пользователей</p>
+              <p className="text-center text-muted-foreground py-8">{t("noUsers")}</p>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Имя</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Роли</TableHead>
-                    <TableHead>Статус</TableHead>
+                    <TableHead>{t("usersTable.name")}</TableHead>
+                    <TableHead>{t("usersTable.email")}</TableHead>
+                    <TableHead>{t("usersTable.roles")}</TableHead>
+                    <TableHead>{t("usersTable.status")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -482,13 +474,13 @@ export default function Roles() {
                               </Badge>
                             ))
                           ) : (
-                            <span className="text-muted-foreground text-sm">Нет ролей</span>
+                            <span className="text-muted-foreground text-sm">{t("noUserRoles")}</span>
                           )}
                         </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant={user.isEmailVerified ? "default" : "outline"}>
-                          {user.isEmailVerified ? "Подтвержден" : "Не подтвержден"}
+                          {user.isEmailVerified ? t("userStatus.verified") : t("userStatus.unverified")}
                         </Badge>
                       </TableCell>
                     </TableRow>
@@ -504,10 +496,10 @@ export default function Roles() {
       <ConfirmDialog
         open={deleteRoleConfirm.open}
         onOpenChange={(open) => setDeleteRoleConfirm({ open, role: deleteRoleConfirm.role })}
-        title="Удалить роль"
-        description={deleteRoleConfirm.role ? `Вы уверены, что хотите удалить роль "${translateRoleName(deleteRoleConfirm.role.name)}"? Это действие нельзя отменить.` : ""}
-        confirmText="Удалить"
-        cancelText="Отмена"
+        title={t("deleteRole")}
+        description={deleteRoleConfirm.role ? t("deleteConfirm", { name: translateRoleName(deleteRoleConfirm.role.name) }) : ""}
+        confirmText={t("common:delete")}
+        cancelText={t("common:cancel")}
         variant="destructive"
         onConfirm={confirmDeleteRole}
       />

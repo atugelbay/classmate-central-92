@@ -1,0 +1,93 @@
+{
+  "title": "Кесте",
+  "addLesson": "Сабақ қосу",
+  "editLesson": "Сабақты өзгерту",
+  "newLesson": "Жаңа сабақ",
+  "lessonDetails": "Сабақ туралы ақпарат",
+  "views": {
+    "day": "Күн",
+    "week": "Апта",
+    "month": "Ай"
+  },
+  "rooms": {
+    "title": "Аудиториялар",
+    "add": "Аудитория қосу",
+    "edit": "Аудиторияны өзгерту",
+    "name": "Атауы",
+    "capacity": "Сыйымдылығы",
+    "color": "Түсі",
+    "status": "Мәртебесі"
+  },
+  "lesson": {
+    "title": "Сабақ атауы",
+    "subject": "Пән",
+    "group": "Топ",
+    "teacher": "Мұғалім",
+    "room": "Аудитория",
+    "students": "Оқушылар",
+    "time": "Уақыт",
+    "duration": "Ұзақтығы",
+    "status": "Мәртебе",
+    "notes": "Жазбалар",
+    "date": "Күні",
+    "type": "Түрі",
+    "individual": "Жеке",
+    "special": "Бір реттік",
+    "start": "Басталуы",
+    "end": "Аяқталуы"
+  },
+  "statuses": {
+    "scheduled": "Жоспарланған",
+    "completed": "Аяқталған",
+    "cancelled": "Бас тартылған"
+  },
+  "attendance": {
+    "title": "Қатысу",
+    "mark": "Белгілеу",
+    "attended": "Қатысты",
+    "missed": "Қатыспады",
+    "excused": "Дәлелді себеп",
+    "reason": "Себебі",
+    "notes": "Жазбалар",
+    "save": "Белгілерді сақтау"
+  },
+  "conflicts": {
+    "title": "Қайшылықтар",
+    "found": "Қайшылықтар табылды",
+    "roomBusy": "Аудитория бос емес",
+    "teacherBusy": "Мұғалім бос емес",
+    "checking": "Қайшылықтарды тексеру...",
+    "noConflicts": "Қайшылықтар табылмады",
+    "suggestedTime": "Ұсынылған уақыт:"
+  },
+  "series": {
+    "title": "Сабақтар сериясы",
+    "create": "Серия құру",
+    "endDate": "Серия аяқталу күні",
+    "weekdays": "Апта күндері",
+    "selectDays": "Кемінде бір күн таңдаңыз"
+  },
+  "modal": {
+    "select": "Таңдаңыз",
+    "createLesson": "Сабақ құру",
+    "saveChanges": "Өзгерістерді сақтау",
+    "cancel": "Бас тарту",
+    "createAnyway": "Қайшылықтарға қарамай құру"
+  },
+  "empty": "Сабақтар жоқ",
+  "emptyDescription": "Бірінші сабақты қосыңыз",
+  "deleteConfirm": "Сабақты жою керек пе?",
+  "deleteWarning": "Бұл әрекетті қайтару мүмкін емес",
+  "messages": {
+    "lessonCreated": "Сабақ құрылды",
+    "lessonUpdated": "Сабақ жаңартылды",
+    "lessonDeleted": "Сабақ жойылды",
+    "lessonCancelled": "Сабақ бас тартылды",
+    "lessonResumed": "Сабақ жалғастырылды",
+    "attendanceAvailableAfterStart": "Белгілеу тек сабақ басталғаннан кейін қолжетімді",
+    "attendanceSaved": "Қатысу сақталды",
+    "roomCreated": "Аудитория құрылды",
+    "error": "Қате орын алды",
+    "hasConflicts": "Қайшылықтар бар. Ұсынылған уақытты пайдаланыңыз немесе құруды растаңыз."
+  }
+}

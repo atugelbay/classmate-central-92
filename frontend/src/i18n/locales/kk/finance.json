@@ -1,0 +1,112 @@
+{
+  "title": "Қаржы",
+  "tabs": {
+    "transactions": "Транзакциялар",
+    "balances": "Баланстар",
+    "debts": "Борыштар",
+    "discounts": "Жеңілдіктер"
+  },
+  "stats": {
+    "income": "Кіріс",
+    "expenses": "Шығыс",
+    "balance": "Баланс",
+    "debts": "Борыштар"
+  },
+  "transactions": {
+    "title": "Транзакция тарихы",
+    "add": "Төлем қосу",
+    "type": "Түрі",
+    "amount": "Сома",
+    "date": "Күні",
+    "description": "Сипаттама",
+    "paymentMethod": "Төлем әдісі",
+    "selectType": "Түрін таңдаңыз",
+    "selectMethod": "Әдісті таңдаңыз",
+    "types": {
+      "payment": "Төлем",
+      "refund": "Қайтару",
+      "debt": "Борыш",
+      "deduction": "Шегеру"
+    },
+    "methods": {
+      "cash": "Қолма-қол",
+      "card": "Карта",
+      "transfer": "Аударым",
+      "other": "Басқа"
+    }
+  },
+  "balances": {
+    "title": "Оқушылар баланстары",
+    "student": "Оқушы",
+    "balance": "Баланс",
+    "status": "Күйі",
+    "lastActivity": "Соңғы белсенділік",
+    "positive": "Оң",
+    "negative": "Қарыз",
+    "zero": "Нөлдік",
+    "noBalances": "Баланс деректері жоқ"
+  },
+  "debts": {
+    "title": "Борыштар",
+    "add": "Борыш қосу",
+    "edit": "Борышты өңдеу",
+    "new": "Жаңа борыш",
+    "student": "Оқушы",
+    "selectStudent": "Оқушыны таңдаңыз",
+    "amount": "Сома (₸)",
+    "dueDate": "Төлеу мерзімі",
+    "status": "Күйі",
+    "notes": "Ескертпелер",
+    "overdue": "Мерзімі өткен",
+    "pending": "Күтуде",
+    "paid": "Төленді",
+    "noDebts": "Борыштар жоқ",
+    "table": {
+      "student": "Оқушы",
+      "amount": "Сома",
+      "status": "Күйі",
+      "dueDate": "Мерзім",
+      "notes": "Ескертпе"
+    }
+  },
+  "discounts": {
+    "title": "Жеңілдіктер",
+    "add": "Жеңілдік құру",
+    "edit": "Жеңілдікті өңдеу",
+    "new": "Жаңа жеңілдік",
+    "name": "Атауы",
+    "description": "Сипаттама",
+    "type": "Жеңілдік түрі",
+    "value": "Мәні",
+    "isActive": "Белсенді",
+    "types": {
+      "percentage": "Пайыздық",
+      "fixed": "Тіркелген сома"
+    },
+    "active": "Белсенді",
+    "inactive": "Белсенді емес",
+    "yesNo": {
+      "yes": "Иә",
+      "no": "Жоқ"
+    },
+    "noDiscounts": "Жеңілдіктер жоқ",
+    "deleteConfirm": "Бұл жеңілдікті жою керек пе?"
+  },
+  "export": {
+    "title": "Экспорттау",
+    "pdf": "PDF экспорт",
+    "excel": "Excel экспорт"
+  },
+  "empty": "Транзакциялар жоқ",
+  "emptyDescription": "Алғашқы транзакцияны қосыңыз",
+  "messages": {
+    "paymentAdded": "Төлем қосылды",
+    "refundAdded": "Қайтару қосылды",
+    "discountCreated": "Жеңілдік құрылды",
+    "discountUpdated": "Жеңілдік жаңартылды",
+    "discountDeleted": "Жеңілдік жойылды",
+    "debtCreated": "Борыш құрылды",
+    "debtUpdated": "Борыш жаңартылды",
+    "error": "Қате орын алды"
+  }
+}

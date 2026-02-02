@@ -1,5 +1,6 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
   LayoutDashboard,
   Users,
@@ -32,9 +33,10 @@ import { useSettings } from "@/hooks/useData";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { LucideIcon } from "lucide-react";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 type NavItem = {
-  title: string;
+  titleKey: string; // i18n key
   url: string;
   icon: LucideIcon;
   permission?: string;
@@ -43,68 +45,68 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   {
-    title: "Dashboard",
+    titleKey: "dashboard",
     url: "/",
     icon: LayoutDashboard,
     permission: "dashboard.view",
-    roles: ["admin", "manager"], // Only admin and manager can access Dashboard
+    roles: ["admin", "manager"],
   },
   {
-    title: "Лиды",
+    titleKey: "leads",
     url: "/leads",
     icon: UserPlus,
     permission: "leads.view",
   },
   {
-    title: "Учителя",
+    titleKey: "teachers",
     url: "/teachers",
     icon: GraduationCap,
     permission: "teachers.view",
   },
   {
-    title: "Ученики",
+    titleKey: "students",
     url: "/students",
     icon: Users,
     permission: "students.view",
   },
   {
-    title: "Расписание",
+    titleKey: "schedule",
     url: "/schedule",
     icon: Calendar,
     permission: "schedule.view",
   },
   {
-    title: "Группы",
+    titleKey: "groups",
     url: "/groups",
     icon: UsersRound,
     permission: "groups.view",
   },
   {
-    title: "Индивидуальные",
+    titleKey: "individualLessons",
     url: "/individual-lessons",
     icon: UserCheck,
     permission: "lessons.view",
   },
   {
-    title: "Финансы",
+    titleKey: "finance",
     url: "/finance",
     icon: DollarSign,
     permission: "finance.view",
   },
   {
-    title: "Абонементы",
+    titleKey: "subscriptions",
     url: "/subscriptions",
     icon: Ticket,
     permission: "subscriptions.view",
   },
   {
-    title: "Настройки",
+    titleKey: "settings",
     url: "/settings",
     icon: Settings,
     permission: "settings.view",
   },
   {
-    title: "Роли и права",
+    titleKey: "roles",
     url: "/roles",
     icon: Shield,
     permission: "roles.view",
@@ -121,6 +123,7 @@ export function AppSidebar({ onRestartOnboarding }: AppSidebarProps) {
   const navigate = useNavigate();
   const { data: settings } = useSettings();
   const { logout, user, hasPermission } = useAuth();
+  const { t, i18n } = useTranslation("navigation");
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -160,7 +163,9 @@ export function AppSidebar({ onRestartOnboarding }: AppSidebarProps) {
               <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
                 {settings?.centerName || "Neosmart"}
               </h2>
-              <p className="text-[10px] text-slate-400">Учебный центр</p>
+              <p className="text-[10px] text-slate-400">
+                {i18n.language === 'kk' ? 'Оқу орталығы' : i18n.language === 'en' ? 'Learning Center' : 'Учебный центр'}
+              </p>
             </div>
           )}
         </div>
@@ -169,7 +174,7 @@ export function AppSidebar({ onRestartOnboarding }: AppSidebarProps) {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className={isCollapsed ? "sr-only" : ""}>
-            Навигация
+            {t("menu")}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -186,24 +191,27 @@ export function AppSidebar({ onRestartOnboarding }: AppSidebarProps) {
                   if (!user || !user.permissions || user.permissions.length === 0) return false;
                   return hasPermission(item.permission);
                 })
-                .map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive(item.url)}
-                      tooltip={isCollapsed ? item.title : undefined}
-                    >
-                      <NavLink
-                        to={item.url}
-                        end={item.url === "/"}
-                        className="flex items-center gap-3"
+                .map((item) => {
+                  const title = t(item.titleKey);
+                  return (
+                    <SidebarMenuItem key={item.titleKey}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive(item.url)}
+                        tooltip={isCollapsed ? title : undefined}
                       >
-                        <item.icon className="h-5 w-5" />
-                        {!isCollapsed && <span>{item.title}</span>}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+                        <NavLink
+                          to={item.url}
+                          end={item.url === "/"}
+                          className="flex items-center gap-3"
+                        >
+                          <item.icon className="h-5 w-5" />
+                          {!isCollapsed && <span>{title}</span>}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -229,6 +237,14 @@ export function AppSidebar({ onRestartOnboarding }: AppSidebarProps) {
             </div>
           </div>
         )}
+        
+        {/* Language Switcher */}
+        {!isCollapsed && (
+          <div className="mb-2">
+            <LanguageSwitcher />
+          </div>
+        )}
+        
         <div className={`flex ${isCollapsed ? "flex-col" : ""} gap-1`}>
           {onRestartOnboarding && (
             <Button
@@ -238,7 +254,7 @@ export function AppSidebar({ onRestartOnboarding }: AppSidebarProps) {
               onClick={onRestartOnboarding}
             >
               <RefreshCcw className="h-4 w-4" />
-              {!isCollapsed && <span className="sr-only">Онбординг</span>}
+              {!isCollapsed && <span className="sr-only">{t("help")}</span>}
             </Button>
           )}
           <Button
@@ -248,7 +264,7 @@ export function AppSidebar({ onRestartOnboarding }: AppSidebarProps) {
             onClick={handleLogout}
           >
             <LogOut className="h-4 w-4" />
-            {!isCollapsed && <span className="sr-only">Выйти</span>}
+            {!isCollapsed && <span className="sr-only">{t("logout")}</span>}
           </Button>
         </div>
       </SidebarFooter>

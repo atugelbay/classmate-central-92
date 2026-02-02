@@ -1,7 +1,9 @@
 import { DollarSign, Calendar, CheckCircle2, XCircle, Clock, User } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import moment from "moment";
+import "moment/locale/kk";
 
 interface TimelineItem {
   id: string;
@@ -20,6 +22,8 @@ interface ActivityTimelineProps {
 }
 
 export function ActivityTimeline({ items, maxItems = 10, className }: ActivityTimelineProps) {
+  const { t, i18n } = useTranslation("students");
+  moment.locale(i18n.language);
   const displayItems = items.slice(0, maxItems);
 
   const getIcon = (type: TimelineItem["type"]) => {
@@ -68,7 +72,7 @@ export function ActivityTimeline({ items, maxItems = 10, className }: ActivityTi
   if (displayItems.length === 0) {
     return (
       <div className="flex items-center justify-center py-8">
-        <p className="text-sm text-muted-foreground">Нет активности</p>
+        <p className="text-sm text-muted-foreground">{t("noActivity")}</p>
       </div>
     );
   }

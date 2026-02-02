@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,7 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation("auth");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,11 +23,11 @@ export default function Login() {
 
     try {
       await login(email, password);
-      toast.success("Успешный вход!");
+      toast.success(t("common:success"));
       // Полная перезагрузка страницы для сброса всех данных
       window.location.href = "/";
     } catch (error: any) {
-      toast.error(error.response?.data?.error || "Ошибка входа");
+      toast.error(error.response?.data?.error || t("errors.invalidCredentials"));
     } finally {
       setIsLoading(false);
     }
@@ -49,17 +51,17 @@ export default function Login() {
           </div>
           <div className="space-y-2 text-center">
             <CardTitle className="text-2xl font-bold">
-              С возвращением!
+              {t("login.title")}
             </CardTitle>
             <CardDescription className="text-muted-foreground">
-              Войдите в ваш учебный центр
+              {t("login.subtitle")}
             </CardDescription>
           </div>
         </CardHeader>
         <CardContent className="pb-8">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+              <Label htmlFor="email" className="text-sm font-medium">{t("login.email")}</Label>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -75,7 +77,7 @@ export default function Login() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-medium">Пароль</Label>
+              <Label htmlFor="password" className="text-sm font-medium">{t("login.password")}</Label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -91,13 +93,13 @@ export default function Login() {
               </div>
             </div>
             <Button type="submit" className="w-full h-12 text-base" disabled={isLoading}>
-              {isLoading ? "Вход..." : "Войти"}
+              {isLoading ? t("common:loading") : t("login.submit")}
             </Button>
           </form>
           <div className="mt-6 text-center text-sm text-muted-foreground">
-            Нет аккаунта?{" "}
+            {t("login.noAccount")}{" "}
             <Link to="/register" className="text-primary font-medium hover:underline underline-offset-4">
-              Зарегистрироваться
+              {t("login.register")}
             </Link>
           </div>
         </CardContent>

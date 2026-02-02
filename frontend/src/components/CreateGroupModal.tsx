@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import moment from "moment";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,8 @@ import { Teacher, Room, Student, CheckConflictsResponse } from "@/types";
 import { AlertTriangle, Loader2, CheckCircle } from "lucide-react";
 import { useCheckConflicts, useCreateBulkLessons, useCreateGroup } from "@/hooks/useData";
 import { toast } from "sonner";
+import "moment/locale/ru";
+import "moment/locale/kk";
 
 interface CreateGroupModalProps {
   open: boolean;
@@ -23,15 +26,23 @@ interface CreateGroupModalProps {
   onSuccess?: () => void;
 }
 
-const WEEKDAYS = [
-  { value: 1, label: "Пн" },
-  { value: 2, label: "Вт" },
-  { value: 3, label: "Ср" },
-  { value: 4, label: "Чт" },
-  { value: 5, label: "Пт" },
-  { value: 6, label: "Сб" },
-  { value: 0, label: "Вс" },
-];
+const getWeekdays = (lang: string) => {
+  const labels: Record<string, string[]> = {
+    ru: ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"],
+    kk: ["Дс", "Сс", "Ср", "Бс", "Жм", "Сн", "Жк"],
+    en: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+  };
+  const l = labels[lang] || labels.ru;
+  return [
+    { value: 1, label: l[0] },
+    { value: 2, label: l[1] },
+    { value: 3, label: l[2] },
+    { value: 4, label: l[3] },
+    { value: 5, label: l[4] },
+    { value: 6, label: l[5] },
+    { value: 0, label: l[6] },
+  ];
+};
 
 export function CreateGroupModal({
   open,
@@ -41,6 +52,9 @@ export function CreateGroupModal({
   students,
   onSuccess,
 }: CreateGroupModalProps) {
+  const { t, i18n } = useTranslation(["groups", "common", "schedule"]);
+  moment.locale(i18n.language);
+  const WEEKDAYS = getWeekdays(i18n.language);
   // Series mode всегда включен для создания группы
   const [selectedWeekdays, setSelectedWeekdays] = useState<number[]>([]);
   const [seriesEndDate, setSeriesEndDate] = useState("");
@@ -218,24 +232,24 @@ export function CreateGroupModal({
 
   const handleSubmit = async (forceCreate = false) => {
     if (!forceCreate && conflicts?.hasConflicts) {
-      toast.error("Есть конфликты. Используйте предложенное время или подтвердите создание.");
+      toast.error(t("errors.hasConflicts"));
       return;
     }
 
     if (selectedWeekdays.length === 0) {
-      toast.error("Выберите хотя бы один день недели");
+      toast.error(t("errors.selectWeekday"));
       return;
     }
 
     // Проверяем что у всех выбранных дней есть время
     const allDaysHaveTime = selectedWeekdays.every(day => dayTimes[day]?.start && dayTimes[day]?.end);
     if (!allDaysHaveTime) {
-      toast.error("Укажите время для всех выбранных дней недели");
+      toast.error(t("errors.setTimeForAllDays"));
       return;
     }
 
     if (!seriesEndDate) {
-      toast.error("Укажите дату окончания серии");
+      toast.error(t("errors.setEndDate"));
       return;
     }
 
@@ -325,18 +339,18 @@ export function CreateGroupModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Новая группа</DialogTitle>
+          <DialogTitle>{t("newGroup")}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 pb-2">
           {/* Section: Основная информация */}
           <div className="space-y-3">
-            <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Основная информация</h4>
+            <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">{t("modal.basicInfo")}</h4>
             
             {/* Group Name & Subject - Two columns */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="groupName">Название группы *</Label>
+                <Label htmlFor="groupName">{t("groupName")} *</Label>
                 <Input
                   id="groupName"
                   value={groupName}
@@ -345,7 +359,7 @@ export function CreateGroupModal({
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="subject">Предмет *</Label>
+                <Label htmlFor="subject">{t("subject")} *</Label>
                 <Input
                   id="subject"
                   value={subject}
@@ -358,10 +372,10 @@ export function CreateGroupModal({
             {/* Teacher & Room - Two columns */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="teacherId">Преподаватель *</Label>
+                <Label htmlFor="teacherId">{t("teacher")} *</Label>
                 <Select value={teacherId} onValueChange={setTeacherId} required>
                   <SelectTrigger>
-                    <SelectValue placeholder="Выберите" />
+                    <SelectValue placeholder={t("select")} />
                   </SelectTrigger>
                   <SelectContent>
                     {teachers.map((teacher) => (
@@ -373,10 +387,10 @@ export function CreateGroupModal({
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="roomId">Аудитория *</Label>
+                <Label htmlFor="roomId">{t("room")} *</Label>
                 <Select value={roomId} onValueChange={setRoomId} required>
                   <SelectTrigger>
-                    <SelectValue placeholder="Выберите" />
+                    <SelectValue placeholder={t("select")} />
                   </SelectTrigger>
                   <SelectContent>
                     {rooms.map((room) => (
@@ -395,7 +409,7 @@ export function CreateGroupModal({
 
           {/* Section: Участники */}
           <div className="space-y-3">
-            <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Участники</h4>
+            <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">{t("modal.participants")}</h4>
             <StudentSelector
               students={students}
               selectedStudentIds={selectedStudentIds}
@@ -408,12 +422,12 @@ export function CreateGroupModal({
 
           {/* Section: Расписание */}
           <div className="space-y-3">
-            <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Расписание</h4>
+            <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">{t("schedule")}</h4>
 
             {/* Start & End Date - Two columns */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="startDate">Дата начала *</Label>
+                <Label htmlFor="startDate">{t("modal.startDate")} *</Label>
                 <Input
                   id="startDate"
                   type="date"
@@ -423,7 +437,7 @@ export function CreateGroupModal({
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="seriesEndDate">Дата окончания *</Label>
+                <Label htmlFor="seriesEndDate">{t("modal.endDate")} *</Label>
                 <Input
                   id="seriesEndDate"
                   type="date"
@@ -437,7 +451,7 @@ export function CreateGroupModal({
 
             {/* Weekdays Selection */}
             <div className="p-4 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 space-y-3">
-              <Label className="block">Дни недели *</Label>
+              <Label className="block">{t("modal.weekdays")} *</Label>
               <div className="flex flex-wrap gap-2">
                 {WEEKDAYS.map((day) => (
                   <button
@@ -455,7 +469,7 @@ export function CreateGroupModal({
                 ))}
               </div>
               {selectedWeekdays.length === 0 && (
-                <p className="text-xs text-rose-500 mt-1">Выберите хотя бы один день</p>
+                <p className="text-xs text-rose-500 mt-1">{t("modal.selectAtLeastOneDay")}</p>
               )}
 
               {/* Time Selection for Each Selected Day */}
@@ -468,14 +482,14 @@ export function CreateGroupModal({
                       <div key={day} className="grid grid-cols-[40px_1fr_1fr] gap-2 items-end">
                         <span className="font-semibold text-sm text-slate-700 dark:text-slate-300 pb-2">{dayLabel}</span>
                         <div className="space-y-1">
-                          <Label className="text-[10px]">Начало</Label>
+                          <Label className="text-[10px]">{t("modal.start")}</Label>
                           <TimePicker
                             value={dayTime.start}
                             onChange={(value) => updateDayTime(day, "start", value)}
                           />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-[10px]">Окончание</Label>
+                          <Label className="text-[10px]">{t("modal.end")}</Label>
                           <TimePicker
                             value={dayTime.end}
                             onChange={(value) => updateDayTime(day, "end", value)}
@@ -493,7 +507,7 @@ export function CreateGroupModal({
           {checkingConflicts && (
             <Alert>
               <Loader2 className="h-4 w-4 animate-spin" />
-              <AlertDescription>Проверка конфликтов...</AlertDescription>
+              <AlertDescription>{t("checkingConflicts")}</AlertDescription>
             </Alert>
           )}
 
@@ -501,17 +515,17 @@ export function CreateGroupModal({
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                <p className="font-semibold mb-2">Обнаружены конфликты:</p>
+                <p className="font-semibold mb-2">{t("conflictsFound")}</p>
                 {conflicts.conflicts.map((conflict, idx) => (
                   <p key={idx} className="text-sm">
                     - {conflict.title} ({moment(conflict.start).format("HH:mm")} - {moment(conflict.end).format("HH:mm")})
-                    {conflict.conflictType === "teacher" && ` - Учитель занят`}
-                    {conflict.conflictType === "room" && ` - Аудитория занята`}
+                    {conflict.conflictType === "teacher" && ` - ${t("teacherBusy")}`}
+                    {conflict.conflictType === "room" && ` - ${t("roomBusy")}`}
                   </p>
                 ))}
                     {conflicts.suggestedTimes && conflicts.suggestedTimes.length > 0 && (
                       <div className="mt-3">
-                        <p className="font-semibold text-sm mb-1">Предложенное время:</p>
+                        <p className="font-semibold text-sm mb-1">{t("suggestedTime")}</p>
                         {conflicts.suggestedTimes.map((time, idx) => (
                           <Button
                             key={idx}
@@ -552,7 +566,7 @@ export function CreateGroupModal({
             selectedWeekdays.every(day => dayTimes[day]?.start && dayTimes[day]?.end) && (
             <Alert variant="success">
               <CheckCircle className="h-4 w-4" />
-              <AlertDescription>Конфликтов не обнаружено</AlertDescription>
+              <AlertDescription>{t("modal.noConflicts")}</AlertDescription>
             </Alert>
           )}
 
@@ -572,15 +586,15 @@ export function CreateGroupModal({
               }
               className="w-full bg-gradient-to-r from-[#6366f1] via-[#8b5cf6] to-[#a855f7] hover:opacity-90 text-white shadow-md"
             >
-              Создать группу
+              {t("modal.createGroup")}
             </Button>
             {conflicts?.hasConflicts && (
               <Button variant="outline" onClick={() => handleSubmit(true)} className="w-full">
-                Создать несмотря на конфликты
+                {t("actions.createAnyway")}
               </Button>
             )}
             <Button variant="ghost" onClick={() => onOpenChange(false)} className="w-full text-muted-foreground">
-              Отмена
+              {t("actions.cancel")}
             </Button>
           </div>
         </div>

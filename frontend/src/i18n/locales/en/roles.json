@@ -1,0 +1,66 @@
+{
+  "title": "Roles and Permissions",
+  "description": "Manage roles and user permissions",
+  "createRole": "Create role",
+  "create": "Create",
+  "editRole": "Edit role",
+  "dialog": {
+    "roleName": "Role name",
+    "description": "Description",
+    "permissions": "Permissions"
+  },
+  "roleNames": {
+    "admin": "Administrator",
+    "manager": "Manager",
+    "teacher": "Teacher",
+    "accountant": "Accountant",
+    "view_only": "View only"
+  },
+  "roleDescriptions": {
+    "admin": "Full access to all system features",
+    "manager": "Access to all features except role management",
+    "teacher": "Limited access to students and schedule",
+    "accountant": "Access to financial data",
+    "view_only": "View only without editing capabilities"
+  },
+  "invite": {
+    "title": "Invite user",
+    "name": "Name",
+    "namePlaceholder": "User name",
+    "email": "Email",
+    "emailPlaceholder": "user@example.com",
+    "role": "Role",
+    "selectRole": "Select role",
+    "branches": "Branch access",
+    "noBranches": "No branches available",
+    "sending": "Sending...",
+    "send": "Send invitation",
+    "selectBranch": "Select at least one branch",
+    "selectRoleError": "Please select a role"
+  },
+  "systemRoles": "System roles",
+  "table": {
+    "name": "Name",
+    "description": "Description",
+    "permissions": "Permissions",
+    "actions": "Actions"
+  },
+  "noRoles": "No roles",
+  "noPermissions": "No permissions",
+  "systemRole": "System role",
+  "companyUsers": "Company users",
+  "usersTable": {
+    "name": "Name",
+    "email": "Email",
+    "roles": "Roles",
+    "status": "Status"
+  },
+  "noUsers": "No users",
+  "noUserRoles": "No roles",
+  "userStatus": {
+    "verified": "Verified",
+    "unverified": "Not verified"
+  },
+  "deleteRole": "Delete role",
+  "deleteConfirm": "Are you sure you want to delete role \"{{name}}\"? This action cannot be undone."
+}

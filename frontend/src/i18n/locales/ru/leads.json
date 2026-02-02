@@ -1,0 +1,55 @@
+{
+  "title": "Лиды",
+  "addLead": "Добавить лид",
+  "editLead": "Редактировать лид",
+  "leadDetails": "Информация о лиде",
+  "searchPlaceholder": "Поиск лидов...",
+  "fields": {
+    "name": "Имя",
+    "phone": "Телефон",
+    "email": "Email",
+    "source": "Источник",
+    "status": "Статус",
+    "notes": "Заметки",
+    "assignedTo": "Ответственный"
+  },
+  "statuses": {
+    "new": "Новый",
+    "inProgress": "В работе",
+    "converted": "Записан",
+    "lost": "Отказ"
+  },
+  "sources": {
+    "website": "Сайт",
+    "phone": "Звонок",
+    "referral": "Рекомендация",
+    "social": "Соц. сети",
+    "other": "Другое"
+  },
+  "empty": "Нет лидов",
+  "emptyDescription": "Добавьте первый лид",
+  "convertToStudent": "Конвертировать в ученика",
+  "deleteConfirm": "Удалить лид {{name}}?",
+  "deleteWarning": "Это действие нельзя отменить",
+  "stats": {
+    "total": "Всего лидов",
+    "new": "Новых",
+    "inProgress": "В работе",
+    "converted": "Записано",
+    "conversionRate": "Конверсия"
+  },
+  "kanban": {
+    "dropHere": "Перетащите сюда"
+  },
+  "activity": {
+    "title": "История",
+    "addComment": "Добавить комментарий",
+    "commentPlaceholder": "Введите комментарий..."
+  },
+  "tasks": {
+    "title": "Задачи",
+    "add": "Добавить задачу",
+    "description": "Описание",
+    "dueDate": "Срок"
+  }
+}

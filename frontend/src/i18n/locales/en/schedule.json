@@ -1,0 +1,93 @@
+{
+  "title": "Schedule",
+  "addLesson": "Add Lesson",
+  "editLesson": "Edit Lesson",
+  "newLesson": "New Lesson",
+  "lessonDetails": "Lesson Details",
+  "views": {
+    "day": "Day",
+    "week": "Week",
+    "month": "Month"
+  },
+  "rooms": {
+    "title": "Rooms",
+    "add": "Add Room",
+    "edit": "Edit Room",
+    "name": "Name",
+    "capacity": "Capacity",
+    "color": "Color",
+    "status": "Status"
+  },
+  "lesson": {
+    "title": "Lesson Title",
+    "subject": "Subject",
+    "group": "Group",
+    "teacher": "Teacher",
+    "room": "Room",
+    "students": "Students",
+    "time": "Time",
+    "duration": "Duration",
+    "status": "Status",
+    "notes": "Notes",
+    "date": "Date",
+    "type": "Type",
+    "individual": "Individual",
+    "special": "One-time",
+    "start": "Start",
+    "end": "End"
+  },
+  "statuses": {
+    "scheduled": "Scheduled",
+    "completed": "Completed",
+    "cancelled": "Cancelled"
+  },
+  "attendance": {
+    "title": "Attendance",
+    "mark": "Mark",
+    "attended": "Attended",
+    "missed": "Missed",
+    "excused": "Excused",
+    "reason": "Reason",
+    "notes": "Notes",
+    "save": "Save attendance"
+  },
+  "conflicts": {
+    "title": "Conflicts",
+    "found": "Conflicts found",
+    "roomBusy": "Room is busy",
+    "teacherBusy": "Teacher is busy",
+    "checking": "Checking conflicts...",
+    "noConflicts": "No conflicts found",
+    "suggestedTime": "Suggested time:"
+  },
+  "series": {
+    "title": "Lesson Series",
+    "create": "Create Series",
+    "endDate": "Series End Date",
+    "weekdays": "Weekdays",
+    "selectDays": "Select at least one day"
+  },
+  "modal": {
+    "select": "Select",
+    "createLesson": "Create Lesson",
+    "saveChanges": "Save Changes",
+    "cancel": "Cancel",
+    "createAnyway": "Create despite conflicts"
+  },
+  "empty": "No lessons",
+  "emptyDescription": "Add your first lesson",
+  "deleteConfirm": "Delete lesson?",
+  "deleteWarning": "This action cannot be undone",
+  "messages": {
+    "lessonCreated": "Lesson created",
+    "lessonUpdated": "Lesson updated",
+    "lessonDeleted": "Lesson deleted",
+    "lessonCancelled": "Lesson cancelled",
+    "lessonResumed": "Lesson resumed",
+    "attendanceAvailableAfterStart": "Attendance marking available only after lesson starts",
+    "attendanceSaved": "Attendance saved",
+    "roomCreated": "Room created",
+    "error": "An error occurred",
+    "hasConflicts": "There are conflicts. Use suggested time or confirm creation."
+  }
+}

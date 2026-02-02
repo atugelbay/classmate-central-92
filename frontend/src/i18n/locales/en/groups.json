@@ -1,0 +1,85 @@
+{
+  "title": "Groups",
+  "searchPlaceholder": "Search groups...",
+  "addGroup": "Add Group",
+  "editGroup": "Edit Group",
+  "newGroup": "New Group",
+  "groupName": "Group Name",
+  "subject": "Subject",
+  "teacher": "Teacher",
+  "selectTeacher": "Select teacher",
+  "select": "Select",
+  "schedule": "Schedule",
+  "scheduleNotSet": "Not set",
+  "room": "Room",
+  "students": "Students",
+  "studentsCount": "{{count}} students",
+  "addStudent": "Add student",
+  "selectedStudents": "Selected students",
+  "status": {
+    "label": "Status",
+    "active": "Active",
+    "inactive": "Inactive",
+    "all": "All"
+  },
+  "stats": {
+    "scheduled": "Scheduled",
+    "completed": "Completed",
+    "total": "Total lessons"
+  },
+  "nextLesson": "Next lesson",
+  "upcomingLessons": "Upcoming lessons",
+  "noStudents": "No students in group",
+  "notAssigned": "Not assigned",
+  "actions": {
+    "extend": "Extend",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "create": "Create",
+    "cancel": "Cancel",
+    "createAnyway": "Create despite conflicts"
+  },
+  "search": "Search by name or subject...",
+  "deleteConfirm": {
+    "title": "Delete Group",
+    "description": "Are you sure you want to delete this group? This action cannot be undone.",
+    "confirm": "Delete",
+    "cancel": "Cancel"
+  },
+  "modal": {
+    "basicInfo": "Basic Information",
+    "participants": "Participants",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "weekdays": "Weekdays",
+    "selectAtLeastOneDay": "Select at least one day",
+    "start": "Start",
+    "end": "End",
+    "noConflicts": "No conflicts found",
+    "createGroup": "Create Group"
+  },
+  "checkingConflicts": "Checking conflicts...",
+  "conflictsFound": "Conflicts found:",
+  "teacherBusy": "Teacher is busy",
+  "roomBusy": "Room is busy",
+  "suggestedTime": "Suggested time:",
+  "canCreateAnyway": "You can still create the group, conflicts will be considered when generating lessons.",
+  "errors": {
+    "hasConflicts": "There are conflicts. Use suggested time or confirm creation.",
+    "selectWeekday": "Select at least one weekday",
+    "setTimeForAllDays": "Set time for all selected weekdays",
+    "setEndDate": "Set series end date"
+  },
+  "weekdays": {
+    "short": {
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat",
+      "sun": "Sun"
+    }
+  }
+}

@@ -1,0 +1,146 @@
+{
+  "title": "Учителя",
+  "addTeacher": "Добавить учителя",
+  "add": "Добавить",
+  "newTeacher": "Новый учитель",
+  "editTeacher": "Редактировать учителя",
+  "teacherDetails": "Информация об учителе",
+  "searchPlaceholder": "Поиск учителей...",
+  "searchByNameOrSubject": "Поиск по имени или предмету...",
+  "allStatuses": "Все статусы",
+  "fields": {
+    "name": "ФИО",
+    "phone": "Телефон",
+    "email": "Email",
+    "subject": "Предмет",
+    "subjects": "Предметы",
+    "status": "Статус",
+    "salary": "Зарплата",
+    "groups": "Группы",
+    "workload": "Плановая загруженность (часов/нед.)",
+    "hoursPerWeek": "Часов/нед."
+  },
+  "statuses": {
+    "active": "Активный",
+    "inactive": "Неактивный"
+  },
+  "badge": {
+    "active": "Активен",
+    "inactive": "Неактивен"
+  },
+  "workload": {
+    "title": "Загруженность на неделю",
+    "hour": "ч",
+    "hourWeek": "ч/нед",
+    "lesson_one": "урок",
+    "lesson_few": "урока",
+    "lesson_many": "уроков"
+  },
+  "detail": {
+    "backToList": "Назад к учителям",
+    "notFound": "Учитель не найден",
+    "backToListBtn": "Вернуться к списку",
+    "loadTitle": "Загруженность",
+    "lessons": "Уроков",
+    "planned": "Плановая",
+    "totalLessons": "Всего уроков",
+    "completed": "Проведено",
+    "completedPercent": "выполнено",
+    "scheduled": "Запланировано",
+    "schedule": "Расписание",
+    "calendar": "Календарь",
+    "list": "Список",
+    "today": "Сегодня",
+    "noLessons": "Уроков не найдено",
+    "more": "ещё",
+    "lessonStatus": "Статус",
+    "lessonStatuses": {
+      "completed": "Проведен",
+      "cancelled": "Отменен",
+      "scheduled": "Запланирован"
+    },
+    "editLesson": "Редактировать урок",
+    "completedShort": "Завершен",
+    "scheduledShort": "Запланир.",
+    "tableHeaders": {
+      "date": "Дата",
+      "time": "Время",
+      "title": "Название",
+      "group": "Группа",
+      "room": "Аудитория",
+      "status": "Статус",
+      "actions": "Действия"
+    }
+  },
+  "actions": {
+    "edit": "Редактировать",
+    "rates": "Ставки",
+    "salary": "Зарплата",
+    "delete": "Удалить"
+  },
+  "nextLesson": "Ближайший урок:",
+  "createLesson": "Создать урок",
+  "individual": "Индивидуальное",
+  "empty": "Нет учителей",
+  "emptyDescription": "Добавьте первого учителя",
+  "deleteConfirm": "Вы уверены?",
+  "deleteDescription": "Это действие нельзя отменить. Учитель \"{{name}}\" будет удален навсегда.",
+  "deleteWarning": "Это действие нельзя отменить",
+  "deleted": "Учитель удален",
+  "salary": {
+    "title": "Расчет зарплаты",
+    "periodStart": "Начало периода",
+    "periodEnd": "Конец периода",
+    "calculating": "Расчет зарплаты...",
+    "result": "Результат расчета",
+    "period": "Период",
+    "groupLessons": "Групповые уроки",
+    "individualLessons": "Индивидуальные уроки",
+    "specialLessons": "Специальные уроки",
+    "hourly": "Почасовая",
+    "perLesson": "Поурочная",
+    "hours": "Часов",
+    "lessonsCount": "Уроков",
+    "rate": "Ставка",
+    "perHour": "час",
+    "perLessonUnit": "урок",
+    "amount": "Сумма",
+    "total": "Итого",
+    "close": "Закрыть",
+    "noRates": "Для расчета зарплаты необходимо добавить ставки для учителя. Используйте кнопку \"Ставки\" для управления ставками.",
+    "noLessons": "За выбранный период нет проведенных уроков или нет ставок для типов проведенных уроков.",
+    "error": "Ошибка при расчете зарплаты"
+  },
+  "rates": {
+    "title": "Управление ставками",
+    "addRate": "Добавить ставку",
+    "editRate": "Редактировать ставку",
+    "noRates": "Ставки не добавлены. Нажмите \"Добавить ставку\" чтобы создать первую ставку.",
+    "lessonType": "Тип урока",
+    "rateType": "Тип ставки",
+    "value": "Значение",
+    "status": "Статус",
+    "actions": "Действия",
+    "rateValue": "Значение ставки (₸)",
+    "active": "Активна",
+    "inactive": "Неактивна",
+    "deleteRate": "Удалить ставку?",
+    "deleteWarning": "Это действие нельзя отменить. Ставка будет удалена навсегда.",
+    "hourlyDesc": "Стоимость одного часа",
+    "perLessonDesc": "Стоимость одного урока",
+    "duplicateWarning": "Активная ставка с таким типом урока и типом ставки уже существует. Деактивируйте существующую или выберите другую комбинацию.",
+    "lessonTypes": {
+      "group": "Групповые",
+      "individual": "Индивидуальные",
+      "special": "Спец уроки"
+    },
+    "rateTypes": {
+      "hourly": "Почасовая",
+      "per_lesson": "Поурочная"
+    },
+    "units": {
+      "hour": "час",
+      "lesson": "урок"
+    }
+  }
+}

@@ -1,0 +1,104 @@
+{
+  "title": "Settings",
+  "tabs": {
+    "general": "General",
+    "company": "Company",
+    "branches": "Branches",
+    "users": "Users",
+    "roles": "Roles",
+    "billing": "Billing",
+    "migration": "Migration"
+  },
+  "general": {
+    "title": "General Settings",
+    "language": "Language",
+    "timezone": "Timezone",
+    "currency": "Currency",
+    "dateFormat": "Date Format",
+    "theme": "Interface",
+    "themes": {
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    }
+  },
+  "company": {
+    "title": "Company Information",
+    "name": "Name",
+    "phone": "Phone",
+    "email": "Email",
+    "address": "Address",
+    "logo": "Logo"
+  },
+  "branches": {
+    "title": "Branches",
+    "add": "Add Branch",
+    "edit": "Edit Branch",
+    "current": "Current Branch",
+    "switch": "Switch Branch"
+  },
+  "users": {
+    "title": "Users",
+    "invite": "Invite User",
+    "role": "Role",
+    "lastActive": "Last Active"
+  },
+  "roles": {
+    "title": "Roles & Permissions",
+    "add": "Add Role",
+    "permissions": "Permissions"
+  },
+  "billing": {
+    "title": "Billing & Plans",
+    "currentPlan": "Current Plan",
+    "upgrade": "Upgrade Plan",
+    "usage": "Usage"
+  },
+  "migration": {
+    "title": "Data Migration",
+    "fromAlfaCRM": "Import from AlfaCRM",
+    "status": "Migration Status"
+  },
+  "saved": "Settings saved",
+  "saveError": "Error saving settings",
+  "about": {
+    "title": "About System",
+    "version": "Version",
+    "lastUpdate": "Last Update",
+    "storage": "Storage"
+  },
+  "interface": {
+    "themeTitle": "Appearance Theme",
+    "themeDescription": "Choose light, dark, or system theme",
+    "colorPalette": "Color Palette",
+    "colorPaletteDescription": "Choose the main color for the interface",
+    "interfaceSize": "Interface Size",
+    "interfaceSizeDescription": "Adjust text and element sizes",
+    "compact": "Compact",
+    "normal": "Normal",
+    "comfortable": "Comfortable",
+    "animations": "Animations",
+    "animationsDescription": "Enable or disable interface animations",
+    "enableAnimations": "Enable animations",
+    "transitionsAndEffects": "Transitions and effects",
+    "dataDensity": "Data Density",
+    "dataDensityDescription": "Adjust spacing in tables and lists",
+    "densityCompact": "Compact",
+    "densityStandard": "Standard",
+    "densitySpacious": "Spacious",
+    "preview": "Preview",
+    "previewDescription": "Example display with current settings",
+    "previewTitle": "Example Title",
+    "previewText": "This is example text with current interface settings. Here you can see how the content will look.",
+    "previewButton": "Example Button",
+    "accentElement": "Accent element with main color"
+  },
+  "colors": {
+    "blue": "Blue",
+    "purple": "Purple",
+    "green": "Green",
+    "orange": "Orange",
+    "red": "Red",
+    "pink": "Pink"
+  }
+}

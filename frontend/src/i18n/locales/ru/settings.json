@@ -1,0 +1,104 @@
+{
+  "title": "Настройки",
+  "tabs": {
+    "general": "Общие",
+    "company": "Компания",
+    "branches": "Филиалы",
+    "users": "Пользователи",
+    "roles": "Роли",
+    "billing": "Тарифы",
+    "migration": "Миграция"
+  },
+  "general": {
+    "title": "Общие настройки",
+    "language": "Язык",
+    "timezone": "Часовой пояс",
+    "currency": "Валюта",
+    "dateFormat": "Формат даты",
+    "theme": "Интерфейс",
+    "themes": {
+      "light": "Светлая",
+      "dark": "Тёмная",
+      "system": "Системная"
+    }
+  },
+  "company": {
+    "title": "Информация о компании",
+    "name": "Название",
+    "phone": "Телефон",
+    "email": "Email",
+    "address": "Адрес",
+    "logo": "Логотип"
+  },
+  "branches": {
+    "title": "Филиалы",
+    "add": "Добавить филиал",
+    "edit": "Редактировать филиал",
+    "current": "Текущий филиал",
+    "switch": "Сменить филиал"
+  },
+  "users": {
+    "title": "Пользователи",
+    "invite": "Пригласить пользователя",
+    "role": "Роль",
+    "lastActive": "Последняя активность"
+  },
+  "roles": {
+    "title": "Роли и права",
+    "add": "Добавить роль",
+    "permissions": "Права доступа"
+  },
+  "billing": {
+    "title": "Тарифы и оплата",
+    "currentPlan": "Текущий тариф",
+    "upgrade": "Улучшить тариф",
+    "usage": "Использование"
+  },
+  "migration": {
+    "title": "Миграция данных",
+    "fromAlfaCRM": "Импорт из AlfaCRM",
+    "status": "Статус миграции"
+  },
+  "saved": "Настройки сохранены",
+  "saveError": "Ошибка сохранения настроек",
+  "about": {
+    "title": "О системе",
+    "version": "Версия",
+    "lastUpdate": "Последнее обновление",
+    "storage": "Хранилище"
+  },
+  "interface": {
+    "themeTitle": "Тема оформления",
+    "themeDescription": "Выберите светлую, темную или системную тему",
+    "colorPalette": "Цветовая палитра",
+    "colorPaletteDescription": "Выберите основной цвет для интерфейса",
+    "interfaceSize": "Размер интерфейса",
+    "interfaceSizeDescription": "Настройте размер текста и элементов интерфейса",
+    "compact": "Компактный",
+    "normal": "Нормальный",
+    "comfortable": "Комфортный",
+    "animations": "Анимации",
+    "animationsDescription": "Включите или отключите анимации в интерфейсе",
+    "enableAnimations": "Включить анимации",
+    "transitionsAndEffects": "Переходы и эффекты",
+    "dataDensity": "Плотность данных",
+    "dataDensityDescription": "Настройте отступы в таблицах и списках",
+    "densityCompact": "Компактная",
+    "densityStandard": "Стандартная",
+    "densitySpacious": "Просторная",
+    "preview": "Предпросмотр",
+    "previewDescription": "Пример отображения с текущими настройками",
+    "previewTitle": "Пример заголовка",
+    "previewText": "Это пример текста с текущими настройками интерфейса. Здесь вы можете увидеть, как будет выглядеть контент.",
+    "previewButton": "Пример кнопки",
+    "accentElement": "Акцентный элемент с основным цветом"
+  },
+  "colors": {
+    "blue": "Синий",
+    "purple": "Фиолетовый",
+    "green": "Зелёный",
+    "orange": "Оранжевый",
+    "red": "Красный",
+    "pink": "Розовый"
+  }
+}

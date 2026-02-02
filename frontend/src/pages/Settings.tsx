@@ -1,5 +1,6 @@
 import { useState } from "react";
 import * as React from "react";
+import { useTranslation } from "react-i18next";
 import { useSettings, useUpdateSettings } from "@/hooks/useData";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -23,20 +24,22 @@ import { useThemeContext } from "@/context/ThemeContext";
 import { ColorThemeName, InterfaceSize, DataDensity } from "@/types";
 import { PageHeader } from "@/components/PageHeader";
 import { EmailVerification } from "@/components/EmailVerification";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
-const COLOR_THEMES = [
-  { name: "blue" as ColorThemeName, label: "Синий", color: "#6366F1" },
-  { name: "purple" as ColorThemeName, label: "Фиолетовый", color: "#A855F7" },
-  { name: "green" as ColorThemeName, label: "Зеленый", color: "#10B981" },
-  { name: "orange" as ColorThemeName, label: "Оранжевый", color: "#F59E0B" },
-  { name: "red" as ColorThemeName, label: "Красный", color: "#EF4444" },
-  { name: "pink" as ColorThemeName, label: "Розовый", color: "#EC4899" },
+const COLOR_THEMES: { name: ColorThemeName; labelKey: string; color: string }[] = [
+  { name: "blue", labelKey: "blue", color: "#6366F1" },
+  { name: "purple", labelKey: "purple", color: "#A855F7" },
+  { name: "green", labelKey: "green", color: "#10B981" },
+  { name: "orange", labelKey: "orange", color: "#F59E0B" },
+  { name: "red", labelKey: "red", color: "#EF4444" },
+  { name: "pink", labelKey: "pink", color: "#EC4899" },
 ];
 
 export default function Settings() {
   const { data: settings, isLoading } = useSettings();
   const updateSettings = useUpdateSettings();
   const { theme, setTheme, uiPreferences, updateUIPreference, applyColorTheme } = useThemeContext();
+  const { t } = useTranslation("settings");
   
   const [centerName, setCenterName] = useState("");
   const [isInitialized, setIsInitialized] = useState(false);
@@ -72,30 +75,45 @@ export default function Settings() {
   return (
     <div className="space-y-6 animate-fade-in-up">
       <PageHeader
-        title="Настройки"
-        description="Конфигурация учебного центра и интерфейса"
+        title={t("title")}
+        description={t("general.title")}
       />
 
       <Tabs defaultValue="general" className="w-full">
         <TabsList>
-          <TabsTrigger value="general">Общие</TabsTrigger>
-          <TabsTrigger value="billing">Тариф</TabsTrigger>
-          <TabsTrigger value="interface">Интерфейс</TabsTrigger>
-          <TabsTrigger value="branches">Филиалы</TabsTrigger>
+          <TabsTrigger value="general">{t("tabs.general")}</TabsTrigger>
+          <TabsTrigger value="billing">{t("tabs.billing")}</TabsTrigger>
+          <TabsTrigger value="interface">{t("general.theme")}</TabsTrigger>
+          <TabsTrigger value="branches">{t("tabs.branches")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="space-y-6 max-w-2xl">
+          {/* Language Settings */}
           <Card>
             <CardHeader>
-              <CardTitle>Основные настройки</CardTitle>
+              <CardTitle>{t("general.language")}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>{t("general.language")}</Label>
+                </div>
+                <LanguageSwitcher />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("general.title")}</CardTitle>
               <CardDescription>
-                Общая информация об учебном центре
+                {t("company.title")}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
-                  <Label htmlFor="centerName">Название учебного центра</Label>
+                  <Label htmlFor="centerName">{t("company.name")}</Label>
                   <Input
                     id="centerName"
                     name="centerName"
@@ -109,10 +127,10 @@ export default function Settings() {
                   {updateSettings.isPending ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Сохранение...
+                      {t("common:loading")}
                     </>
                   ) : (
-                    "Сохранить настройки"
+                    t("common:save")
                   )}
                 </Button>
               </form>
@@ -123,19 +141,19 @@ export default function Settings() {
 
           <Card>
             <CardHeader>
-              <CardTitle>О системе</CardTitle>
+              <CardTitle>{t("about.title")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Версия:</span>
+                <span className="text-muted-foreground">{t("about.version")}:</span>
                 <span className="font-medium">1.0.0</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Последнее обновление:</span>
+                <span className="text-muted-foreground">{t("about.lastUpdate")}:</span>
                 <span className="font-medium">Октябрь 2025</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Хранилище:</span>
+                <span className="text-muted-foreground">{t("about.storage")}:</span>
                 <span className="font-medium">PostgreSQL</span>
               </div>
             </CardContent>
@@ -146,9 +164,9 @@ export default function Settings() {
           {/* Theme Selection */}
           <Card>
             <CardHeader>
-              <CardTitle>Тема оформления</CardTitle>
+              <CardTitle>{t("interface.themeTitle")}</CardTitle>
               <CardDescription>
-                Выберите светлую, темную или системную тему
+                {t("interface.themeDescription")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -168,7 +186,7 @@ export default function Settings() {
                     className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
                   >
                     <Sun className="mb-3 h-6 w-6" />
-                    <span className="text-sm font-medium">Светлая</span>
+                    <span className="text-sm font-medium">{t("general.themes.light")}</span>
                   </Label>
                 </div>
                 <div>
@@ -182,7 +200,7 @@ export default function Settings() {
                     className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
                   >
                     <Moon className="mb-3 h-6 w-6" />
-                    <span className="text-sm font-medium">Темная</span>
+                    <span className="text-sm font-medium">{t("general.themes.dark")}</span>
                   </Label>
                 </div>
                 <div>
@@ -196,7 +214,7 @@ export default function Settings() {
                     className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
                   >
                     <Monitor className="mb-3 h-6 w-6" />
-                    <span className="text-sm font-medium">Системная</span>
+                    <span className="text-sm font-medium">{t("general.themes.system")}</span>
                   </Label>
                 </div>
               </RadioGroup>
@@ -206,9 +224,9 @@ export default function Settings() {
           {/* Color Palette */}
           <Card>
             <CardHeader>
-              <CardTitle>Цветовая палитра</CardTitle>
+              <CardTitle>{t("interface.colorPalette")}</CardTitle>
               <CardDescription>
-                Выберите основной цвет для интерфейса
+                {t("interface.colorPaletteDescription")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -228,7 +246,7 @@ export default function Settings() {
                       style={{ backgroundColor: colorTheme.color }}
                     />
                     <div className="flex-1 text-left">
-                      <div className="font-medium">{colorTheme.label}</div>
+                      <div className="font-medium">{t(`colors.${colorTheme.labelKey}`)}</div>
                     </div>
                     {uiPreferences.colorTheme === colorTheme.name && (
                       <Check className="h-5 w-5 text-primary" />
@@ -242,9 +260,9 @@ export default function Settings() {
           {/* Interface Size */}
           <Card>
             <CardHeader>
-              <CardTitle>Размер интерфейса</CardTitle>
+              <CardTitle>{t("interface.interfaceSize")}</CardTitle>
               <CardDescription>
-                Настройте размер текста и элементов интерфейса
+                {t("interface.interfaceSizeDescription")}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -266,7 +284,7 @@ export default function Settings() {
                     className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
                   >
                     <span className="text-xs mb-2">Aa</span>
-                    <span className="text-sm font-medium">Компактный</span>
+                    <span className="text-sm font-medium">{t("interface.compact")}</span>
                   </Label>
                 </div>
                 <div>
@@ -280,7 +298,7 @@ export default function Settings() {
                     className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
                   >
                     <span className="text-sm mb-2">Aa</span>
-                    <span className="text-sm font-medium">Нормальный</span>
+                    <span className="text-sm font-medium">{t("interface.normal")}</span>
                   </Label>
                 </div>
                 <div>
@@ -294,7 +312,7 @@ export default function Settings() {
                     className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
                   >
                     <span className="text-base mb-2">Aa</span>
-                    <span className="text-sm font-medium">Комфортный</span>
+                    <span className="text-sm font-medium">{t("interface.comfortable")}</span>
                   </Label>
                 </div>
               </RadioGroup>
@@ -305,17 +323,17 @@ export default function Settings() {
           <div className="grid md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Анимации</CardTitle>
+                <CardTitle>{t("interface.animations")}</CardTitle>
                 <CardDescription>
-                  Включите или отключите анимации в интерфейсе
+                  {t("interface.animationsDescription")}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label htmlFor="animations">Включить анимации</Label>
+                    <Label htmlFor="animations">{t("interface.enableAnimations")}</Label>
                     <p className="text-sm text-muted-foreground">
-                      Переходы и эффекты
+                      {t("interface.transitionsAndEffects")}
                     </p>
                   </div>
                   <Switch
@@ -331,9 +349,9 @@ export default function Settings() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Плотность данных</CardTitle>
+                <CardTitle>{t("interface.dataDensity")}</CardTitle>
                 <CardDescription>
-                  Настройте отступы в таблицах и списках
+                  {t("interface.dataDensityDescription")}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -347,9 +365,9 @@ export default function Settings() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="compact">Компактная</SelectItem>
-                    <SelectItem value="standard">Стандартная</SelectItem>
-                    <SelectItem value="spacious">Просторная</SelectItem>
+                    <SelectItem value="compact">{t("interface.densityCompact")}</SelectItem>
+                    <SelectItem value="standard">{t("interface.densityStandard")}</SelectItem>
+                    <SelectItem value="spacious">{t("interface.densitySpacious")}</SelectItem>
                   </SelectContent>
                 </Select>
               </CardContent>
@@ -359,25 +377,24 @@ export default function Settings() {
           {/* Preview Section */}
           <Card>
             <CardHeader>
-              <CardTitle>Предпросмотр</CardTitle>
+              <CardTitle>{t("interface.preview")}</CardTitle>
               <CardDescription>
-                Пример отображения с текущими настройками
+                {t("interface.previewDescription")}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div className="rounded-lg border bg-card p-4">
-                  <h3 className="font-semibold mb-2">Пример заголовка</h3>
+                  <h3 className="font-semibold mb-2">{t("interface.previewTitle")}</h3>
                   <p className="text-muted-foreground mb-4">
-                    Это пример текста с текущими настройками интерфейса. 
-                    Здесь вы можете увидеть, как будет выглядеть контент.
+                    {t("interface.previewText")}
                   </p>
-                  <Button>Пример кнопки</Button>
+                  <Button>{t("interface.previewButton")}</Button>
                 </div>
                 <div className="rounded-lg border bg-muted/50 p-3">
                   <div className="flex items-center gap-2 text-sm">
                     <Palette className="h-4 w-4 text-primary" />
-                    <span>Акцентный элемент с основным цветом</span>
+                    <span>{t("interface.accentElement")}</span>
                   </div>
                 </div>
               </div>

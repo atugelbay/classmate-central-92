@@ -1,10 +1,10 @@
 import { Calendar, Clock, Loader2, ArrowRight, MapPin } from "lucide-react";
 import { useTodayLessons, useTeachers, useGroups, useRooms } from "@/hooks/useData";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import moment from "moment";
 import "moment/locale/ru";
-
-moment.locale("ru");
+import "moment/locale/kk";
 
 export function TodayScheduleCompact() {
   const navigate = useNavigate();
@@ -12,6 +12,10 @@ export function TodayScheduleCompact() {
   const { data: teachers = [] } = useTeachers();
   const { data: groups = [] } = useGroups();
   const { data: rooms = [] } = useRooms();
+  const { t, i18n } = useTranslation("dashboard");
+  
+  // Set moment locale based on current language
+  moment.locale(i18n.language);
 
   const sortedLessons = Array.isArray(lessons) 
     ? [...lessons]
@@ -33,10 +37,10 @@ export function TodayScheduleCompact() {
           <div className="p-2 rounded-xl bg-sky-500">
             <Calendar className="h-5 w-5 text-white" />
           </div>
-          <span className="font-semibold text-foreground">Расписание</span>
+          <span className="font-semibold text-foreground">{t("todaySchedule.title")}</span>
         </div>
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          Все <ArrowRight className="h-3 w-3" />
+          {t("common:all")} <ArrowRight className="h-3 w-3" />
         </div>
       </div>
 
@@ -44,11 +48,11 @@ export function TodayScheduleCompact() {
       <div className="flex items-center gap-3 mb-4">
         <div className="flex-1 p-3 rounded-xl bg-sky-500/10">
           <div className="text-2xl font-bold text-sky-600 dark:text-sky-400">{totalLessons}</div>
-          <div className="text-xs text-muted-foreground">уроков</div>
+          <div className="text-xs text-muted-foreground">{t("stats.lessons").toLowerCase()}</div>
         </div>
         <div className="flex-1 p-3 rounded-xl bg-emerald-500/10">
           <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{completedCount}</div>
-          <div className="text-xs text-muted-foreground">завершено</div>
+          <div className="text-xs text-muted-foreground">{t("common:statuses.completed").toLowerCase()}</div>
         </div>
       </div>
 
@@ -60,7 +64,7 @@ export function TodayScheduleCompact() {
       ) : sortedLessons.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
           <Calendar className="h-8 w-8 mb-2 opacity-50" />
-          <span className="text-sm">Нет уроков на сегодня</span>
+          <span className="text-sm">{t("todaySchedule.noLessons")}</span>
         </div>
       ) : (
         <div className="flex-1 space-y-2 overflow-y-auto">
@@ -72,6 +76,12 @@ export function TodayScheduleCompact() {
             const endTime = moment(lesson.end);
             const isNow = moment().isBetween(startTime, endTime);
             const isPast = moment().isAfter(endTime);
+            
+            // "Now" label translations
+            const getNowLabel = () => {
+              const labels = { ru: "Сейчас", kk: "Қазір", en: "Now" };
+              return labels[i18n.language as 'ru' | 'kk' | 'en'] || labels.ru;
+            };
             
             return (
               <div
@@ -93,12 +103,12 @@ export function TodayScheduleCompact() {
                   </div>
                   {isNow && (
                     <span className="px-2 py-0.5 rounded-full bg-white/20 text-[10px] font-medium">
-                      Сейчас
+                      {getNowLabel()}
                     </span>
                   )}
                 </div>
                 <div className={`text-xs truncate ${isNow ? "text-white/90" : "text-foreground"}`}>
-                  {group?.name || teacher?.name || "Урок"}
+                  {group?.name || teacher?.name || t("stats.lessons")}
                 </div>
                 {room && (
                   <div className={`flex items-center gap-1 text-xs mt-1 ${isNow ? "text-white/70" : "text-muted-foreground"}`}>

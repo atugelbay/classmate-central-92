@@ -1,8 +1,10 @@
 import { ClipboardCheck, Loader2, CheckCircle, XCircle } from "lucide-react";
 import { useAttendanceChart } from "@/hooks/useData";
+import { useTranslation } from "react-i18next";
 
 export function AttendanceCompact() {
   const { data: attendanceData = [], isLoading } = useAttendanceChart("week");
+  const { t } = useTranslation("dashboard");
 
   const safeData = Array.isArray(attendanceData) ? attendanceData : [];
   const totalAttended = safeData.reduce((sum, item) => sum + item.attended, 0);
@@ -61,7 +63,7 @@ export function AttendanceCompact() {
               <div className={`p-1.5 rounded-lg bg-${colors.accent}-500/10`}>
                 <ClipboardCheck className={`h-4 w-4 text-${colors.accent}-500`} />
               </div>
-              <span className="font-semibold text-foreground text-sm">Посещаемость</span>
+              <span className="font-semibold text-foreground text-sm">{t("attendance.title")}</span>
             </div>
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">

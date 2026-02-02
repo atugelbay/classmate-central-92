@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   useLeads,
   useCreateLead,
@@ -61,23 +62,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import moment from "moment";
 import "moment/locale/ru";
-
-moment.locale("ru");
-
-const statusLabels: Record<LeadStatus, string> = {
-  new: "Новый",
-  in_progress: "В работе",
-  enrolled: "Записан",
-  rejected: "Отказ",
-};
-
-const sourceLabels: Record<LeadSource, string> = {
-  call: "Звонок",
-  website: "Сайт",
-  social: "Соцсети",
-  referral: "Рекомендация",
-  other: "Другое",
-};
+import "moment/locale/kk";
 
 const statusColors: Record<LeadStatus, string> = {
   new: "bg-blue-100 text-blue-800 border-blue-200",
@@ -103,6 +88,26 @@ const columnBgColors: Record<LeadStatus, string> = {
 };
 
 export default function Leads() {
+  const { t, i18n } = useTranslation(["leads", "common"]);
+  moment.locale(i18n.language);
+
+  // Status labels using translations
+  const statusLabels: Record<LeadStatus, string> = {
+    new: t("statuses.new"),
+    in_progress: t("statuses.inProgress"),
+    enrolled: t("statuses.converted"),
+    rejected: t("statuses.lost"),
+  };
+
+  // Source labels using translations
+  const sourceLabels: Record<LeadSource, string> = {
+    website: t("sources.website"),
+    phone: t("sources.phone"),
+    referral: t("sources.referral"),
+    social: t("sources.social"),
+    other: t("sources.other"),
+  };
+  
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
@@ -259,20 +264,20 @@ export default function Leads() {
   return (
     <div className="space-y-6 animate-fade-in-up">
       <PageHeader
-        title="Лиды"
-        description="Управление потенциальными клиентами"
+        title={t("title")}
+        description={t("searchPlaceholder")}
         actions={
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="sm:size-default">
                 <Plus className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Добавить лид</span>
-                <span className="sm:hidden">Добавить</span>
+                <span className="hidden sm:inline">{t("addLead")}</span>
+                <span className="sm:hidden">{t("common:add")}</span>
               </Button>
             </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Новый лид</DialogTitle>
+              <DialogTitle>{t("addLead")}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleCreateLead} className="space-y-4">
               <div>
@@ -319,27 +324,27 @@ export default function Leads() {
       {stats && (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
           <StatCard
-            title="Всего лидов"
+            title={t("stats.total")}
             value={stats.totalLeads}
             icon={UserPlus}
           />
           <StatCard
-            title="Новые"
+            title={t("stats.new")}
             value={stats.newLeads}
             icon={UserPlus}
           />
           <StatCard
-            title="В работе"
+            title={t("stats.inProgress")}
             value={stats.inProgressLeads}
             icon={MessageSquare}
           />
           <StatCard
-            title="Записано"
+            title={t("stats.converted")}
             value={stats.enrolledLeads}
             icon={CheckSquare}
           />
           <StatCard
-            title="Конверсия"
+            title={t("stats.conversionRate")}
             value={`${stats.conversionRate.toFixed(1)}%`}
             icon={TrendingUp}
           />
@@ -460,7 +465,7 @@ export default function Leads() {
               ))}
               {statusLeads.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <div className="text-xs text-slate-400">Нет лидов</div>
+                  <div className="text-xs text-slate-400">{t("empty")}</div>
                 </div>
               )}
             </div>

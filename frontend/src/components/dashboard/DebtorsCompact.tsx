@@ -1,11 +1,13 @@
 import { AlertTriangle, ArrowRight, Loader2, CheckCircle2, Users } from "lucide-react";
 import { useAllBalances, useStudents } from "@/hooks/useData";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 export function DebtorsCompact() {
   const navigate = useNavigate();
   const { data: balances = [], isLoading: balancesLoading } = useAllBalances();
   const { data: students = [], isLoading: studentsLoading } = useStudents();
+  const { t, i18n } = useTranslation("dashboard");
 
   const isLoading = balancesLoading || studentsLoading;
 
@@ -23,6 +25,17 @@ export function DebtorsCompact() {
   const totalDebt = debtors.reduce((sum: number, d: any) => sum + Math.abs(d.balance), 0);
   const debtorCount = debtors.length;
 
+  // Translations
+  const getNoDebtorsText = () => {
+    const texts = { ru: "Нет должников", kk: "Борышкерлер жоқ", en: "No debtors" };
+    return texts[i18n.language as 'ru' | 'kk' | 'en'] || texts.ru;
+  };
+
+  const getDebtsTitle = () => {
+    const texts = { ru: "Задолженности", kk: "Борыштар", en: "Debts" };
+    return texts[i18n.language as 'ru' | 'kk' | 'en'] || texts.ru;
+  };
+
   return (
     <div 
       className="h-full rounded-2xl bg-card border border-border p-4 flex items-center gap-4 cursor-pointer transition-all hover:shadow-lg hover:border-rose-200 dark:hover:border-rose-800"
@@ -39,10 +52,10 @@ export function DebtorsCompact() {
           </div>
           <div className="flex-1">
             <div className="font-semibold text-foreground text-sm mb-1">
-              Задолженности
+              {getDebtsTitle()}
             </div>
             <div className="text-sm text-emerald-600 dark:text-emerald-400">
-              Нет должников
+              {getNoDebtorsText()}
             </div>
           </div>
         </>
@@ -54,14 +67,14 @@ export function DebtorsCompact() {
 
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
-              <span className="font-semibold text-foreground text-sm">Задолженности</span>
+              <span className="font-semibold text-foreground text-sm">{getDebtsTitle()}</span>
             </div>
             <div className="text-xl font-bold text-rose-600 dark:text-rose-400">
               -{totalDebt.toLocaleString()} ₸
             </div>
             <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
               <Users className="h-3 w-3" />
-              {debtorCount} {debtorCount === 1 ? 'ученик' : 'учеников'}
+              {debtorCount}
             </div>
           </div>
 

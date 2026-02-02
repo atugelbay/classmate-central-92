@@ -1,0 +1,55 @@
+{
+  "title": "Leads",
+  "addLead": "Add Lead",
+  "editLead": "Edit Lead",
+  "leadDetails": "Lead Details",
+  "searchPlaceholder": "Search leads...",
+  "fields": {
+    "name": "Name",
+    "phone": "Phone",
+    "email": "Email",
+    "source": "Source",
+    "status": "Status",
+    "notes": "Notes",
+    "assignedTo": "Assigned To"
+  },
+  "statuses": {
+    "new": "New",
+    "inProgress": "In Progress",
+    "converted": "Enrolled",
+    "lost": "Lost"
+  },
+  "sources": {
+    "website": "Website",
+    "phone": "Phone Call",
+    "referral": "Referral",
+    "social": "Social Media",
+    "other": "Other"
+  },
+  "empty": "No leads",
+  "emptyDescription": "Add your first lead",
+  "convertToStudent": "Convert to Student",
+  "deleteConfirm": "Delete lead {{name}}?",
+  "deleteWarning": "This action cannot be undone",
+  "stats": {
+    "total": "Total Leads",
+    "new": "New",
+    "inProgress": "In Progress",
+    "converted": "Enrolled",
+    "conversionRate": "Conversion Rate"
+  },
+  "kanban": {
+    "dropHere": "Drop here"
+  },
+  "activity": {
+    "title": "Activity",
+    "addComment": "Add Comment",
+    "commentPlaceholder": "Enter comment..."
+  },
+  "tasks": {
+    "title": "Tasks",
+    "add": "Add Task",
+    "description": "Description",
+    "dueDate": "Due Date"
+  }
+}

@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useQueries } from "@tanstack/react-query";
 import * as subscriptionsApi from "@/api/subscriptions";
 import {
@@ -73,12 +74,13 @@ import {
 import { Discount, PaymentTransaction } from "@/types";
 import moment from "moment";
 import "moment/locale/ru";
-
-moment.locale("ru");
+import "moment/locale/kk";
 
 export default function StudentDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation(["students", "common"]);
+  moment.locale(i18n.language);
   const { data: students = [] } = useStudents();
   const { data: groups = [] } = useGroups();
   const { data: lessons = [] } = useLessons();
@@ -214,10 +216,10 @@ export default function StudentDetail() {
   };
 
   const statusNames: Record<string, string> = {
-    active: "Активный",
-    inactive: "Неактивный",
-    frozen: "Заморожен",
-    graduated: "Закончил",
+    active: t("statusNames.active"),
+    inactive: t("statusNames.inactive"),
+    frozen: t("statusNames.frozen"),
+    graduated: t("statusNames.graduated"),
   };
 
   const handleAddNote = async () => {
@@ -271,7 +273,7 @@ export default function StudentDetail() {
       id: `transaction-${tx.id}`,
       date: tx.createdAt,
       type: tx.type === "payment" ? ("payment" as const) : tx.type === "refund" ? ("refund" as const) : ("debt" as const),
-      title: tx.type === "payment" ? "Оплата" : tx.type === "refund" ? "Возврат" : "Долг",
+      title: tx.type === "payment" ? t("timeline.payment") : tx.type === "refund" ? t("timeline.refund") : t("timeline.debt"),
       description: tx.description || tx.paymentMethod,
       amount: tx.type === "payment" ? tx.amount : -tx.amount,
       status: tx.type === "payment" ? ("success" as const) : ("error" as const),
@@ -285,7 +287,7 @@ export default function StudentDetail() {
           id: `lesson-${j.lessonId || j.startTime}`,
           date: j.startTime,
           type: "lesson" as const,
-          title: j.lessonTitle || "Занятие",
+          title: j.lessonTitle || t("timeline.lesson"),
           description: moment(j.startTime).format("HH:mm"),
           amount: -lessonCost,
           status: "info" as const,
@@ -303,7 +305,7 @@ export default function StudentDetail() {
         className="rounded-xl hover:bg-muted -mb-2"
       >
         <ArrowLeft className="h-4 w-4 mr-2" />
-        Назад к ученикам
+        {t("backToStudents")}
       </Button>
 
       {/* Bento Grid Layout */}
@@ -332,13 +334,13 @@ export default function StudentDetail() {
                   </div>
                   <Select value={selectedStatus} onValueChange={handleStatusChange}>
                     <SelectTrigger className="w-[180px] h-8 bg-white/50 dark:bg-white/10 border-0">
-                      <SelectValue placeholder="Изменить статус" />
+                      <SelectValue placeholder={t("changeStatus")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="active">Активный</SelectItem>
-                      <SelectItem value="inactive">Неактивный</SelectItem>
-                      <SelectItem value="frozen">Заморожен</SelectItem>
-                      <SelectItem value="graduated">Закончил</SelectItem>
+                      <SelectItem value="active">{t("statusNames.active")}</SelectItem>
+                      <SelectItem value="inactive">{t("statusNames.inactive")}</SelectItem>
+                      <SelectItem value="frozen">{t("statusNames.frozen")}</SelectItem>
+                      <SelectItem value="graduated">{t("statusNames.graduated")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -361,7 +363,7 @@ export default function StudentDetail() {
               )}
               <div className="flex items-center gap-2">
                 <GraduationCap className="h-4 w-4 text-violet-600 dark:text-violet-400" />
-                <span>{studentGroups.length} {studentGroups.length === 1 ? "группа" : "групп"}</span>
+                <span>{studentGroups.length} {studentGroups.length === 1 ? t("group_one") : t("group_many")}</span>
               </div>
             </div>
             
@@ -374,7 +376,7 @@ export default function StudentDetail() {
                 className="rounded-xl bg-white/70 dark:bg-white/10 border border-violet-200/50 dark:border-white/10 hover:bg-white hover:shadow-md hover:scale-[1.02] transition-all duration-200"
               >
                 <Edit className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Править</span>
+                <span className="hidden sm:inline">{t("editBtn")}</span>
               </Button>
               <Button 
                 variant="outline" 
@@ -383,7 +385,7 @@ export default function StudentDetail() {
                 className="rounded-xl bg-white/70 dark:bg-white/10 border border-violet-200/50 dark:border-white/10 hover:bg-white hover:shadow-md hover:scale-[1.02] transition-all duration-200"
               >
                 <Download className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Отчеты</span>
+                <span className="hidden sm:inline">{t("reports")}</span>
               </Button>
             </div>
           </div>
@@ -398,7 +400,7 @@ export default function StudentDetail() {
               <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 shadow-soft">
                 <Wallet className="h-5 w-5 text-white" />
               </div>
-              <span className="text-sm font-medium text-muted-foreground">Баланс</span>
+              <span className="text-sm font-medium text-muted-foreground">{t("fields.balance")}</span>
             </div>
             
             <div className={`text-4xl font-bold mb-1 ${(balance?.balance || 0) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
@@ -408,12 +410,12 @@ export default function StudentDetail() {
             
             <div className="space-y-3 pt-4 border-t border-emerald-200/50 dark:border-emerald-700/50">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Посещаемость</span>
+                <span className="text-sm text-muted-foreground">{t("attendance")}</span>
                 <span className="font-semibold">{attendanceStats.total > 0 ? Math.round((attendanceStats.attended / attendanceStats.total) * 100) : 0}%</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Занятий</span>
-                <span className="font-semibold">{attendanceStats.attended} из {attendanceStats.total}</span>
+                <span className="text-sm text-muted-foreground">{t("lessons")}</span>
+                <span className="font-semibold">{attendanceStats.attended} {t("lessonsOf")} {attendanceStats.total}</span>
               </div>
             </div>
           </div>
@@ -427,9 +429,9 @@ export default function StudentDetail() {
               <BookOpen className="h-6 w-6 text-white" />
             </div>
             <div>
-              <span className="text-sm font-medium text-muted-foreground">Уроки</span>
+              <span className="text-sm font-medium text-muted-foreground">{t("lessonsLabel")}</span>
               <div className="text-3xl font-bold text-violet-600 dark:text-violet-400">
-                {totalLessonsRemaining} <span className="text-lg font-normal text-muted-foreground">из {totalLessonsInSubscriptions}</span>
+                {totalLessonsRemaining} <span className="text-lg font-normal text-muted-foreground">{t("lessonsOf")} {totalLessonsInSubscriptions}</span>
               </div>
             </div>
           </div>
@@ -442,12 +444,12 @@ export default function StudentDetail() {
               <CalendarClock className="h-6 w-6 text-white" />
             </div>
             <div>
-              <span className="text-sm font-medium text-muted-foreground">Следующий урок</span>
+              <span className="text-sm font-medium text-muted-foreground">{t("nextLesson")}</span>
               <div className="text-2xl font-bold">
                 {nextLesson ? moment(nextLesson.start).format("DD MMM, HH:mm") : "—"}
               </div>
               <div className="text-sm text-muted-foreground">
-                {nextLesson ? "запланирован" : "нет уроков"}
+                {nextLesson ? (i18n.language === 'kk' ? 'жоспарланған' : i18n.language === 'en' ? 'scheduled' : 'запланирован') : t("noUpcomingLessons")}
               </div>
             </div>
           </div>
@@ -461,7 +463,7 @@ export default function StudentDetail() {
             <div className="p-2 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600">
               <Bell className="h-4 w-4 text-white" />
             </div>
-            <span className="font-semibold">Важные уведомления ({notifications.filter((n) => !n.isRead).length})</span>
+            <span className="font-semibold">{t("notifications")} ({notifications.filter((n) => !n.isRead).length})</span>
           </div>
           <div className="space-y-2">
             {notifications
@@ -495,7 +497,7 @@ export default function StudentDetail() {
                 <div className="p-2 rounded-lg bg-[hsl(262,83%,58%)]">
                   <BookOpen className="h-4 w-4 text-white" />
                 </div>
-                <h3 className="font-semibold text-slate-900 dark:text-slate-100">Абонементы</h3>
+                <h3 className="font-semibold text-slate-900 dark:text-slate-100">{t("subscriptions")}</h3>
               </div>
               <Button 
                 variant="ghost" 
@@ -504,7 +506,7 @@ export default function StudentDetail() {
                 onClick={() => setIsAssignSubModalOpen(true)}
               >
                 <Plus className="h-3 w-3 mr-1" />
-                Добавить
+                {t("add")}
               </Button>
             </div>
             
@@ -512,7 +514,7 @@ export default function StudentDetail() {
               {subscriptions.length === 0 ? (
                 <div className="text-center text-muted-foreground py-8 rounded-lg bg-muted/30">
                   <BookOpen className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                  <p className="text-sm">Нет абонементов</p>
+                  <p className="text-sm">{t("noSubscriptions")}</p>
                 </div>
               ) : (
                 subscriptions.map((sub) => (
@@ -525,7 +527,7 @@ export default function StudentDetail() {
                     />
                     <div className="space-y-2 pt-3 mt-3 border-t border-border">
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">Стоимость</span>
+                        <span className="text-muted-foreground">{t("subscriptionCost")}</span>
                         {sub.originalPrice && sub.originalPrice > sub.totalPrice && sub.discountAmount ? (
                           <div className="flex flex-col items-end">
                             <span className="font-semibold text-emerald-600">{sub.totalPrice.toLocaleString()} ₸</span>
@@ -536,11 +538,11 @@ export default function StudentDetail() {
                         )}
                       </div>
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">За урок</span>
+                        <span className="text-muted-foreground">{t("perLesson")}</span>
                         <span className="font-semibold text-foreground">{sub.pricePerLesson.toFixed(0)} ₸</span>
                       </div>
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">Период</span>
+                        <span className="text-muted-foreground">{t("period")}</span>
                         <span className="font-semibold text-foreground">
                           {moment(sub.startDate).format("DD.MM")} - {sub.endDate ? moment(sub.endDate).format("DD.MM") : "∞"}
                         </span>
@@ -550,7 +552,7 @@ export default function StudentDetail() {
                           ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 text-xs" 
                           : "text-xs"
                         }>
-                          {sub.status === "active" ? "Активен" : "Неактивен"}
+                          {sub.status === "active" ? t("statusActive") : t("statusInactive")}
                         </Badge>
                         <div className="flex items-center gap-1 ml-auto">
                           {sub.status === "active" && (
@@ -564,7 +566,7 @@ export default function StudentDetail() {
                               }}
                             >
                               <Clock className="h-3 w-3 mr-1" />
-                              Заморозить
+                              {t("freezeSubscription")}
                             </Button>
                           )}
                           <Button
@@ -572,7 +574,7 @@ export default function StudentDetail() {
                             size="sm"
                             className="h-7 px-2 text-xs text-muted-foreground hover:text-rose-600"
                             onClick={async () => {
-                              if (window.confirm("Вы уверены, что хотите удалить этот абонемент?")) {
+                              if (window.confirm(t("deleteSubscriptionConfirm"))) {
                                 await deleteSubscription.mutateAsync(sub.id);
                               }
                             }}
@@ -595,14 +597,14 @@ export default function StudentDetail() {
                 <div className="p-2 rounded-lg bg-amber-500">
                   <Percent className="h-4 w-4 text-white" />
                 </div>
-                <h3 className="font-semibold text-slate-900 dark:text-slate-100">Скидки</h3>
+                <h3 className="font-semibold text-slate-900 dark:text-slate-100">{t("discounts")}</h3>
               </div>
               <StudentDiscountCreateDialog studentId={id || ""} onApplied={() => { }} />
             </div>
             
             {studentDiscounts.length === 0 ? (
               <div className="text-center text-muted-foreground py-6 rounded-lg bg-muted/30">
-                <p className="text-sm">(не задано)</p>
+                <p className="text-sm">{t("noDiscounts")}</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -642,13 +644,13 @@ export default function StudentDetail() {
                 <div className="p-2 rounded-lg bg-sky-500">
                   <StickyNote className="h-4 w-4 text-white" />
                 </div>
-                <h3 className="font-semibold text-slate-900 dark:text-slate-100">Заметки</h3>
+                <h3 className="font-semibold text-slate-900 dark:text-slate-100">{t("notes")}</h3>
               </div>
               <Dialog open={isNoteDialogOpen} onOpenChange={setIsNoteDialogOpen}>
                 <DialogTrigger asChild>
                   <Button variant="ghost" size="sm" className="h-8 px-3 text-xs text-muted-foreground hover:text-foreground">
                     <Plus className="h-3 w-3 mr-1" />
-                    Добавить
+                    {t("add")}
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
@@ -657,18 +659,18 @@ export default function StudentDetail() {
                       <div className="p-2 rounded-lg bg-sky-500">
                         <StickyNote className="h-5 w-5 text-white" />
                       </div>
-                      Новая заметка
+                      {t("newNote")}
                     </DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4">
                     <Textarea
-                      placeholder="Введите текст заметки..."
+                      placeholder={t("writeNote")}
                       value={newNote}
                       onChange={(e) => setNewNote(e.target.value)}
                       rows={4}
                     />
                     <Button onClick={handleAddNote} disabled={!newNote.trim()}>
-                      Сохранить
+                      {t("save")}
                     </Button>
                   </div>
                 </DialogContent>
@@ -679,7 +681,7 @@ export default function StudentDetail() {
               {notes.length === 0 ? (
                 <div className="text-center text-muted-foreground py-6 rounded-lg bg-muted/30">
                   <StickyNote className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                  <p className="text-sm">Нет заметок</p>
+                  <p className="text-sm">{t("noNotes")}</p>
                 </div>
               ) : (
                 notes.map((note) => (
@@ -705,7 +707,7 @@ export default function StudentDetail() {
                 <div className="p-2 rounded-lg bg-[hsl(262,83%,58%)]">
                   <TrendingUp className="h-5 w-5 text-white" />
                 </div>
-                <h3 className="font-semibold text-slate-900 dark:text-slate-100">История баланса</h3>
+                <h3 className="font-semibold text-slate-900 dark:text-slate-100">{t("balanceHistory")}</h3>
               </div>
               <Button 
                 size="sm" 
@@ -713,7 +715,7 @@ export default function StudentDetail() {
                 className="bg-gradient-to-r from-[#6366f1] via-[#a855f7] to-[#ec4899] hover:opacity-90 text-white border-0"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Добавить платеж
+                {t("addPayment")}
               </Button>
             </div>
             <BalanceChart transactions={transactions} currentBalance={balance?.balance || 0} />
@@ -739,7 +741,7 @@ export default function StudentDetail() {
                 <div className="p-2 rounded-lg bg-sky-500">
                   <Users className="h-5 w-5 text-white" />
                 </div>
-                <h3 className="font-semibold text-slate-900 dark:text-slate-100">Группы</h3>
+                <h3 className="font-semibold text-slate-900 dark:text-slate-100">{t("groups")}</h3>
               </div>
               <Select
                 onValueChange={async (groupId) => {
@@ -759,7 +761,7 @@ export default function StudentDetail() {
                 }}
               >
                 <SelectTrigger className="w-[180px] h-9">
-                  <SelectValue placeholder="Добавить в группу" />
+                  <SelectValue placeholder={t("addToGroup")} />
                 </SelectTrigger>
                 <SelectContent>
                   {groups
@@ -776,7 +778,7 @@ export default function StudentDetail() {
             {studentGroups.length === 0 ? (
               <div className="text-center text-muted-foreground py-10 rounded-lg bg-muted/30">
                 <Users className="h-10 w-10 mx-auto mb-3 opacity-40" />
-                <p>Студент не состоит в группах</p>
+                <p>{t("notInGroups")}</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -794,7 +796,7 @@ export default function StudentDetail() {
                     }
                   });
 
-                  const weekdayNames = ["ВС", "ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ"];
+                  const weekdayNames = t("weekdays.short", { returnObjects: true }) as string[];
                   const sortedDays = Array.from(scheduleMap.keys()).sort((a, b) => {
                     const aAdj = a === 0 ? 7 : a;
                     const bAdj = b === 0 ? 7 : b;
@@ -850,7 +852,7 @@ export default function StudentDetail() {
               <div className="p-2 rounded-lg bg-[hsl(262,83%,58%)]">
                 <Clock className="h-5 w-5 text-white" />
               </div>
-              <h3 className="font-semibold text-slate-900 dark:text-slate-100">История активности</h3>
+              <h3 className="font-semibold text-slate-900 dark:text-slate-100">{t("activity")}</h3>
             </div>
             <ActivityTimeline items={timelineItems} maxItems={15} />
           </div>
@@ -861,7 +863,7 @@ export default function StudentDetail() {
       <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Добавить оплату</DialogTitle>
+            <DialogTitle>{t("paymentDialog.title")}</DialogTitle>
           </DialogHeader>
           <form
             onSubmit={async (e) => {
@@ -883,7 +885,7 @@ export default function StudentDetail() {
             className="space-y-4"
           >
             <div>
-              <Label htmlFor="amount">Сумма (₸)</Label>
+              <Label htmlFor="amount">{t("paymentDialog.amount")}</Label>
               <Input
                 id="amount"
                 name="amount"
@@ -895,25 +897,25 @@ export default function StudentDetail() {
               />
             </div>
             <div>
-              <Label htmlFor="paymentMethod">Способ оплаты</Label>
+              <Label htmlFor="paymentMethod">{t("paymentDialog.method")}</Label>
               <Select name="paymentMethod" required>
                 <SelectTrigger>
-                  <SelectValue placeholder="Выберите способ оплаты" />
+                  <SelectValue placeholder={t("paymentDialog.methodPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="cash">Наличные</SelectItem>
-                  <SelectItem value="card">Карта</SelectItem>
-                  <SelectItem value="transfer">Перевод</SelectItem>
-                  <SelectItem value="other">Другое</SelectItem>
+                  <SelectItem value="cash">{t("paymentDialog.methodCash")}</SelectItem>
+                  <SelectItem value="card">{t("paymentDialog.methodCard")}</SelectItem>
+                  <SelectItem value="transfer">{t("paymentDialog.methodTransfer")}</SelectItem>
+                  <SelectItem value="other">{t("paymentDialog.methodOther")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label htmlFor="description">Описание (опционально)</Label>
+              <Label htmlFor="description">{t("paymentDialog.description")}</Label>
               <Textarea
                 id="description"
                 name="description"
-                placeholder="Дополнительная информация..."
+                placeholder={t("paymentDialog.descriptionPlaceholder")}
                 rows={3}
               />
             </div>
@@ -923,10 +925,10 @@ export default function StudentDetail() {
                 variant="outline"
                 onClick={() => setIsPaymentDialogOpen(false)}
               >
-                Отмена
+                {t("paymentDialog.cancel")}
               </Button>
               <Button type="submit" disabled={createTransaction.isPending}>
-                {createTransaction.isPending ? "Сохранение..." : "Добавить оплату"}
+                {createTransaction.isPending ? t("paymentDialog.saving") : t("paymentDialog.submit")}
               </Button>
             </div>
           </form>
@@ -945,7 +947,7 @@ export default function StudentDetail() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Изменить платеж</DialogTitle>
+            <DialogTitle>{t("paymentDialog.editTitle")}</DialogTitle>
           </DialogHeader>
           {editingTransaction ? (
             <form
@@ -976,7 +978,7 @@ export default function StudentDetail() {
               className="space-y-4"
             >
               <div>
-                <Label htmlFor="edit-amount">Сумма (₸)</Label>
+                <Label htmlFor="edit-amount">{t("paymentDialog.amount")}</Label>
                 <Input
                   id="edit-amount"
                   name="amount"
@@ -988,25 +990,25 @@ export default function StudentDetail() {
                 />
               </div>
               <div>
-                <Label htmlFor="edit-paymentMethod">Способ оплаты</Label>
+                <Label htmlFor="edit-paymentMethod">{t("paymentDialog.method")}</Label>
                 <Select name="paymentMethod" defaultValue={editingTransaction.paymentMethod} required>
                   <SelectTrigger id="edit-paymentMethod">
-                    <SelectValue placeholder="Выберите способ оплаты" />
+                    <SelectValue placeholder={t("paymentDialog.methodPlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="cash">Наличные</SelectItem>
-                    <SelectItem value="card">Карта</SelectItem>
-                    <SelectItem value="transfer">Перевод</SelectItem>
-                    <SelectItem value="other">Другое</SelectItem>
+                    <SelectItem value="cash">{t("paymentDialog.methodCash")}</SelectItem>
+                    <SelectItem value="card">{t("paymentDialog.methodCard")}</SelectItem>
+                    <SelectItem value="transfer">{t("paymentDialog.methodTransfer")}</SelectItem>
+                    <SelectItem value="other">{t("paymentDialog.methodOther")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label htmlFor="edit-description">Описание (опционально)</Label>
+                <Label htmlFor="edit-description">{t("paymentDialog.description")}</Label>
                 <Textarea
                   id="edit-description"
                   name="description"
-                  placeholder="Дополнительная информация..."
+                  placeholder={t("paymentDialog.descriptionPlaceholder")}
                   rows={3}
                   defaultValue={editingTransaction.description}
                 />
@@ -1020,16 +1022,16 @@ export default function StudentDetail() {
                     setEditingTransaction(null);
                   }}
                 >
-                  Отмена
+                  {t("paymentDialog.cancel")}
                 </Button>
                 <Button type="submit" disabled={updateTransaction.isPending}>
-                  {updateTransaction.isPending ? "Сохранение..." : "Сохранить изменения"}
+                  {updateTransaction.isPending ? t("paymentDialog.saving") : t("paymentDialog.saveChanges")}
                 </Button>
               </div>
             </form>
           ) : (
             <p className="text-sm text-muted-foreground py-4">
-              Выберите платеж из списка для редактирования
+              {t("paymentDialog.selectForEdit")}
             </p>
           )}
         </DialogContent>
@@ -1084,6 +1086,7 @@ export default function StudentDetail() {
 }
 
 function StudentDiscountCreateDialog({ studentId, onApplied }: { studentId: string; onApplied?: () => void }) {
+  const { t } = useTranslation("students");
   const { data: discountsData = [] } = useDiscounts();
   const discounts: Discount[] = Array.isArray(discountsData) ? discountsData : [];
   const createDiscount = useCreateDiscount();
@@ -1096,12 +1099,12 @@ function StudentDiscountCreateDialog({ studentId, onApplied }: { studentId: stri
       <DialogTrigger asChild>
         <Button variant="ghost" size="sm" className="h-8 px-3 text-xs">
           <Plus className="h-3 w-3 mr-1" />
-          Добавить
+          {t("add")}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{mode === "create" ? "Новая скидка" : "Применить скидку"}</DialogTitle>
+          <DialogTitle>{mode === "create" ? t("newDiscount") : t("applyDiscount")}</DialogTitle>
         </DialogHeader>
 
         {mode === "create" ? (
@@ -1126,32 +1129,32 @@ function StudentDiscountCreateDialog({ studentId, onApplied }: { studentId: stri
             }}
           >
             <div>
-              <Label htmlFor="name">Название</Label>
+              <Label htmlFor="name">{t("discountName")}</Label>
               <Input id="name" name="name" required />
             </div>
             <div>
-              <Label htmlFor="description">Описание</Label>
+              <Label htmlFor="description">{t("discountDescription")}</Label>
               <Input id="description" name="description" />
             </div>
             <div>
-              <Label htmlFor="type">Тип скидки</Label>
+              <Label htmlFor="type">{t("discountType")}</Label>
               <Select name="type" defaultValue="percentage" required>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="percentage">Процентная</SelectItem>
-                  <SelectItem value="fixed">Фиксированная сумма</SelectItem>
+                  <SelectItem value="percentage">{t("discountTypePercent")}</SelectItem>
+                  <SelectItem value="fixed">{t("discountTypeFixed")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label htmlFor="value">Значение</Label>
+              <Label htmlFor="value">{t("discountValue")}</Label>
               <Input id="value" name="value" type="number" step="0.01" required />
             </div>
             <div className="flex items-center justify-between pt-2">
-              <Button type="button" variant="ghost" onClick={() => setMode("apply")}>выбрать существующую</Button>
-              <Button type="submit">Создать и применить</Button>
+              <Button type="button" variant="ghost" onClick={() => setMode("apply")}>{t("selectExisting")}</Button>
+              <Button type="submit">{t("createAndApply")}</Button>
             </div>
           </form>
         ) : (
@@ -1172,10 +1175,10 @@ function StudentDiscountCreateDialog({ studentId, onApplied }: { studentId: stri
             }}
           >
             <div>
-              <Label htmlFor="discountId">Скидка</Label>
+              <Label htmlFor="discountId">{t("discount")}</Label>
               <Select name="discountId" required>
                 <SelectTrigger>
-                  <SelectValue placeholder="Выберите скидку" />
+                  <SelectValue placeholder={t("selectDiscount")} />
                 </SelectTrigger>
                 <SelectContent>
                   {discounts.filter((d) => d.isActive).map((d) => (
@@ -1187,12 +1190,12 @@ function StudentDiscountCreateDialog({ studentId, onApplied }: { studentId: stri
               </Select>
             </div>
             <div>
-              <Label htmlFor="expiresAt">Срок действия (необязательно)</Label>
+              <Label htmlFor="expiresAt">{t("expiresAt")}</Label>
               <Input id="expiresAt" name="expiresAt" type="date" />
             </div>
             <div className="flex items-center justify-between pt-2">
-              <Button type="button" variant="ghost" onClick={() => setMode("create")}>создать новую</Button>
-              <Button type="submit">Применить</Button>
+              <Button type="button" variant="ghost" onClick={() => setMode("create")}>{t("createNew")}</Button>
+              <Button type="submit">{t("apply")}</Button>
             </div>
           </form>
         )}

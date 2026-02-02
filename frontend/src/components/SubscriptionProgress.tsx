@@ -1,4 +1,5 @@
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
+import { useTranslation } from "react-i18next";
 
 interface SubscriptionProgressProps {
   lessonsUsed: number;
@@ -13,6 +14,7 @@ export function SubscriptionProgress({
   subscriptionName,
   size = "md",
 }: SubscriptionProgressProps) {
+  const { t } = useTranslation("students");
   const lessonsRemaining = Math.max(0, totalLessons - lessonsUsed);
   const percentage = totalLessons > 0 ? ((lessonsRemaining / totalLessons) * 100).toFixed(0) : "0";
 
@@ -25,8 +27,8 @@ export function SubscriptionProgress({
   const config = sizeConfig[size];
 
   const data = [
-    { name: "Использовано", value: lessonsUsed, color: "#94a3b8" },
-    { name: "Осталось", value: lessonsRemaining, color: "#8b5cf6" },
+    { name: t("subscription.used"), value: lessonsUsed, color: "#94a3b8" },
+    { name: t("subscription.remaining"), value: lessonsRemaining, color: "#8b5cf6" },
   ];
 
   // If no lessons remaining, show as depleted
@@ -57,14 +59,14 @@ export function SubscriptionProgress({
           <div className={`${config.fontSize} font-bold leading-none`} style={{ color: displayColor }}>
             {lessonsRemaining}
           </div>
-          <div className="text-[10px] text-muted-foreground mt-0.5">осталось</div>
+          <div className="text-[10px] text-muted-foreground mt-0.5">{t("subscription.remaining")}</div>
         </div>
       </div>
       {subscriptionName && (
         <div className="text-sm font-medium mt-2 text-center">{subscriptionName}</div>
       )}
       <div className="text-xs text-muted-foreground">
-        {lessonsUsed} из {totalLessons} использовано ({percentage}%)
+        {lessonsUsed} {t("lessonsOf")} {totalLessons} {t("subscription.used")} ({percentage}%)
       </div>
     </div>
   );

@@ -1,0 +1,79 @@
+{
+  "title": "Жазылымдар",
+  "description": "Жазылымдар мен қатысуды басқару",
+  "tabs": {
+    "subscriptions": "Оқушылар жазылымдары",
+    "types": "Жазылым түрлері"
+  },
+  "stats": {
+    "active": "Белсенді",
+    "expired": "Мерзімі біткен",
+    "frozen": "Тоқтатылған",
+    "lessonsRemaining": "Қалған сабақтар",
+    "subscriptions": "Жазылымдар",
+    "total": "Барлығы"
+  },
+  "studentSubscriptions": "Оқушылар жазылымдары",
+  "issueSubscription": "Жазылым беру",
+  "issue": "Беру",
+  "subscriptionTypes": "Жазылым түрлері",
+  "createType": "Түр құру",
+  "allTypes": "Барлық түрлер",
+  "billingTypes": {
+    "per_lesson": "Сабақ бойынша",
+    "monthly": "Айлық",
+    "unlimited": "Шексіз"
+  },
+  "table": {
+    "student": "Оқушы",
+    "type": "Түрі",
+    "lessonsRemaining": "Қалған сабақтар",
+    "prices": "Бағалар",
+    "period": "Кезең",
+    "status": "Күйі",
+    "freeze": "Тоқтату",
+    "actions": "Әрекеттер",
+    "pricePerLesson": "{{price}} ₸/сабақ"
+  },
+  "noSubscriptions": "Жазылымдар жоқ",
+  "noTypes": "Жазылым түрлері жоқ",
+  "noTypesWithFilter": "Таңдалған тарификациямен түрлер жоқ",
+  "dialog": {
+    "newSubscription": "Жаңа жазылым",
+    "editSubscription": "Жазылымды өңдеу",
+    "newType": "Жаңа жазылым түрі",
+    "editType": "Түрді өңдеу",
+    "student": "Оқушы",
+    "selectStudent": "Оқушыны таңдаңыз",
+    "subscriptionType": "Жазылым түрі",
+    "selectType": "Түрді таңдаңыз",
+    "autoFilledFromTemplate": "Үлгіден автоматты толтырылды",
+    "totalLessons": "Барлық сабақтар",
+    "usedLessons": "Пайдаланылған сабақтар",
+    "totalPrice": "Жалпы құны",
+    "pricePerLesson": "Сабақ бағасы",
+    "lessonsRemaining": "Қалған сабақтар",
+    "calculatedAuto": "(автоматты есептеледі)",
+    "startDate": "Басталу күні",
+    "endDate": "Аяқталу күні (міндетті емес)",
+    "status": "Күйі",
+    "freezeDaysRemaining": "Қалған тоқтату күндері",
+    "name": "Атауы",
+    "description": "Сипаттама",
+    "lessonsCount": "Сабақ саны",
+    "price": "Бағасы (₸)",
+    "validityDays": "Жарамдылық мерзімі (күн, міндетті емес)",
+    "unlimited": "Шексіз",
+    "canFreeze": "Тоқтатуға болады"
+  },
+  "status": {
+    "active": "Белсенді",
+    "frozen": "Тоқтатылған",
+    "expired": "Мерзімі біткен"
+  },
+  "days": "күн",
+  "lessons": "сабақ",
+  "pricePerLessonLabel": "Сабақ бағасы",
+  "validity": "Мерзім",
+  "deleteConfirm": "Бұл жазылымды жойғыңыз келетініне сенімдісіз бе?"
+}

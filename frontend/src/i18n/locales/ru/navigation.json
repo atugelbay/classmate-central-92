@@ -1,0 +1,21 @@
+{
+  "dashboard": "Главная",
+  "students": "Ученики",
+  "teachers": "Учителя",
+  "groups": "Группы",
+  "schedule": "Расписание",
+  "individualLessons": "Индивидуальные",
+  "finance": "Финансы",
+  "subscriptions": "Абонементы",
+  "leads": "Лиды",
+  "settings": "Настройки",
+  "roles": "Роли",
+  "logout": "Выйти",
+  "profile": "Профиль",
+  "notifications": "Уведомления",
+  "help": "Помощь",
+  "search": "Поиск...",
+  "menu": "Меню",
+  "collapse": "Свернуть",
+  "expand": "Развернуть"
+}

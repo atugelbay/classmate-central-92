@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import moment from "moment";
 import "moment/dist/locale/ru";
+import "moment/dist/locale/kk";
 import { Room, Lesson, Teacher, Group, Student, StudentSubscription } from "@/types";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -42,6 +44,8 @@ export default function RoomScheduleView({
   unmarkedLessonIds = new Set(),
 }: RoomScheduleViewProps) {
   const navigate = useNavigate();
+  const { i18n } = useTranslation("schedule");
+  moment.locale(i18n.language);
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -604,7 +608,7 @@ export default function RoomScheduleView({
                 <div className="min-w-0 flex-1">
                   <div className="font-bold text-xs sm:text-sm truncate text-slate-900 dark:text-slate-100">{room.name}</div>
                   <div className="text-[10px] sm:text-xs text-muted-foreground">
-                    {room.capacity} мест
+                    {room.capacity} {i18n.language === 'kk' ? 'орын' : i18n.language === 'en' ? 'seats' : 'мест'}
                   </div>
                 </div>
               </div>
@@ -942,7 +946,9 @@ export default function RoomScheduleView({
               {/* Empty state */}
               {lessonsByRoom[room.id]?.length === 0 && !draggingLesson && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <p className="text-xs text-muted-foreground/50">Нет занятий</p>
+                  <p className="text-xs text-muted-foreground/50">
+                    {i18n.language === 'kk' ? 'Сабақ жоқ' : i18n.language === 'en' ? 'No lessons' : 'Нет занятий'}
+                  </p>
                 </div>
               )}
             </div>

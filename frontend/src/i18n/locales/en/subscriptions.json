@@ -1,0 +1,79 @@
+{
+  "title": "Subscriptions",
+  "description": "Manage subscriptions and attendance",
+  "tabs": {
+    "subscriptions": "Student subscriptions",
+    "types": "Subscription types"
+  },
+  "stats": {
+    "active": "Active",
+    "expired": "Expired",
+    "frozen": "Frozen",
+    "lessonsRemaining": "Lessons remaining",
+    "subscriptions": "Subscriptions",
+    "total": "Total"
+  },
+  "studentSubscriptions": "Student subscriptions",
+  "issueSubscription": "Issue subscription",
+  "issue": "Issue",
+  "subscriptionTypes": "Subscription types",
+  "createType": "Create type",
+  "allTypes": "All types",
+  "billingTypes": {
+    "per_lesson": "Per lesson",
+    "monthly": "Monthly",
+    "unlimited": "Unlimited"
+  },
+  "table": {
+    "student": "Student",
+    "type": "Type",
+    "lessonsRemaining": "Lessons left",
+    "prices": "Prices",
+    "period": "Period",
+    "status": "Status",
+    "freeze": "Freeze",
+    "actions": "Actions",
+    "pricePerLesson": "{{price}} ₸/lesson"
+  },
+  "noSubscriptions": "No subscriptions",
+  "noTypes": "No subscription types",
+  "noTypesWithFilter": "No types with selected billing",
+  "dialog": {
+    "newSubscription": "New subscription",
+    "editSubscription": "Edit subscription",
+    "newType": "New subscription type",
+    "editType": "Edit type",
+    "student": "Student",
+    "selectStudent": "Select student",
+    "subscriptionType": "Subscription type",
+    "selectType": "Select type",
+    "autoFilledFromTemplate": "Auto-filled from template",
+    "totalLessons": "Total lessons",
+    "usedLessons": "Used lessons",
+    "totalPrice": "Total price",
+    "pricePerLesson": "Price per lesson",
+    "lessonsRemaining": "Lessons remaining",
+    "calculatedAuto": "(calculated automatically)",
+    "startDate": "Start date",
+    "endDate": "End date (optional)",
+    "status": "Status",
+    "freezeDaysRemaining": "Freeze days remaining",
+    "name": "Name",
+    "description": "Description",
+    "lessonsCount": "Lessons count",
+    "price": "Price (₸)",
+    "validityDays": "Validity (days, optional)",
+    "unlimited": "Unlimited",
+    "canFreeze": "Can freeze"
+  },
+  "status": {
+    "active": "Active",
+    "frozen": "Frozen",
+    "expired": "Expired"
+  },
+  "days": "days",
+  "lessons": "lessons",
+  "pricePerLessonLabel": "Price per lesson",
+  "validity": "Validity",
+  "deleteConfirm": "Are you sure you want to delete this subscription?"
+}

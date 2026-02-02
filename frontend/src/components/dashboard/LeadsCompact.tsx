@@ -1,14 +1,18 @@
 import { UserPlus, ArrowRight, Loader2, Phone, Clock } from "lucide-react";
 import { useLeads } from "@/hooks/useData";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import moment from "moment";
 import "moment/locale/ru";
-
-moment.locale("ru");
+import "moment/locale/kk";
 
 export function LeadsCompact() {
   const navigate = useNavigate();
   const { data: leads = [], isLoading } = useLeads();
+  const { t, i18n } = useTranslation("dashboard");
+
+  // Set moment locale based on current language
+  moment.locale(i18n.language);
 
   const newLeads = Array.isArray(leads) 
     ? leads
@@ -19,6 +23,12 @@ export function LeadsCompact() {
 
   const totalNew = Array.isArray(leads) ? leads.filter((l: any) => l.status === "new").length : 0;
   const totalInProgress = Array.isArray(leads) ? leads.filter((l: any) => l.status === "in_progress").length : 0;
+
+  // No leads text translations
+  const getNoLeadsText = () => {
+    const texts = { ru: "Нет новых заявок", kk: "Жаңа өтініштер жоқ", en: "No new leads" };
+    return texts[i18n.language as 'ru' | 'kk' | 'en'] || texts.ru;
+  };
 
   return (
     <div 
@@ -37,10 +47,10 @@ export function LeadsCompact() {
               <div className="p-2 rounded-xl bg-cyan-500">
                 <UserPlus className="h-5 w-5 text-white" />
               </div>
-              <span className="font-semibold text-foreground">Заявки</span>
+              <span className="font-semibold text-foreground">{t("leads.title")}</span>
             </div>
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              Все <ArrowRight className="h-3 w-3" />
+              {t("common:all")} <ArrowRight className="h-3 w-3" />
             </div>
           </div>
 
@@ -48,11 +58,11 @@ export function LeadsCompact() {
           <div className="flex items-center gap-4 mb-4">
             <div className="flex-1 p-3 rounded-xl bg-cyan-500/10">
               <div className="text-2xl font-bold text-cyan-600 dark:text-cyan-400">{totalNew}</div>
-              <div className="text-xs text-muted-foreground">новых</div>
+              <div className="text-xs text-muted-foreground">{t("leads.new").toLowerCase()}</div>
             </div>
             <div className="flex-1 p-3 rounded-xl bg-amber-500/10">
               <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">{totalInProgress}</div>
-              <div className="text-xs text-muted-foreground">в работе</div>
+              <div className="text-xs text-muted-foreground">{t("leads.inProgress").toLowerCase()}</div>
             </div>
           </div>
 
@@ -61,7 +71,7 @@ export function LeadsCompact() {
             {newLeads.length === 0 ? (
               <div className="flex flex-col items-center justify-center text-center py-4 text-muted-foreground">
                 <UserPlus className="h-8 w-8 mb-2 opacity-50" />
-                <p className="text-sm">Нет новых заявок</p>
+                <p className="text-sm">{getNoLeadsText()}</p>
               </div>
             ) : (
               <div className="space-y-2">

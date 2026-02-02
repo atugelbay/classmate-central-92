@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Calendar, UserPlus, DollarSign, Users, Plus } from "lucide-react";
 import { LessonFormModal } from "@/components/LessonFormModal";
 import { useTeachers, useGroups, useRooms, useStudents } from "@/hooks/useData";
 
 export function QuickActionsRow() {
   const navigate = useNavigate();
+  const { t } = useTranslation("dashboard");
   const [isLessonFormOpen, setIsLessonFormOpen] = useState(false);
   
   const { data: teachers = [] } = useTeachers();
@@ -15,8 +17,8 @@ export function QuickActionsRow() {
 
   const quickActions = [
     {
-      label: "Новый урок",
-      description: "Добавить занятие",
+      label: t("quickActions.addLesson"),
+      description: t("quickActions.addLesson"),
       icon: Calendar,
       iconBg: "bg-[hsl(250,84%,54%)]", // Primary blue from logo
       hoverBg: "hover:bg-blue-50/50 dark:hover:bg-blue-950/30",
@@ -24,8 +26,8 @@ export function QuickActionsRow() {
       onClick: () => setIsLessonFormOpen(true),
     },
     {
-      label: "Ученик",
-      description: "Записать нового",
+      label: t("quickActions.addStudent"),
+      description: t("quickActions.addStudent"),
       icon: UserPlus,
       iconBg: "bg-[hsl(158,64%,45%)]", // Success green
       hoverBg: "hover:bg-emerald-50/50 dark:hover:bg-emerald-950/30",
@@ -33,8 +35,8 @@ export function QuickActionsRow() {
       onClick: () => navigate("/students"),
     },
     {
-      label: "Платёж",
-      description: "Принять оплату",
+      label: t("quickActions.addPayment"),
+      description: t("quickActions.addPayment"),
       icon: DollarSign,
       iconBg: "bg-[hsl(38,92%,55%)]", // Warning orange
       hoverBg: "hover:bg-amber-50/50 dark:hover:bg-amber-950/30",
@@ -42,8 +44,8 @@ export function QuickActionsRow() {
       onClick: () => navigate("/finance"),
     },
     {
-      label: "Группа",
-      description: "Создать группу",
+      label: t("quickActions.viewSchedule"),
+      description: t("quickActions.viewSchedule"),
       icon: Users,
       iconBg: "bg-[hsl(262,83%,58%)]", // Accent violet from logo
       hoverBg: "hover:bg-violet-50/50 dark:hover:bg-violet-950/30",

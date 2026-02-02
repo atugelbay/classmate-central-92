@@ -1,4 +1,5 @@
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { useTranslation } from "react-i18next";
 import { PaymentTransaction } from "@/types";
 import moment from "moment";
 
@@ -8,6 +9,7 @@ interface BalanceChartProps {
 }
 
 export function BalanceChart({ transactions, currentBalance }: BalanceChartProps) {
+  const { t } = useTranslation("students");
   // Calculate balance history from transactions
   const balanceHistory = transactions
     .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
@@ -28,7 +30,7 @@ export function BalanceChart({ transactions, currentBalance }: BalanceChartProps
   if (chartData.length === 0) {
     return (
       <div className="flex items-center justify-center h-52">
-        <p className="text-sm text-muted-foreground">Нет истории транзакций</p>
+        <p className="text-sm text-muted-foreground">{t("noTransactions")}</p>
       </div>
     );
   }
@@ -67,7 +69,7 @@ export function BalanceChart({ transactions, currentBalance }: BalanceChartProps
               boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
               padding: "8px 12px",
             }}
-            formatter={(value: number) => [`${value.toLocaleString()} ₸`, "Баланс"]}
+            formatter={(value: number) => [`${value.toLocaleString()} ₸`, t("fields.balance")]}
             labelStyle={{ color: '#64748b', marginBottom: '4px' }}
           />
           <Area

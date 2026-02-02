@@ -1,0 +1,55 @@
+{
+  "title": "Лидтер",
+  "addLead": "Лид қосу",
+  "editLead": "Лидті өзгерту",
+  "leadDetails": "Лид туралы ақпарат",
+  "searchPlaceholder": "Лидтерді іздеу...",
+  "fields": {
+    "name": "Аты",
+    "phone": "Телефон",
+    "email": "Email",
+    "source": "Қайнар көз",
+    "status": "Мәртебе",
+    "notes": "Жазбалар",
+    "assignedTo": "Жауапты"
+  },
+  "statuses": {
+    "new": "Жаңа",
+    "inProgress": "Жұмыста",
+    "converted": "Жазылды",
+    "lost": "Бас тартты"
+  },
+  "sources": {
+    "website": "Сайт",
+    "phone": "Қоңырау",
+    "referral": "Ұсыныс",
+    "social": "Әлеуметтік желі",
+    "other": "Басқа"
+  },
+  "empty": "Лидтер жоқ",
+  "emptyDescription": "Бірінші лидті қосыңыз",
+  "convertToStudent": "Оқушыға айналдыру",
+  "deleteConfirm": "{{name}} лидін жою керек пе?",
+  "deleteWarning": "Бұл әрекетті қайтару мүмкін емес",
+  "stats": {
+    "total": "Барлық лидтер",
+    "new": "Жаңалар",
+    "inProgress": "Жұмыста",
+    "converted": "Жазылғандар",
+    "conversionRate": "Конверсия"
+  },
+  "kanban": {
+    "dropHere": "Осында апарыңыз"
+  },
+  "activity": {
+    "title": "Тарих",
+    "addComment": "Пікір қосу",
+    "commentPlaceholder": "Пікір жазыңыз..."
+  },
+  "tasks": {
+    "title": "Тапсырмалар",
+    "add": "Тапсырма қосу",
+    "description": "Сипаттама",
+    "dueDate": "Мерзімі"
+  }
+}

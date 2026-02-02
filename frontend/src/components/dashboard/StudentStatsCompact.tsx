@@ -1,10 +1,12 @@
 import { Users, TrendingUp, Loader2, UserCheck, Snowflake, UserPlus } from "lucide-react";
 import { useDashboardStats } from "@/hooks/useData";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 export function StudentStatsCompact() {
   const navigate = useNavigate();
   const { data: stats, isLoading } = useDashboardStats();
+  const { t } = useTranslation("dashboard");
 
   const students = stats?.students || { active: 0, new: 0, frozen: 0 };
   const total = students.active + students.new + students.frozen;
@@ -26,7 +28,7 @@ export function StudentStatsCompact() {
               <div className="p-2 rounded-xl bg-violet-500">
                 <Users className="h-4 w-4 text-white" />
               </div>
-              <span className="font-semibold text-foreground text-sm">Ученики</span>
+              <span className="font-semibold text-foreground text-sm">{t("stats.students")}</span>
             </div>
             {students.new > 0 && (
               <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
@@ -42,7 +44,7 @@ export function StudentStatsCompact() {
               {total}
             </div>
             <div className="text-xs text-muted-foreground">
-              всего учеников
+              {t("stats.students").toLowerCase()}
             </div>
           </div>
 
@@ -50,11 +52,11 @@ export function StudentStatsCompact() {
           <div className="flex items-center gap-4 mt-auto">
             <div className="flex items-center gap-1.5">
               <UserCheck className="h-3.5 w-3.5 text-emerald-500" />
-              <span className="text-xs text-muted-foreground">{students.active} актив.</span>
+              <span className="text-xs text-muted-foreground">{students.active}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Snowflake className="h-3.5 w-3.5 text-sky-500" />
-              <span className="text-xs text-muted-foreground">{students.frozen} замор.</span>
+              <span className="text-xs text-muted-foreground">{students.frozen}</span>
             </div>
           </div>
         </>

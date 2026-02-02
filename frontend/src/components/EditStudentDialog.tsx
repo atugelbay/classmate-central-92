@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ interface EditStudentDialogProps {
 }
 
 export function EditStudentDialog({ open, onOpenChange, student }: EditStudentDialogProps) {
+  const { t, i18n } = useTranslation(["students", "common"]);
   const updateStudent = useUpdateStudent();
   const [formData, setFormData] = useState({
     name: "",
@@ -52,10 +54,10 @@ export function EditStudentDialog({ open, onOpenChange, student }: EditStudentDi
           address: formData.address,
         },
       });
-      toast.success("Студент обновлен");
+      toast.success(i18n.language === 'kk' ? 'Оқушы жаңартылды' : i18n.language === 'en' ? 'Student updated' : 'Студент обновлен');
       onOpenChange(false);
     } catch (error: any) {
-      toast.error(`Ошибка: ${error.response?.data?.error || error.message}`);
+      toast.error(`${t("common:error")}: ${error.response?.data?.error || error.message}`);
     }
   };
 
@@ -63,19 +65,19 @@ export function EditStudentDialog({ open, onOpenChange, student }: EditStudentDi
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
-          <DialogTitle>Редактировать студента</DialogTitle>
+          <DialogTitle>{t("edit.title")}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Section: Личные данные */}
           <div className="space-y-3">
-            <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Личные данные</h4>
+            <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">{t("edit.personalInfo")}</h4>
             
             {/* Name - Full width */}
             <div className="space-y-1.5">
-              <Label htmlFor="name">ФИО *</Label>
+              <Label htmlFor="name">{t("name")} *</Label>
               <Input
                 id="name"
-                placeholder="Иван Иванов"
+                placeholder={i18n.language === 'kk' ? 'Иван Иванов' : i18n.language === 'en' ? 'John Doe' : 'Иван Иванов'}
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
@@ -85,7 +87,7 @@ export function EditStudentDialog({ open, onOpenChange, student }: EditStudentDi
             {/* Age & Phone - Two columns */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="age">Возраст *</Label>
+                <Label htmlFor="age">{t("age")} *</Label>
                 <Input
                   id="age"
                   type="number"
@@ -96,7 +98,7 @@ export function EditStudentDialog({ open, onOpenChange, student }: EditStudentDi
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="phone">Телефон *</Label>
+                <Label htmlFor="phone">{t("phone")} *</Label>
                 <Input
                   id="phone"
                   type="tel"
@@ -117,25 +119,25 @@ export function EditStudentDialog({ open, onOpenChange, student }: EditStudentDi
 
           {/* Section: Контакты */}
           <div className="space-y-3">
-            <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Контакты</h4>
+            <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">{t("edit.contacts")}</h4>
             
             {/* Email & Address - Two columns */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t("email")}</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="ivan@mail.ru"
+                  placeholder={i18n.language === 'kk' ? 'ivan@mail.ru' : i18n.language === 'en' ? 'john@mail.com' : 'ivan@mail.ru'}
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="address">Адрес</Label>
+                <Label htmlFor="address">{t("address")}</Label>
                 <Input
                   id="address"
-                  placeholder="ул. Абая, 10"
+                  placeholder={i18n.language === 'kk' ? 'Абай к., 10' : i18n.language === 'en' ? '10 Main St' : 'ул. Абая, 10'}
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 />
@@ -153,10 +155,10 @@ export function EditStudentDialog({ open, onOpenChange, student }: EditStudentDi
               {updateStudent.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Сохранение...
+                  {t("edit.saving")}
                 </>
               ) : (
-                "Сохранить изменения"
+                t("edit.saveChanges")
               )}
             </Button>
             <Button
@@ -166,7 +168,7 @@ export function EditStudentDialog({ open, onOpenChange, student }: EditStudentDi
               disabled={updateStudent.isPending}
               className="w-full text-muted-foreground"
             >
-              Отмена
+              {t("common:cancel")}
             </Button>
           </div>
         </form>

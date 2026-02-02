@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Search, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -20,6 +21,7 @@ import { useQuery } from "@tanstack/react-query";
 
 export function HeaderSearch() {
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation("students");
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -81,7 +83,7 @@ export function HeaderSearch() {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
             type="search"
-            placeholder="Поиск учеников..."
+            placeholder={t("searchPlaceholder")}
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
@@ -115,9 +117,9 @@ export function HeaderSearch() {
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
               </div>
             ) : filteredStudents.length === 0 && debouncedQuery.length > 0 ? (
-              <CommandEmpty>Ученики не найдены</CommandEmpty>
+              <CommandEmpty>{i18n.language === 'kk' ? 'Оқушылар табылмады' : i18n.language === 'en' ? 'No students found' : 'Ученики не найдены'}</CommandEmpty>
             ) : filteredStudents.length > 0 ? (
-              <CommandGroup heading="Ученики">
+              <CommandGroup heading={t("title")}>
                 {filteredStudents.map((student) => (
                   <CommandItem
                     key={student.id}
@@ -140,7 +142,7 @@ export function HeaderSearch() {
                 ))}
               </CommandGroup>
             ) : (
-              <CommandEmpty>Начните вводить для поиска...</CommandEmpty>
+              <CommandEmpty>{i18n.language === 'kk' ? 'Іздеу үшін теріңіз...' : i18n.language === 'en' ? 'Start typing to search...' : 'Начните вводить для поиска...'}</CommandEmpty>
             )}
           </CommandList>
         </Command>

@@ -1,0 +1,65 @@
+{
+  "title": "Басты бет",
+  "welcome": "Қош келдіңіз",
+  "welcomeBack": "Қайта оралғаныңызбен, {{name}}!",
+  "overview": "Шолу",
+  "stats": {
+    "students": "Оқушылар",
+    "teachers": "Мұғалімдер",
+    "groups": "Топтар",
+    "lessons": "Сабақтар",
+    "revenue": "Кіріс",
+    "attendance": "Қатысу"
+  },
+  "todaySchedule": {
+    "title": "Бүгінгі кесте",
+    "noLessons": "Бүгін сабақ жоқ",
+    "upcoming": "Алдағы сабақтар"
+  },
+  "quickActions": {
+    "title": "Жылдам әрекеттер",
+    "addStudent": "Оқушы қосу",
+    "addLesson": "Сабақ қосу",
+    "addPayment": "Төлем қосу",
+    "viewSchedule": "Топ құру"
+  },
+  "recentPayments": {
+    "title": "Соңғы төлемдер",
+    "viewAll": "Барлығы"
+  },
+  "debtors": {
+    "title": "Борышкерлер",
+    "count": "{{count}} борышкер",
+    "viewAll": "Барлығын көру",
+    "noDebtors": "Борышкерлер жоқ"
+  },
+  "debts": {
+    "title": "Борыштар",
+    "noDebts": "Борыштар жоқ"
+  },
+  "attendance": {
+    "title": "Қатысу",
+    "thisWeek": "Осы аптада",
+    "thisMonth": "Осы айда"
+  },
+  "leads": {
+    "title": "Өтінімдер",
+    "new": "Жаңа",
+    "inProgress": "Өңделуде",
+    "noLeads": "Жаңа өтінім жоқ"
+  },
+  "groups": {
+    "title": "Топтар",
+    "active": "Белсенді топтар"
+  },
+  "notifications": {
+    "title": "Хабарландырулар",
+    "oneLesson": "1 сабақ қалды",
+    "debt": "Борышкерлер"
+  },
+  "income": "Кіріс",
+  "details": "Толығырақ",
+  "now": "Қазір",
+  "individual": "Жеке сабақ",
+  "noLessons": "Сабақ жоқ"
+}

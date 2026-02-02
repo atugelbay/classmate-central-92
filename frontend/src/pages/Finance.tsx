@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle, StatCard } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -15,9 +16,8 @@ import { Discount, DebtRecord } from "@/types";
 import moment from "moment";
 import { PageHeader } from "@/components/PageHeader";
 import "moment/locale/ru";
+import "moment/locale/kk";
 import { ExportDialog } from "@/components/ExportDialog";
-
-moment.locale("ru");
 
 // Helper to get initials from name
 const getInitials = (name: string) => {
@@ -30,6 +30,9 @@ const getInitials = (name: string) => {
 };
 
 export default function Finance() {
+  const { t, i18n } = useTranslation(["finance", "common"]);
+  moment.locale(i18n.language);
+  
   const { data: transactions = [], isLoading: transactionsLoading } = useTransactions();
   const { data: balances = [], isLoading: balancesLoading } = useAllBalances();
   const { data: discounts = [], isLoading: discountsLoading } = useDiscounts();
@@ -162,15 +165,15 @@ export default function Finance() {
   return (
     <div className="space-y-6 animate-fade-in-up">
       <PageHeader
-        title="Финансы"
-        description="Управление финансами и платежами"
+        title={t("title")}
+        description={t("transactions.title")}
       />
 
       {/* KPI Statistics - Clean white cards with colored accent */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="rounded-xl bg-card border border-border p-5 border-t-4 border-t-emerald-500">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm text-muted-foreground">Общий доход</span>
+            <span className="text-sm text-muted-foreground">{t("stats.income")}</span>
             <div className="p-2 rounded-lg bg-emerald-500">
               <TrendingUp className="h-4 w-4 text-white" />
             </div>
@@ -182,7 +185,7 @@ export default function Finance() {
 
         <div className="rounded-xl bg-card border border-border p-5 border-t-4 border-t-rose-500">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm text-muted-foreground">Возвраты</span>
+            <span className="text-sm text-muted-foreground">{t("transactions.types.refund")}</span>
             <div className="p-2 rounded-lg bg-rose-500">
               <TrendingDown className="h-4 w-4 text-white" />
             </div>
@@ -194,7 +197,7 @@ export default function Finance() {
 
         <div className="rounded-xl bg-card border border-border p-5 border-t-4 border-t-blue-500">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm text-muted-foreground">Общий баланс</span>
+            <span className="text-sm text-muted-foreground">{t("stats.balance")}</span>
             <div className="p-2 rounded-lg bg-blue-500">
               <Wallet className="h-4 w-4 text-white" />
             </div>
@@ -206,7 +209,7 @@ export default function Finance() {
 
         <div className="rounded-xl bg-card border border-border p-5 border-t-4 border-t-amber-500">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm text-muted-foreground">Долги</span>
+            <span className="text-sm text-muted-foreground">{t("debts.title")}</span>
             <div className="p-2 rounded-lg bg-amber-500">
               <AlertCircle className="h-4 w-4 text-white" />
             </div>
@@ -220,16 +223,16 @@ export default function Finance() {
       {/* Tabs */}
       <Tabs defaultValue="transactions">
         <TabsList className="rounded-2xl p-1 bg-muted/50">
-          <TabsTrigger value="transactions" className="rounded-xl">Транзакции</TabsTrigger>
-          <TabsTrigger value="balances" className="rounded-xl">Балансы</TabsTrigger>
-          <TabsTrigger value="discounts" className="rounded-xl">Скидки</TabsTrigger>
-          <TabsTrigger value="debts" className="rounded-xl">Долги</TabsTrigger>
+          <TabsTrigger value="transactions" className="rounded-xl">{t("tabs.transactions")}</TabsTrigger>
+          <TabsTrigger value="balances" className="rounded-xl">{t("tabs.balances")}</TabsTrigger>
+          <TabsTrigger value="discounts" className="rounded-xl">{t("tabs.discounts")}</TabsTrigger>
+          <TabsTrigger value="debts" className="rounded-xl">{t("tabs.debts")}</TabsTrigger>
         </TabsList>
 
         {/* Transactions Tab - Card Based */}
         <TabsContent value="transactions" className="space-y-4 mt-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <h2 className="text-lg font-semibold text-foreground">История транзакций</h2>
+            <h2 className="text-lg font-semibold text-foreground">{t("transactions.title")}</h2>
             <div className="flex gap-2 flex-wrap">
               <Button
                 variant="outline"
@@ -237,25 +240,25 @@ export default function Finance() {
                 className="rounded-xl"
               >
                 <FileText className="h-4 w-4 mr-2" />
-                Экспорт
+                {t("common:export")}
               </Button>
               <Dialog open={isTransactionDialogOpen} onOpenChange={setIsTransactionDialogOpen}>
                 <DialogTrigger asChild>
                   <Button className="rounded-xl bg-gradient-to-r from-[#6366f1] via-[#a855f7] to-[#ec4899] hover:opacity-90 text-white border-0">
                     <Plus className="h-4 w-4 mr-2" />
-                    Добавить платеж
+                    {t("transactions.add")}
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="rounded-3xl">
                   <DialogHeader>
-                    <DialogTitle>Новая транзакция</DialogTitle>
+                    <DialogTitle>{t("transactions.add")}</DialogTitle>
                   </DialogHeader>
                   <form onSubmit={handleTransactionSubmit} className="space-y-4">
                     <div>
-                      <Label htmlFor="studentId">Студент</Label>
+                      <Label htmlFor="studentId">{t("common:name")}</Label>
                       <Select name="studentId" required>
                         <SelectTrigger className="rounded-xl">
-                          <SelectValue placeholder="Выберите студента" />
+                          <SelectValue placeholder={t("common:select")} />
                         </SelectTrigger>
                         <SelectContent>
                           {students.map(student => (
@@ -267,41 +270,41 @@ export default function Finance() {
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="amount">Сумма (₸)</Label>
+                      <Label htmlFor="amount">{t("transactions.amount")} (₸)</Label>
                       <Input id="amount" name="amount" type="number" step="0.01" required className="rounded-xl" />
                     </div>
                     <div>
-                      <Label htmlFor="type">Тип</Label>
+                      <Label htmlFor="type">{t("transactions.type")}</Label>
                       <Select name="type" required>
                         <SelectTrigger className="rounded-xl">
-                          <SelectValue placeholder="Выберите тип" />
+                          <SelectValue placeholder={t("transactions.selectType")} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="payment">Платеж</SelectItem>
-                          <SelectItem value="refund">Возврат</SelectItem>
-                          <SelectItem value="debt">Долг</SelectItem>
+                          <SelectItem value="payment">{t("transactions.types.payment")}</SelectItem>
+                          <SelectItem value="refund">{t("transactions.types.refund")}</SelectItem>
+                          <SelectItem value="debt">{t("transactions.types.debt")}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="paymentMethod">Способ оплаты</Label>
+                      <Label htmlFor="paymentMethod">{t("transactions.paymentMethod")}</Label>
                       <Select name="paymentMethod" required>
                         <SelectTrigger className="rounded-xl">
-                          <SelectValue placeholder="Выберите способ" />
+                          <SelectValue placeholder={t("transactions.selectMethod")} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="cash">Наличные</SelectItem>
-                          <SelectItem value="card">Карта</SelectItem>
-                          <SelectItem value="transfer">Перевод</SelectItem>
-                          <SelectItem value="other">Другое</SelectItem>
+                          <SelectItem value="cash">{t("transactions.methods.cash")}</SelectItem>
+                          <SelectItem value="card">{t("transactions.methods.card")}</SelectItem>
+                          <SelectItem value="transfer">{t("transactions.methods.transfer")}</SelectItem>
+                          <SelectItem value="other">{t("transactions.methods.other")}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="description">Описание</Label>
+                      <Label htmlFor="description">{t("transactions.description")}</Label>
                       <Input id="description" name="description" className="rounded-xl" />
                     </div>
-                    <Button type="submit" className="w-full rounded-xl">Создать</Button>
+                    <Button type="submit" className="w-full rounded-xl">{t("common:create")}</Button>
                   </form>
                 </DialogContent>
               </Dialog>
@@ -313,7 +316,7 @@ export default function Finance() {
             {sortedDates.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <CreditCard className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                <p>Нет транзакций</p>
+                <p>{t("empty")}</p>
               </div>
             ) : (
               sortedDates.slice(0, 10).map(date => (
@@ -350,7 +353,7 @@ export default function Finance() {
                                   : "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-800"
                               }`}
                             >
-                              {transaction.type === "payment" ? "Платеж" : transaction.type === "refund" ? "Возврат" : "Долг"}
+                              {t(`transactions.types.${transaction.type}`)}
                             </Badge>
                           </div>
                           {transaction.description && (
@@ -370,22 +373,22 @@ export default function Finance() {
 
         {/* Balances Tab - Modern Table */}
         <TabsContent value="balances" className="space-y-4 mt-6">
-          <h2 className="text-lg font-semibold text-foreground">Балансы студентов</h2>
+          <h2 className="text-lg font-semibold text-foreground">{t("balances.title")}</h2>
           
           {balances.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <Wallet className="h-12 w-12 mx-auto mb-4 opacity-30" />
-              <p>Нет данных о балансах</p>
+              <p>{t("balances.noBalances")}</p>
             </div>
           ) : (
             <div className="rounded-xl border border-border bg-card overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className="w-[300px]">Студент</TableHead>
-                    <TableHead>Баланс</TableHead>
-                    <TableHead>Статус</TableHead>
-                    <TableHead className="text-right">Последняя активность</TableHead>
+                    <TableHead className="w-[300px]">{t("balances.student")}</TableHead>
+                    <TableHead>{t("balances.balance")}</TableHead>
+                    <TableHead>{t("balances.status")}</TableHead>
+                    <TableHead className="text-right">{t("balances.lastActivity")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -418,15 +421,15 @@ export default function Finance() {
                         <TableCell>
                           {isNegative ? (
                             <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-800">
-                              Задолженность
+                              {t("balances.negative")}
                             </Badge>
                           ) : balance.balance === 0 ? (
                             <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-900/50 dark:text-gray-400 dark:border-gray-700">
-                              Нулевой
+                              {t("balances.zero")}
                             </Badge>
                           ) : (
                             <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800">
-                              Положительный
+                              {t("balances.positive")}
                             </Badge>
                           )}
                         </TableCell>
@@ -448,56 +451,56 @@ export default function Finance() {
         {/* Discounts Tab */}
         <TabsContent value="discounts" className="space-y-4 mt-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <h2 className="text-lg font-semibold text-foreground">Скидки</h2>
+            <h2 className="text-lg font-semibold text-foreground">{t("discounts.title")}</h2>
             <Dialog open={isDiscountDialogOpen} onOpenChange={(open) => { setIsDiscountDialogOpen(open); if (!open) setSelectedDiscount(null); }}>
               <DialogTrigger asChild>
                 <Button variant="outline" className="rounded-xl">
                   <Plus className="h-4 w-4 mr-2" />
-                  Создать скидку
+                  {t("discounts.add")}
                 </Button>
               </DialogTrigger>
               <DialogContent className="rounded-3xl">
                 <DialogHeader>
-                  <DialogTitle>{selectedDiscount ? "Редактировать скидку" : "Новая скидка"}</DialogTitle>
+                  <DialogTitle>{selectedDiscount ? t("discounts.edit") : t("discounts.new")}</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleDiscountSubmit} className="space-y-4">
                   <div>
-                    <Label htmlFor="name">Название</Label>
+                    <Label htmlFor="name">{t("discounts.name")}</Label>
                     <Input id="name" name="name" defaultValue={selectedDiscount?.name} required className="rounded-xl" />
                   </div>
                   <div>
-                    <Label htmlFor="description">Описание</Label>
+                    <Label htmlFor="description">{t("discounts.description")}</Label>
                     <Input id="description" name="description" defaultValue={selectedDiscount?.description} className="rounded-xl" />
                   </div>
                   <div>
-                    <Label htmlFor="type">Тип скидки</Label>
+                    <Label htmlFor="type">{t("discounts.type")}</Label>
                     <Select name="type" defaultValue={selectedDiscount?.type || "percentage"} required>
                       <SelectTrigger className="rounded-xl">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="percentage">Процентная</SelectItem>
-                        <SelectItem value="fixed">Фиксированная сумма</SelectItem>
+                        <SelectItem value="percentage">{t("discounts.types.percentage")}</SelectItem>
+                        <SelectItem value="fixed">{t("discounts.types.fixed")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <Label htmlFor="value">Значение</Label>
+                    <Label htmlFor="value">{t("discounts.value")}</Label>
                     <Input id="value" name="value" type="number" step="0.01" defaultValue={selectedDiscount?.value} required className="rounded-xl" />
                   </div>
                   <div>
-                    <Label htmlFor="isActive">Активна</Label>
+                    <Label htmlFor="isActive">{t("discounts.isActive")}</Label>
                     <Select name="isActive" defaultValue={selectedDiscount?.isActive ? "true" : "false"} required>
                       <SelectTrigger className="rounded-xl">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="true">Да</SelectItem>
-                        <SelectItem value="false">Нет</SelectItem>
+                        <SelectItem value="true">{t("discounts.yesNo.yes")}</SelectItem>
+                        <SelectItem value="false">{t("discounts.yesNo.no")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button type="submit" className="w-full rounded-xl">{selectedDiscount ? "Сохранить" : "Создать"}</Button>
+                  <Button type="submit" className="w-full rounded-xl">{selectedDiscount ? t("common:save") : t("common:create")}</Button>
                 </form>
               </DialogContent>
             </Dialog>
@@ -506,7 +509,7 @@ export default function Finance() {
           {discounts.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-30" />
-              <p>Нет скидок</p>
+              <p>{t("discounts.noDiscounts")}</p>
             </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -521,14 +524,14 @@ export default function Finance() {
                       ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800" 
                       : "bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-900/50 dark:text-gray-400 dark:border-gray-700"
                     }>
-                      {discount.isActive ? "Активна" : "Неактивна"}
+                      {discount.isActive ? t("discounts.active") : t("discounts.inactive")}
                     </Badge>
                   </div>
                   <div className="text-3xl font-bold text-primary">
                     {discount.type === "percentage" ? `${discount.value}%` : `${discount.value.toLocaleString()} ₸`}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
-                    {discount.type === "percentage" ? "Процентная" : "Фиксированная"}
+                    {t(`discounts.types.${discount.type}`)}
                   </div>
                   {discount.description && (
                     <div className="text-sm text-muted-foreground mt-3">
@@ -552,7 +555,7 @@ export default function Finance() {
                       size="sm"
                       className="rounded-lg text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/50"
                       onClick={() => {
-                        if (confirm("Удалить эту скидку?")) {
+                        if (confirm(t("discounts.deleteConfirm"))) {
                           deleteDiscount.mutate(discount.id);
                         }
                       }}
@@ -569,24 +572,24 @@ export default function Finance() {
         {/* Debts Tab */}
         <TabsContent value="debts" className="space-y-4 mt-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <h2 className="text-lg font-semibold text-foreground">Долги</h2>
+            <h2 className="text-lg font-semibold text-foreground">{t("debts.title")}</h2>
             <Dialog open={isDebtDialogOpen} onOpenChange={(open) => { setIsDebtDialogOpen(open); if (!open) setSelectedDebt(null); }}>
               <DialogTrigger asChild>
                 <Button variant="outline" className="rounded-xl">
                   <Plus className="h-4 w-4 mr-2" />
-                  Добавить долг
+                  {t("debts.add")}
                 </Button>
               </DialogTrigger>
               <DialogContent className="rounded-3xl">
                 <DialogHeader>
-                  <DialogTitle>{selectedDebt ? "Редактировать долг" : "Новый долг"}</DialogTitle>
+                  <DialogTitle>{selectedDebt ? t("debts.edit") : t("debts.new")}</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleDebtSubmit} className="space-y-4">
                   <div>
-                    <Label htmlFor="debt-studentId">Студент</Label>
+                    <Label htmlFor="debt-studentId">{t("debts.student")}</Label>
                     <Select name="studentId" defaultValue={selectedDebt?.studentId} required>
                       <SelectTrigger className="rounded-xl">
-                        <SelectValue placeholder="Выберите студента" />
+                        <SelectValue placeholder={t("debts.selectStudent")} />
                       </SelectTrigger>
                       <SelectContent>
                         {students.map(student => (
@@ -598,30 +601,30 @@ export default function Finance() {
                     </Select>
                   </div>
                   <div>
-                    <Label htmlFor="debt-amount">Сумма (₸)</Label>
+                    <Label htmlFor="debt-amount">{t("debts.amount")}</Label>
                     <Input id="debt-amount" name="amount" type="number" step="0.01" defaultValue={selectedDebt?.amount} required className="rounded-xl" />
                   </div>
                   <div>
-                    <Label htmlFor="dueDate">Срок погашения</Label>
+                    <Label htmlFor="dueDate">{t("debts.dueDate")}</Label>
                     <Input id="dueDate" name="dueDate" type="date" defaultValue={selectedDebt?.dueDate?.split('T')[0]} className="rounded-xl" />
                   </div>
                   <div>
-                    <Label htmlFor="debt-status">Статус</Label>
+                    <Label htmlFor="debt-status">{t("debts.status")}</Label>
                     <Select name="status" defaultValue={selectedDebt?.status || "pending"} required>
                       <SelectTrigger className="rounded-xl">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="pending">Ожидает оплаты</SelectItem>
-                        <SelectItem value="paid">Оплачен</SelectItem>
+                        <SelectItem value="pending">{t("debts.pending")}</SelectItem>
+                        <SelectItem value="paid">{t("debts.paid")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <Label htmlFor="notes">Примечания</Label>
+                    <Label htmlFor="notes">{t("debts.notes")}</Label>
                     <Input id="notes" name="notes" defaultValue={selectedDebt?.notes} className="rounded-xl" />
                   </div>
-                  <Button type="submit" className="w-full rounded-xl">{selectedDebt ? "Сохранить" : "Создать"}</Button>
+                  <Button type="submit" className="w-full rounded-xl">{selectedDebt ? t("common:save") : t("common:create")}</Button>
                 </form>
               </DialogContent>
             </Dialog>
@@ -630,18 +633,18 @@ export default function Finance() {
           {debts.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-30" />
-              <p>Нет долгов</p>
+              <p>{t("debts.noDebts")}</p>
             </div>
           ) : (
             <div className="rounded-xl border border-border bg-card overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className="w-[250px]">Студент</TableHead>
-                    <TableHead>Сумма</TableHead>
-                    <TableHead>Статус</TableHead>
-                    <TableHead>Срок</TableHead>
-                    <TableHead className="text-right">Примечание</TableHead>
+                    <TableHead className="w-[250px]">{t("debts.table.student")}</TableHead>
+                    <TableHead>{t("debts.table.amount")}</TableHead>
+                    <TableHead>{t("debts.table.status")}</TableHead>
+                    <TableHead>{t("debts.table.dueDate")}</TableHead>
+                    <TableHead className="text-right">{t("debts.table.notes")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -679,7 +682,7 @@ export default function Finance() {
                             ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800" 
                             : "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800"
                           }>
-                            {isPaid ? "Оплачен" : "Ожидает"}
+                            {isPaid ? t("debts.paid") : t("debts.pending")}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-muted-foreground">

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -7,11 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { FileText, FileSpreadsheet, Loader2 } from "lucide-react";
 import moment from "moment";
+import "moment/locale/kk";
 import { ScheduleExportFilters, StudentsExportFilters, TransactionsExportFilters } from "@/api/export";
 import { exportAPI, downloadBlob } from "@/api/export";
 import { toast } from "sonner";
-
-moment.locale("ru");
 
 interface ExportDialogProps {
   open: boolean;
@@ -46,6 +46,8 @@ export function ExportDialog({
   singleStudentId,
   singleStudentName,
 }: ExportDialogProps) {
+  const { t, i18n } = useTranslation("common");
+  moment.locale(i18n.language);
   const [format, setFormat] = useState<"pdf" | "excel">("pdf");
   const [loading, setLoading] = useState(false);
 
@@ -143,10 +145,10 @@ export function ExportDialog({
       }
 
       downloadBlob(blob, filename);
-      toast.success(`${format.toUpperCase()} экспортирован`);
+      toast.success(t("exportDialog.exported", { format: format.toUpperCase() }));
       onOpenChange(false);
     } catch (error: any) {
-      toast.error(`Ошибка при экспорте ${format.toUpperCase()}: ${error.response?.data?.error || error.message}`);
+      toast.error(`${t("exportDialog.exportError", { format: format.toUpperCase() })}: ${error.response?.data?.error || error.message}`);
     } finally {
       setLoading(false);
     }
@@ -156,13 +158,13 @@ export function ExportDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Экспорт данных</DialogTitle>
+          <DialogTitle>{t("exportDialog.title")}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           {/* Format selection */}
           <div className="space-y-3">
-            <Label>Формат экспорта</Label>
+            <Label>{t("exportDialog.format")}</Label>
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
@@ -196,7 +198,7 @@ export function ExportDialog({
             <>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="schedule-start-date">Начало периода</Label>
+                  <Label htmlFor="schedule-start-date">{t("exportDialog.periodStart")}</Label>
                   <Input
                     id="schedule-start-date"
                     type="date"
@@ -205,7 +207,7 @@ export function ExportDialog({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="schedule-end-date">Конец периода</Label>
+                  <Label htmlFor="schedule-end-date">{t("exportDialog.periodEnd")}</Label>
                   <Input
                     id="schedule-end-date"
                     type="date"
@@ -218,10 +220,10 @@ export function ExportDialog({
               {singleStudentMode && singleStudentName && (
                 <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
                   <p className="text-sm text-blue-900">
-                    <span className="font-medium">Студент:</span> {singleStudentName}
+                    <span className="font-medium">{t("exportDialog.student")}:</span> {singleStudentName}
                   </p>
                   <p className="text-xs text-blue-700 mt-1">
-                    Будут включены все занятия студента за выбранный период (посещенные, пропущенные, запланированные)
+                    {t("exportDialog.studentInfo")}
                   </p>
                 </div>
               )}
@@ -229,13 +231,13 @@ export function ExportDialog({
               {!singleStudentMode && (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="schedule-teacher">Учитель</Label>
+                    <Label htmlFor="schedule-teacher">{t("exportDialog.teacher")}</Label>
                     <Select value={scheduleTeacherId} onValueChange={setScheduleTeacherId}>
                       <SelectTrigger id="schedule-teacher">
-                        <SelectValue placeholder="Все учителя" />
+                        <SelectValue placeholder={t("exportDialog.allTeachers")} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">Все учителя</SelectItem>
+                        <SelectItem value="all">{t("exportDialog.allTeachers")}</SelectItem>
                         {teachers.map((teacher) => (
                           <SelectItem key={teacher.id} value={teacher.id}>
                             {teacher.name}
@@ -246,13 +248,13 @@ export function ExportDialog({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="schedule-group">Группа</Label>
+                    <Label htmlFor="schedule-group">{t("exportDialog.group")}</Label>
                     <Select value={scheduleGroupId} onValueChange={setScheduleGroupId}>
                       <SelectTrigger id="schedule-group">
-                        <SelectValue placeholder="Все группы" />
+                        <SelectValue placeholder={t("exportDialog.allGroups")} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">Все группы</SelectItem>
+                        <SelectItem value="all">{t("exportDialog.allGroups")}</SelectItem>
                         {groups.map((group) => (
                           <SelectItem key={group.id} value={group.id}>
                             {group.name}
@@ -263,13 +265,13 @@ export function ExportDialog({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="schedule-room">Аудитория</Label>
+                    <Label htmlFor="schedule-room">{t("exportDialog.room")}</Label>
                     <Select value={scheduleRoomId} onValueChange={setScheduleRoomId}>
                       <SelectTrigger id="schedule-room">
-                        <SelectValue placeholder="Все аудитории" />
+                        <SelectValue placeholder={t("exportDialog.allRooms")} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">Все аудитории</SelectItem>
+                        <SelectItem value="all">{t("exportDialog.allRooms")}</SelectItem>
                         {rooms.map((room) => (
                           <SelectItem key={room.id} value={room.id}>
                             {room.name}
@@ -280,16 +282,16 @@ export function ExportDialog({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="schedule-status">Статус урока</Label>
+                    <Label htmlFor="schedule-status">{t("exportDialog.lessonStatus")}</Label>
                     <Select value={scheduleStatus} onValueChange={setScheduleStatus}>
                       <SelectTrigger id="schedule-status">
-                        <SelectValue placeholder="Все статусы" />
+                        <SelectValue placeholder={t("exportDialog.allStatuses")} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">Все статусы</SelectItem>
-                        <SelectItem value="scheduled">Запланирован</SelectItem>
-                        <SelectItem value="cancelled">Отменен</SelectItem>
-                        <SelectItem value="completed">Завершен</SelectItem>
+                        <SelectItem value="all">{t("exportDialog.allStatuses")}</SelectItem>
+                        <SelectItem value="scheduled">{t("exportDialog.statusScheduled")}</SelectItem>
+                        <SelectItem value="cancelled">{t("exportDialog.statusCancelled")}</SelectItem>
+                        <SelectItem value="completed">{t("exportDialog.statusCompleted")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -302,29 +304,29 @@ export function ExportDialog({
           {type === "students" && (
             <>
               <div className="space-y-2">
-                <Label htmlFor="student-status">Статус</Label>
+                <Label htmlFor="student-status">{t("exportDialog.status")}</Label>
                 <Select value={studentStatus} onValueChange={setStudentStatus}>
                   <SelectTrigger id="student-status">
-                    <SelectValue placeholder="Все статусы" />
+                    <SelectValue placeholder={t("exportDialog.allStatuses")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Все статусы</SelectItem>
-                    <SelectItem value="active">Активный</SelectItem>
-                    <SelectItem value="inactive">Неактивный</SelectItem>
-                    <SelectItem value="frozen">Заморожен</SelectItem>
-                    <SelectItem value="graduated">Закончил</SelectItem>
+                    <SelectItem value="all">{t("exportDialog.allStatuses")}</SelectItem>
+                    <SelectItem value="active">{t("exportDialog.statusActive")}</SelectItem>
+                    <SelectItem value="inactive">{t("exportDialog.statusInactive")}</SelectItem>
+                    <SelectItem value="frozen">{t("exportDialog.statusFrozen")}</SelectItem>
+                    <SelectItem value="graduated">{t("exportDialog.statusGraduated")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="student-group">Группа</Label>
+                <Label htmlFor="student-group">{t("exportDialog.group")}</Label>
                 <Select value={studentGroupId} onValueChange={setStudentGroupId}>
                   <SelectTrigger id="student-group">
-                    <SelectValue placeholder="Все группы" />
+                    <SelectValue placeholder={t("exportDialog.allGroups")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Все группы</SelectItem>
+                    <SelectItem value="all">{t("exportDialog.allGroups")}</SelectItem>
                     {groups.map((group) => (
                       <SelectItem key={group.id} value={group.id}>
                         {group.name}
@@ -335,13 +337,13 @@ export function ExportDialog({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="student-teacher">Учитель</Label>
+                <Label htmlFor="student-teacher">{t("exportDialog.teacher")}</Label>
                 <Select value={studentTeacherId} onValueChange={setStudentTeacherId}>
                   <SelectTrigger id="student-teacher">
-                    <SelectValue placeholder="Все учителя" />
+                    <SelectValue placeholder={t("exportDialog.allTeachers")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Все учителя</SelectItem>
+                    <SelectItem value="all">{t("exportDialog.allTeachers")}</SelectItem>
                     {teachers.map((teacher) => (
                       <SelectItem key={teacher.id} value={teacher.id}>
                         {teacher.name}
@@ -352,10 +354,10 @@ export function ExportDialog({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="student-query">Поиск</Label>
+                <Label htmlFor="student-query">{t("exportDialog.search")}</Label>
                 <Input
                   id="student-query"
-                  placeholder="Поиск по имени, email, телефону..."
+                  placeholder={t("exportDialog.searchPlaceholder")}
                   value={studentQuery}
                   onChange={(e) => setStudentQuery(e.target.value)}
                 />
@@ -370,7 +372,7 @@ export function ExportDialog({
                   }
                 />
                 <Label htmlFor="student-has-balance" className="cursor-pointer">
-                  Только с балансом
+                  {t("exportDialog.hasBalanceOnly")}
                 </Label>
               </div>
             </>
@@ -381,7 +383,7 @@ export function ExportDialog({
             <>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="transaction-start-date">Начало периода</Label>
+                  <Label htmlFor="transaction-start-date">{t("exportDialog.periodStart")}</Label>
                   <Input
                     id="transaction-start-date"
                     type="date"
@@ -390,7 +392,7 @@ export function ExportDialog({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="transaction-end-date">Конец периода</Label>
+                  <Label htmlFor="transaction-end-date">{t("exportDialog.periodEnd")}</Label>
                   <Input
                     id="transaction-end-date"
                     type="date"
@@ -403,10 +405,10 @@ export function ExportDialog({
               {singleStudentMode && singleStudentName && (
                 <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
                   <p className="text-sm text-blue-900">
-                    <span className="font-medium">Студент:</span> {singleStudentName}
+                    <span className="font-medium">{t("exportDialog.student")}:</span> {singleStudentName}
                   </p>
                   <p className="text-xs text-blue-700 mt-1">
-                    Будут включены все платежи и списания студента за выбранный период
+                    {t("exportDialog.studentTransactionsInfo")}
                   </p>
                 </div>
               )}
@@ -414,27 +416,27 @@ export function ExportDialog({
               {!singleStudentMode && (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="transaction-type">Тип операции</Label>
+                    <Label htmlFor="transaction-type">{t("exportDialog.operationType")}</Label>
                     <Select value={transactionType} onValueChange={setTransactionType}>
                       <SelectTrigger id="transaction-type">
-                        <SelectValue placeholder="Все типы" />
+                        <SelectValue placeholder={t("exportDialog.allTypes")} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">Все типы</SelectItem>
-                        <SelectItem value="payment">Платеж</SelectItem>
-                        <SelectItem value="writeoff">Списание</SelectItem>
+                        <SelectItem value="all">{t("exportDialog.allTypes")}</SelectItem>
+                        <SelectItem value="payment">{t("exportDialog.typePayment")}</SelectItem>
+                        <SelectItem value="writeoff">{t("exportDialog.typeWriteoff")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="transaction-student">Ученик</Label>
+                    <Label htmlFor="transaction-student">{t("exportDialog.studentFilter")}</Label>
                     <Select value={transactionStudentId} onValueChange={setTransactionStudentId}>
                       <SelectTrigger id="transaction-student">
-                        <SelectValue placeholder="Все ученики" />
+                        <SelectValue placeholder={t("exportDialog.allStudents")} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">Все ученики</SelectItem>
+                        <SelectItem value="all">{t("exportDialog.allStudents")}</SelectItem>
                         {students.map((student) => (
                           <SelectItem key={student.id} value={student.id}>
                             {student.name}
@@ -445,13 +447,13 @@ export function ExportDialog({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="transaction-teacher">Учитель</Label>
+                    <Label htmlFor="transaction-teacher">{t("exportDialog.teacher")}</Label>
                     <Select value={transactionTeacherId} onValueChange={setTransactionTeacherId}>
                       <SelectTrigger id="transaction-teacher">
-                        <SelectValue placeholder="Все учителя" />
+                        <SelectValue placeholder={t("exportDialog.allTeachers")} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">Все учителя</SelectItem>
+                        <SelectItem value="all">{t("exportDialog.allTeachers")}</SelectItem>
                         {teachers.map((teacher) => (
                           <SelectItem key={teacher.id} value={teacher.id}>
                             {teacher.name}
@@ -462,13 +464,13 @@ export function ExportDialog({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="transaction-group">Группа</Label>
+                    <Label htmlFor="transaction-group">{t("exportDialog.group")}</Label>
                     <Select value={transactionGroupId} onValueChange={setTransactionGroupId}>
                       <SelectTrigger id="transaction-group">
-                        <SelectValue placeholder="Все группы" />
+                        <SelectValue placeholder={t("exportDialog.allGroups")} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">Все группы</SelectItem>
+                        <SelectItem value="all">{t("exportDialog.allGroups")}</SelectItem>
                         {groups.map((group) => (
                           <SelectItem key={group.id} value={group.id}>
                             {group.name}
@@ -485,13 +487,13 @@ export function ExportDialog({
 
         <DialogFooter className="border-t border-border/50 pt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading} className="rounded-xl">
-            Отмена
+            {t("cancel")}
           </Button>
           <Button onClick={handleExport} disabled={loading} className="rounded-xl">
             {loading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Экспорт...
+                {t("exportDialog.exporting")}
               </>
             ) : (
               <>
@@ -500,7 +502,7 @@ export function ExportDialog({
                 ) : (
                   <FileSpreadsheet className="mr-2 h-4 w-4" />
                 )}
-                Экспортировать {format.toUpperCase()}
+                {t("exportDialog.exportFormat", { format: format.toUpperCase() })}
               </>
             )}
           </Button>

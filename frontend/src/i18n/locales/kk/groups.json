@@ -1,0 +1,85 @@
+{
+  "title": "Топтар",
+  "searchPlaceholder": "Топтарды іздеу...",
+  "addGroup": "Топ қосу",
+  "editGroup": "Топты өзгерту",
+  "newGroup": "Жаңа топ",
+  "groupName": "Топ атауы",
+  "subject": "Пән",
+  "teacher": "Мұғалім",
+  "selectTeacher": "Мұғалімді таңдаңыз",
+  "select": "Таңдаңыз",
+  "schedule": "Кесте",
+  "scheduleNotSet": "Орнатылмаған",
+  "room": "Аудитория",
+  "students": "Оқушылар",
+  "studentsCount": "{{count}} оқушы",
+  "addStudent": "Оқушы қосу",
+  "selectedStudents": "Таңдалған оқушылар",
+  "status": {
+    "label": "Мәртебе",
+    "active": "Белсенді",
+    "inactive": "Белсенді емес",
+    "all": "Барлығы"
+  },
+  "stats": {
+    "scheduled": "Жоспарланған",
+    "completed": "Өткізілген",
+    "total": "Барлық сабақтар"
+  },
+  "nextLesson": "Келесі сабақ",
+  "upcomingLessons": "Алдағы сабақтар",
+  "noStudents": "Топта оқушылар жоқ",
+  "notAssigned": "Тағайындалмаған",
+  "actions": {
+    "extend": "Ұзарту",
+    "edit": "Өзгерту",
+    "delete": "Жою",
+    "save": "Сақтау",
+    "create": "Құру",
+    "cancel": "Бас тарту",
+    "createAnyway": "Қайшылықтарға қарамай құру"
+  },
+  "search": "Атауы немесе пәні бойынша іздеу...",
+  "deleteConfirm": {
+    "title": "Топты жою",
+    "description": "Бұл топты жоюға сенімдісіз бе? Бұл әрекетті қайтару мүмкін емес.",
+    "confirm": "Жою",
+    "cancel": "Бас тарту"
+  },
+  "modal": {
+    "basicInfo": "Негізгі ақпарат",
+    "participants": "Қатысушылар",
+    "startDate": "Басталу күні",
+    "endDate": "Аяқталу күні",
+    "weekdays": "Апта күндері",
+    "selectAtLeastOneDay": "Кемінде бір күн таңдаңыз",
+    "start": "Басталуы",
+    "end": "Аяқталуы",
+    "noConflicts": "Қайшылықтар табылмады",
+    "createGroup": "Топ құру"
+  },
+  "checkingConflicts": "Қайшылықтарды тексеру...",
+  "conflictsFound": "Қайшылықтар табылды:",
+  "teacherBusy": "Мұғалім бос емес",
+  "roomBusy": "Аудитория бос емес",
+  "suggestedTime": "Ұсынылған уақыт:",
+  "canCreateAnyway": "Сіз бәрібір топ құра аласыз, қайшылықтар сабақтар жасау кезінде ескеріледі.",
+  "errors": {
+    "hasConflicts": "Қайшылықтар бар. Ұсынылған уақытты пайдаланыңыз немесе құруды растаңыз.",
+    "selectWeekday": "Кемінде бір апта күнін таңдаңыз",
+    "setTimeForAllDays": "Барлық таңдалған күндер үшін уақытты көрсетіңіз",
+    "setEndDate": "Серия аяқталу күнін көрсетіңіз"
+  },
+  "weekdays": {
+    "short": {
+      "mon": "Дс",
+      "tue": "Сс",
+      "wed": "Ср",
+      "thu": "Бс",
+      "fri": "Жм",
+      "sat": "Сн",
+      "sun": "Жк"
+    }
+  }
+}

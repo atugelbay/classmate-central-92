@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -34,12 +35,14 @@ import { SubscriptionType, StudentSubscription } from "@/types";
 import moment from "moment";
 import { PageHeader } from "@/components/PageHeader";
 import "moment/locale/ru";
-
-moment.locale("ru");
+import "moment/locale/kk";
 
 const ITEMS_PER_PAGE = 39;
 
 export default function Subscriptions() {
+  const { t, i18n } = useTranslation("subscriptions");
+  moment.locale(i18n.language);
+  
   const { data: subscriptionTypes = [], isLoading: typesLoading } = useSubscriptionTypes();
   const { data: subscriptions = [], isLoading: subscriptionsLoading } = useAllSubscriptions();
   const { data: students = [] } = useStudents();
@@ -97,9 +100,9 @@ export default function Subscriptions() {
   }, [billingTypeFilter]);
   
   const billingTypeLabels = {
-    per_lesson: "Поурочный",
-    monthly: "Помесячный",
-    unlimited: "Безлимитный",
+    per_lesson: t("billingTypes.per_lesson"),
+    monthly: t("billingTypes.monthly"),
+    unlimited: t("billingTypes.unlimited"),
   } as const;
   
   const billingTypeColors = {
@@ -191,7 +194,7 @@ export default function Subscriptions() {
 
   const handleDeleteSubscription = async (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation(); // Prevent row click if called from table
-    if (window.confirm("Вы уверены, что хотите удалить этот абонемент?")) {
+    if (window.confirm(t("deleteConfirm"))) {
       await deleteSubscription.mutateAsync(id);
       if (selectedSubscription?.id === id) {
         setIsSubscriptionDialogOpen(false);
@@ -221,53 +224,53 @@ export default function Subscriptions() {
   return (
     <div className="space-y-6 animate-fade-in-up">
       <PageHeader
-        title="Абонементы"
-        description="Управление абонементами и посещаемостью"
+        title={t("title")}
+        description={t("description")}
       />
 
       {/* Statistics */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Активные</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("stats.active")}</CardTitle>
             <CheckCircle2 className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{activeSubscriptions}</div>
-            <p className="text-xs text-muted-foreground">Абонементов</p>
+            <p className="text-xs text-muted-foreground">{t("stats.subscriptions")}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Истекшие</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("stats.expired")}</CardTitle>
             <XCircle className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{expiredSubscriptions}</div>
-            <p className="text-xs text-muted-foreground">Абонементов</p>
+            <p className="text-xs text-muted-foreground">{t("stats.subscriptions")}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Заморожено</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("stats.frozen")}</CardTitle>
             <Snowflake className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{frozenSubscriptions}</div>
-            <p className="text-xs text-muted-foreground">Абонементов</p>
+            <p className="text-xs text-muted-foreground">{t("stats.subscriptions")}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Осталось уроков</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("stats.lessonsRemaining")}</CardTitle>
             <Calendar className="h-4 w-4 text-purple-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalLessonsRemaining}</div>
-            <p className="text-xs text-muted-foreground">Всего</p>
+            <p className="text-xs text-muted-foreground">{t("stats.total")}</p>
           </CardContent>
         </Card>
       </div>
@@ -275,32 +278,32 @@ export default function Subscriptions() {
       {/* Tabs */}
       <Tabs defaultValue="subscriptions">
         <TabsList>
-          <TabsTrigger value="subscriptions">Абонементы студентов</TabsTrigger>
-          <TabsTrigger value="types">Типы абонементов</TabsTrigger>
+          <TabsTrigger value="subscriptions">{t("tabs.subscriptions")}</TabsTrigger>
+          <TabsTrigger value="types">{t("tabs.types")}</TabsTrigger>
         </TabsList>
 
         {/* Subscriptions Tab */}
         <TabsContent value="subscriptions" className="space-y-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <h2 className="text-xl font-semibold">Абонементы студентов</h2>
+            <h2 className="text-xl font-semibold">{t("studentSubscriptions")}</h2>
             <Dialog open={isSubscriptionDialogOpen} onOpenChange={(open) => { setIsSubscriptionDialogOpen(open); if (!open) setSelectedSubscription(null); }}>
               <DialogTrigger asChild>
                 <Button size="sm" className="sm:size-default">
                   <Plus className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Выдать абонемент</span>
-                  <span className="sm:hidden">Выдать</span>
+                  <span className="hidden sm:inline">{t("issueSubscription")}</span>
+                  <span className="sm:hidden">{t("issue")}</span>
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>{selectedSubscription ? "Редактировать абонемент" : "Новый абонемент"}</DialogTitle>
+                  <DialogTitle>{selectedSubscription ? t("dialog.editSubscription") : t("dialog.newSubscription")}</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubscriptionSubmit} className="space-y-4">
                   <div>
-                    <Label htmlFor="studentId">Студент</Label>
+                    <Label htmlFor="studentId">{t("dialog.student")}</Label>
                     <Select name="studentId" defaultValue={selectedSubscription?.studentId} required>
                       <SelectTrigger>
-                        <SelectValue placeholder="Выберите студента" />
+                        <SelectValue placeholder={t("dialog.selectStudent")} />
                       </SelectTrigger>
                       <SelectContent>
                         {students.map(student => (
@@ -312,15 +315,15 @@ export default function Subscriptions() {
                     </Select>
                   </div>
                   <div>
-                    <Label htmlFor="subscriptionTypeId">Тип абонемента</Label>
+                    <Label htmlFor="subscriptionTypeId">{t("dialog.subscriptionType")}</Label>
                     <Select value={formTypeId} onValueChange={setFormTypeId} required>
                       <SelectTrigger>
-                        <SelectValue placeholder="Выберите тип" />
+                        <SelectValue placeholder={t("dialog.selectType")} />
                       </SelectTrigger>
                       <SelectContent>
                         {subscriptionTypes.map(type => (
                           <SelectItem key={type.id} value={type.id}>
-                            {type.name} ({type.lessonsCount} уроков, {type.price.toLocaleString()} ₸)
+                            {type.name} ({type.lessonsCount} {t("lessons")}, {type.price.toLocaleString()} ₸)
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -328,7 +331,7 @@ export default function Subscriptions() {
                     {formTypeId && (
                       <div className="mt-2 p-3 bg-blue-50 rounded-lg text-sm">
                         <p className="text-blue-900">
-                          <span className="font-medium">Автоматически заполнено из шаблона</span>
+                          <span className="font-medium">{t("dialog.autoFilledFromTemplate")}</span>
                         </p>
                       </div>
                     )}
@@ -337,11 +340,11 @@ export default function Subscriptions() {
                   <div className="p-4 bg-gray-50 rounded-lg border border-gray-200 space-y-3">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label className="text-xs text-muted-foreground">Всего уроков</Label>
+                        <Label className="text-xs text-muted-foreground">{t("dialog.totalLessons")}</Label>
                         <p className="text-lg font-semibold">{formTotalLessons}</p>
                       </div>
                       <div>
-                        <Label htmlFor="usedLessons">Использовано уроков</Label>
+                        <Label htmlFor="usedLessons">{t("dialog.usedLessons")}</Label>
                         <Input 
                           id="usedLessons" 
                           name="usedLessons" 
@@ -355,11 +358,11 @@ export default function Subscriptions() {
                     
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label className="text-xs text-muted-foreground">Общая стоимость</Label>
+                        <Label className="text-xs text-muted-foreground">{t("dialog.totalPrice")}</Label>
                         <p className="text-lg font-semibold">{formTotalPrice.toLocaleString()} ₸</p>
                       </div>
                       <div>
-                        <Label className="text-xs text-muted-foreground">Цена за урок</Label>
+                        <Label className="text-xs text-muted-foreground">{t("dialog.pricePerLesson")}</Label>
                         <p className="text-lg font-semibold">{formPricePerLesson.toLocaleString()} ₸</p>
                       </div>
                     </div>
@@ -367,15 +370,15 @@ export default function Subscriptions() {
                     {selectedSubscription && (
                       <div className="pt-2 border-t">
                         <p className="text-sm text-blue-900">
-                          <span className="font-medium">Осталось уроков: </span>
+                          <span className="font-medium">{t("dialog.lessonsRemaining")}: </span>
                           <span className="text-lg font-bold">{selectedSubscription.lessonsRemaining}</span>
-                          <span className="text-xs text-blue-700 ml-2">(вычисляется автоматически)</span>
+                          <span className="text-xs text-blue-700 ml-2">{t("dialog.calculatedAuto")}</span>
                         </p>
                       </div>
                     )}
                   </div>
                   <div>
-                    <Label htmlFor="startDate">Дата начала</Label>
+                    <Label htmlFor="startDate">{t("dialog.startDate")}</Label>
                     <Input 
                       id="startDate" 
                       name="startDate" 
@@ -385,7 +388,7 @@ export default function Subscriptions() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="endDate">Дата окончания (необязательно)</Label>
+                    <Label htmlFor="endDate">{t("dialog.endDate")}</Label>
                     <Input 
                       id="endDate" 
                       name="endDate" 
@@ -394,24 +397,24 @@ export default function Subscriptions() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="status">Статус</Label>
+                    <Label htmlFor="status">{t("dialog.status")}</Label>
                     <Select name="status" defaultValue={selectedSubscription?.status || "active"}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="active">Активный</SelectItem>
-                        <SelectItem value="frozen">Заморожен</SelectItem>
-                        <SelectItem value="expired">Истёк</SelectItem>
+                        <SelectItem value="active">{t("status.active")}</SelectItem>
+                        <SelectItem value="frozen">{t("status.frozen")}</SelectItem>
+                        <SelectItem value="expired">{t("status.expired")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <Label htmlFor="freezeDaysRemaining">Осталось дней заморозки</Label>
+                    <Label htmlFor="freezeDaysRemaining">{t("dialog.freezeDaysRemaining")}</Label>
                     <Input id="freezeDaysRemaining" name="freezeDaysRemaining" type="number" defaultValue={selectedSubscription?.freezeDaysRemaining || 0} />
                   </div>
                   <div className="flex gap-2">
-                    <Button type="submit" className="flex-1">{selectedSubscription ? "Сохранить" : "Создать"}</Button>
+                    <Button type="submit" className="flex-1">{selectedSubscription ? t("common:save") : t("common:create")}</Button>
                     {selectedSubscription && (
                       <Button 
                         type="button"
@@ -420,7 +423,7 @@ export default function Subscriptions() {
                         className="flex items-center gap-2"
                       >
                         <Trash2 className="h-4 w-4" />
-                        Удалить
+                        {t("common:delete")}
                       </Button>
                     )}
                   </div>
@@ -434,21 +437,21 @@ export default function Subscriptions() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Студент</TableHead>
-                    <TableHead>Тип</TableHead>
-                    <TableHead>Уроков осталось</TableHead>
-                    <TableHead>Цены</TableHead>
-                    <TableHead>Период</TableHead>
-                    <TableHead>Статус</TableHead>
-                    <TableHead>Заморозка</TableHead>
-                    <TableHead>Действия</TableHead>
+                    <TableHead>{t("table.student")}</TableHead>
+                    <TableHead>{t("table.type")}</TableHead>
+                    <TableHead>{t("table.lessonsRemaining")}</TableHead>
+                    <TableHead>{t("table.prices")}</TableHead>
+                    <TableHead>{t("table.period")}</TableHead>
+                    <TableHead>{t("table.status")}</TableHead>
+                    <TableHead>{t("table.freeze")}</TableHead>
+                    <TableHead>{t("table.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {paginatedSubscriptions.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={8} className="text-center text-muted-foreground">
-                          Нет абонементов
+                          {t("noSubscriptions")}
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -474,12 +477,12 @@ export default function Subscriptions() {
                               "destructive"
                             }
                           >
-                            {subscription.status === "active" ? "Активный" : subscription.status === "frozen" ? "Заморожен" : "Истёк"}
+                            {t(`status.${subscription.status}`)}
                           </Badge>
                         </TableCell>
                         <TableCell>
                           {subscription.freezeDaysRemaining > 0 ? (
-                            <span className="text-sm text-blue-600">{subscription.freezeDaysRemaining} дней</span>
+                            <span className="text-sm text-blue-600">{subscription.freezeDaysRemaining} {t("days")}</span>
                           ) : (
                             <span className="text-sm text-muted-foreground">—</span>
                           )}
@@ -549,57 +552,57 @@ export default function Subscriptions() {
         {/* Types Tab */}
         <TabsContent value="types" className="space-y-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <h2 className="text-xl font-semibold">Типы абонементов</h2>
+            <h2 className="text-xl font-semibold">{t("subscriptionTypes")}</h2>
             <div className="flex gap-2 items-center flex-wrap">
               <Select value={billingTypeFilter} onValueChange={setBillingTypeFilter}>
                 <SelectTrigger className="w-[150px] sm:w-[200px]">
-                  <SelectValue placeholder="Все типы" />
+                  <SelectValue placeholder={t("allTypes")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Все типы</SelectItem>
-                  <SelectItem value="per_lesson">Поурочный</SelectItem>
-                  <SelectItem value="monthly">Помесячный</SelectItem>
-                  <SelectItem value="unlimited">Безлимитный</SelectItem>
+                  <SelectItem value="all">{t("allTypes")}</SelectItem>
+                  <SelectItem value="per_lesson">{t("billingTypes.per_lesson")}</SelectItem>
+                  <SelectItem value="monthly">{t("billingTypes.monthly")}</SelectItem>
+                  <SelectItem value="unlimited">{t("billingTypes.unlimited")}</SelectItem>
                 </SelectContent>
               </Select>
               <Dialog open={isTypeDialogOpen} onOpenChange={(open) => { setIsTypeDialogOpen(open); if (!open) setSelectedType(null); }}>
                 <DialogTrigger asChild>
                   <Button size="sm" className="sm:size-default">
                     <Plus className="h-4 w-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Создать тип</span>
-                    <span className="sm:hidden">Создать</span>
+                    <span className="hidden sm:inline">{t("createType")}</span>
+                    <span className="sm:hidden">{t("common:create")}</span>
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>{selectedType ? "Редактировать тип" : "Новый тип абонемента"}</DialogTitle>
+                    <DialogTitle>{selectedType ? t("dialog.editType") : t("dialog.newType")}</DialogTitle>
                   </DialogHeader>
                   <form onSubmit={handleTypeSubmit} className="space-y-4">
                     <div>
-                      <Label htmlFor="name">Название</Label>
+                      <Label htmlFor="name">{t("dialog.name")}</Label>
                       <Input id="name" name="name" defaultValue={selectedType?.name} required />
                     </div>
                     <div>
-                      <Label htmlFor="description">Описание</Label>
+                      <Label htmlFor="description">{t("dialog.description")}</Label>
                       <Input id="description" name="description" defaultValue={selectedType?.description} />
                     </div>
                     <div>
-                      <Label htmlFor="lessonsCount">Количество уроков</Label>
+                      <Label htmlFor="lessonsCount">{t("dialog.lessonsCount")}</Label>
                       <Input id="lessonsCount" name="lessonsCount" type="number" defaultValue={selectedType?.lessonsCount} required />
                     </div>
                     <div>
-                      <Label htmlFor="price">Цена (₸)</Label>
+                      <Label htmlFor="price">{t("dialog.price")}</Label>
                       <Input id="price" name="price" type="number" step="0.01" defaultValue={selectedType?.price} required />
                     </div>
                     <div>
-                      <Label htmlFor="validityDays">Срок действия (дней, необязательно)</Label>
-                      <Input id="validityDays" name="validityDays" type="number" defaultValue={selectedType?.validityDays} placeholder="Неограничено" />
+                      <Label htmlFor="validityDays">{t("dialog.validityDays")}</Label>
+                      <Input id="validityDays" name="validityDays" type="number" defaultValue={selectedType?.validityDays} placeholder={t("dialog.unlimited")} />
                     </div>
                     <div className="flex items-center space-x-2">
                       <Switch id="canFreeze" name="canFreeze" defaultChecked={selectedType?.canFreeze} />
-                      <Label htmlFor="canFreeze">Можно замораживать</Label>
+                      <Label htmlFor="canFreeze">{t("dialog.canFreeze")}</Label>
                     </div>
-                    <Button type="submit" className="w-full">{selectedType ? "Сохранить" : "Создать"}</Button>
+                    <Button type="submit" className="w-full">{selectedType ? t("common:save") : t("common:create")}</Button>
                   </form>
                 </DialogContent>
               </Dialog>
@@ -609,7 +612,7 @@ export default function Subscriptions() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {paginatedTypes.length === 0 ? (
               <p className="text-muted-foreground col-span-full text-center py-8">
-                {billingTypeFilter === "all" ? "Нет типов абонементов" : "Нет типов с выбранной тарификацией"}
+                {billingTypeFilter === "all" ? t("noTypes") : t("noTypesWithFilter")}
               </p>
             ) : (
               paginatedTypes.map(type => (
@@ -629,10 +632,10 @@ export default function Subscriptions() {
                     <div className="space-y-1 text-sm text-muted-foreground">
                       <div className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
-                        {type.lessonsCount} уроков
+                        {type.lessonsCount} {t("lessons")}
                       </div>
-                      <div>Цена за урок: {(type.price / type.lessonsCount).toFixed(0)} ₸</div>
-                      <div>Срок: {type.validityDays ? `${type.validityDays} дней` : "Неограничено"}</div>
+                      <div>{t("pricePerLessonLabel")}: {(type.price / type.lessonsCount).toFixed(0)} ₸</div>
+                      <div>{t("validity")}: {type.validityDays ? `${type.validityDays} ${t("days")}` : t("dialog.unlimited")}</div>
                     </div>
                   </CardContent>
                 </Card>

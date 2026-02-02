@@ -1,0 +1,66 @@
+{
+  "title": "Рөлдер мен қол жеткізу құқықтары",
+  "description": "Рөлдер мен пайдаланушылар рұқсаттарын басқару",
+  "createRole": "Рөл құру",
+  "create": "Құру",
+  "editRole": "Рөлді өңдеу",
+  "dialog": {
+    "roleName": "Рөл атауы",
+    "description": "Сипаттама",
+    "permissions": "Рұқсаттар"
+  },
+  "roleNames": {
+    "admin": "Әкімші",
+    "manager": "Менеджер",
+    "teacher": "Мұғалім",
+    "accountant": "Бухгалтер",
+    "view_only": "Тек қарау"
+  },
+  "roleDescriptions": {
+    "admin": "Жүйенің барлық функцияларына толық қол жеткізу",
+    "manager": "Рөлдерді басқарудан басқа барлық функцияларға қол жеткізу",
+    "teacher": "Оқушылар мен кестеге шектеулі қол жеткізу",
+    "accountant": "Қаржылық деректерге қол жеткізу",
+    "view_only": "Өзгерту мүмкіндігінсіз тек қарау"
+  },
+  "invite": {
+    "title": "Пайдаланушыны шақыру",
+    "name": "Аты",
+    "namePlaceholder": "Пайдаланушы аты",
+    "email": "Email",
+    "emailPlaceholder": "user@example.com",
+    "role": "Рөл",
+    "selectRole": "Рөлді таңдаңыз",
+    "branches": "Филиалдарға қол жеткізу",
+    "noBranches": "Қол жетімді филиалдар жоқ",
+    "sending": "Жіберілуде...",
+    "send": "Шақыру жіберу",
+    "selectBranch": "Кем дегенде бір филиалды таңдаңыз",
+    "selectRoleError": "Рөлді таңдаңыз"
+  },
+  "systemRoles": "Жүйелік рөлдер",
+  "table": {
+    "name": "Атауы",
+    "description": "Сипаттама",
+    "permissions": "Рұқсаттар",
+    "actions": "Әрекеттер"
+  },
+  "noRoles": "Рөлдер жоқ",
+  "noPermissions": "Рұқсаттар жоқ",
+  "systemRole": "Жүйелік рөл",
+  "companyUsers": "Компания пайдаланушылары",
+  "usersTable": {
+    "name": "Аты",
+    "email": "Email",
+    "roles": "Рөлдер",
+    "status": "Күйі"
+  },
+  "noUsers": "Пайдаланушылар жоқ",
+  "noUserRoles": "Рөлдер жоқ",
+  "userStatus": {
+    "verified": "Расталған",
+    "unverified": "Расталмаған"
+  },
+  "deleteRole": "Рөлді жою",
+  "deleteConfirm": "\"{{name}}\" рөлін жойғыңыз келетініне сенімдісіз бе? Бұл әрекетті қайтару мүмкін емес."
+}

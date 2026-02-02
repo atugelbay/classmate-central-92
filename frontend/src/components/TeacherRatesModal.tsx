@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Dialog,
   DialogContent,
@@ -46,6 +47,7 @@ interface TeacherRatesModalProps {
 }
 
 export function TeacherRatesModal({ open, onOpenChange, teacherId }: TeacherRatesModalProps) {
+  const { t } = useTranslation(["teachers", "common"]);
   const { data: rates = [], isLoading } = useTeacherRates(teacherId);
   const createRate = useCreateTeacherRate();
   const updateRate = useUpdateTeacherRate();
@@ -143,18 +145,18 @@ export function TeacherRatesModal({ open, onOpenChange, teacherId }: TeacherRate
   const getLessonTypeLabel = (type: string) => {
     switch (type) {
       case "group":
-        return "Групповые";
+        return t("rates.lessonTypes.group");
       case "individual":
-        return "Индивидуальные";
+        return t("rates.lessonTypes.individual");
       case "special":
-        return "Спец уроки";
+        return t("rates.lessonTypes.special");
       default:
         return type;
     }
   };
 
   const getRateTypeLabel = (type: string) => {
-    return type === "hourly" ? "Почасовая" : "Поурочная";
+    return type === "hourly" ? t("rates.rateTypes.hourly") : t("rates.rateTypes.per_lesson");
   };
 
   // Check if rate combination already exists (for validation)
@@ -173,7 +175,7 @@ export function TeacherRatesModal({ open, onOpenChange, teacherId }: TeacherRate
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Управление ставками</DialogTitle>
+            <DialogTitle>{t("rates.title")}</DialogTitle>
           </DialogHeader>
 
           {isLoading ? (
@@ -185,14 +187,14 @@ export function TeacherRatesModal({ open, onOpenChange, teacherId }: TeacherRate
               <div className="flex justify-end">
                 <Button onClick={() => handleOpenForm()}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Добавить ставку
+                  {t("rates.addRate")}
                 </Button>
               </div>
 
               {rates.length === 0 ? (
                 <Card>
                   <CardContent className="p-8 text-center text-muted-foreground">
-                    Ставки не добавлены. Нажмите "Добавить ставку" чтобы создать первую ставку.
+                    {t("rates.noRates")}
                   </CardContent>
                 </Card>
               ) : (
@@ -200,11 +202,11 @@ export function TeacherRatesModal({ open, onOpenChange, teacherId }: TeacherRate
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Тип урока</TableHead>
-                        <TableHead>Тип ставки</TableHead>
-                        <TableHead>Значение</TableHead>
-                        <TableHead>Статус</TableHead>
-                        <TableHead className="text-right">Действия</TableHead>
+                        <TableHead>{t("rates.lessonType")}</TableHead>
+                        <TableHead>{t("rates.rateType")}</TableHead>
+                        <TableHead>{t("rates.value")}</TableHead>
+                        <TableHead>{t("rates.status")}</TableHead>
+                        <TableHead className="text-right">{t("rates.actions")}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -215,12 +217,12 @@ export function TeacherRatesModal({ open, onOpenChange, teacherId }: TeacherRate
                           <TableCell className="font-semibold">
                             {rate.rateValue.toLocaleString()} ₸
                             <span className="text-xs text-muted-foreground ml-1">
-                              /{rate.rateType === "hourly" ? "час" : "урок"}
+                              /{rate.rateType === "hourly" ? t("rates.units.hour") : t("rates.units.lesson")}
                             </span>
                           </TableCell>
                           <TableCell>
                             <Badge variant={rate.isActive ? "default" : "secondary"}>
-                              {rate.isActive ? "Активна" : "Неактивна"}
+                              {rate.isActive ? t("rates.active") : t("rates.inactive")}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
@@ -257,12 +259,12 @@ export function TeacherRatesModal({ open, onOpenChange, teacherId }: TeacherRate
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingRate ? "Редактировать ставку" : "Добавить ставку"}
+              {editingRate ? t("rates.editRate") : t("rates.addRate")}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="lessonType">Тип урока *</Label>
+              <Label htmlFor="lessonType">{t("rates.lessonType")} *</Label>
               <Select
                 value={formData.lessonType}
                 onValueChange={(value: "group" | "individual" | "special") =>
@@ -274,15 +276,15 @@ export function TeacherRatesModal({ open, onOpenChange, teacherId }: TeacherRate
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="group">Групповые</SelectItem>
-                  <SelectItem value="individual">Индивидуальные</SelectItem>
-                  <SelectItem value="special">Спец уроки</SelectItem>
+                  <SelectItem value="group">{t("rates.lessonTypes.group")}</SelectItem>
+                  <SelectItem value="individual">{t("rates.lessonTypes.individual")}</SelectItem>
+                  <SelectItem value="special">{t("rates.lessonTypes.special")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div>
-              <Label htmlFor="rateType">Тип ставки *</Label>
+              <Label htmlFor="rateType">{t("rates.rateType")} *</Label>
               <Select
                 value={formData.rateType}
                 onValueChange={(value: "hourly" | "per_lesson") =>
@@ -294,15 +296,15 @@ export function TeacherRatesModal({ open, onOpenChange, teacherId }: TeacherRate
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="hourly">Почасовая</SelectItem>
-                  <SelectItem value="per_lesson">Поурочная</SelectItem>
+                  <SelectItem value="hourly">{t("rates.rateTypes.hourly")}</SelectItem>
+                  <SelectItem value="per_lesson">{t("rates.rateTypes.per_lesson")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div>
               <Label htmlFor="rateValue">
-                Значение ставки (₸) *
+                {t("rates.rateValue")} *
               </Label>
               <Input
                 id="rateValue"
@@ -313,15 +315,15 @@ export function TeacherRatesModal({ open, onOpenChange, teacherId }: TeacherRate
                 onChange={(e) => setFormData({ ...formData, rateValue: e.target.value })}
                 placeholder={
                   formData.rateType === "hourly"
-                    ? "Например, 2000"
-                    : "Например, 2500"
+                    ? "2000"
+                    : "2500"
                 }
                 required
               />
               <p className="text-xs text-muted-foreground mt-1">
                 {formData.rateType === "hourly"
-                  ? "Стоимость одного часа"
-                  : "Стоимость одного урока"}
+                  ? t("rates.hourlyDesc")
+                  : t("rates.perLessonDesc")}
               </p>
             </div>
 
@@ -336,24 +338,23 @@ export function TeacherRatesModal({ open, onOpenChange, teacherId }: TeacherRate
                 className="h-4 w-4"
               />
               <Label htmlFor="isActive" className="cursor-pointer">
-                Активна
+                {t("rates.active")}
               </Label>
             </div>
 
             {!editingRate &&
               rateExists(formData.lessonType, formData.rateType) && (
                 <div className="text-sm text-yellow-600 bg-yellow-50 p-2 rounded">
-                  ⚠️ Активная ставка с таким типом урока и типом ставки уже существует.
-                  Деактивируйте существующую или выберите другую комбинацию.
+                  ⚠️ {t("rates.duplicateWarning")}
                 </div>
               )}
 
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={handleCloseForm}>
-                Отмена
+                {t("common:cancel")}
               </Button>
               <Button type="submit">
-                {editingRate ? "Сохранить" : "Добавить"}
+                {editingRate ? t("common:save") : t("common:add")}
               </Button>
             </div>
           </form>
@@ -367,18 +368,18 @@ export function TeacherRatesModal({ open, onOpenChange, teacherId }: TeacherRate
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Удалить ставку?</AlertDialogTitle>
+            <AlertDialogTitle>{t("rates.deleteRate")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Это действие нельзя отменить. Ставка будет удалена навсегда.
+              {t("rates.deleteWarning")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogCancel>{t("common:cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Удалить
+              {t("common:delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

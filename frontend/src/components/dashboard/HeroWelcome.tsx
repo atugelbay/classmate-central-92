@@ -1,30 +1,68 @@
 import { useAuth } from "@/context/AuthContext";
 import { Sparkles } from "lucide-react";
-
-// Function to get greeting based on time of day
-const getGreeting = (): string => {
-  const hour = new Date().getHours();
-  
-  if (hour >= 6 && hour < 12) {
-    return "Доброе утро";
-  } else if (hour >= 12 && hour < 18) {
-    return "Добрый день";
-  } else if (hour >= 18 && hour < 23) {
-    return "Добрый вечер";
-  } else {
-    return "Доброй ночи";
-  }
-};
+import { useTranslation } from "react-i18next";
+import moment from "moment";
+import "moment/locale/ru";
+import "moment/locale/kk";
 
 export function HeroWelcome() {
   const { user } = useAuth();
-  const today = new Date();
-  const dateOptions: Intl.DateTimeFormatOptions = { 
-    weekday: 'long', 
-    day: 'numeric', 
-    month: 'long' 
+  const { t, i18n } = useTranslation("dashboard");
+  moment.locale(i18n.language);
+  
+  // Get formatted date using moment.js for proper localization
+  const formattedDate = moment().format("dddd, D MMMM");
+
+  // Get greeting based on time of day
+  const getGreeting = (): string => {
+    const hour = new Date().getHours();
+    const greetings = {
+      ru: {
+        morning: "Доброе утро",
+        afternoon: "Добрый день",
+        evening: "Добрый вечер",
+        night: "Доброй ночи"
+      },
+      kk: {
+        morning: "Қайырлы таң",
+        afternoon: "Қайырлы күн",
+        evening: "Қайырлы кеш",
+        night: "Қайырлы түн"
+      },
+      en: {
+        morning: "Good morning",
+        afternoon: "Good afternoon",
+        evening: "Good evening",
+        night: "Good night"
+      }
+    };
+    
+    const lang = (i18n.language as 'ru' | 'kk' | 'en') || 'ru';
+    const texts = greetings[lang] || greetings.ru;
+    
+    if (hour >= 6 && hour < 12) return texts.morning;
+    if (hour >= 12 && hour < 18) return texts.afternoon;
+    if (hour >= 18 && hour < 23) return texts.evening;
+    return texts.night;
   };
-  const formattedDate = today.toLocaleDateString('ru-RU', dateOptions);
+
+  // Motivational text translations
+  const getMotivationalText = (): string => {
+    const texts = {
+      ru: "Отличного продуктивного дня!",
+      kk: "Өнімді күн болсын!",
+      en: "Have a productive day!"
+    };
+    const lang = (i18n.language as 'ru' | 'kk' | 'en') || 'ru';
+    return texts[lang] || texts.ru;
+  };
+
+  // Guest text translations
+  const getGuestText = (): string => {
+    const texts = { ru: "Гость", kk: "Қонақ", en: "Guest" };
+    const lang = (i18n.language as 'ru' | 'kk' | 'en') || 'ru';
+    return texts[lang] || texts.ru;
+  };
 
   return (
     <div className="h-full rounded-xl bg-gradient-to-r from-[hsl(250,84%,54%)] to-[hsl(262,83%,58%)] px-6 py-4 flex items-center justify-between relative overflow-hidden">
@@ -39,7 +77,7 @@ export function HeroWelcome() {
         </div>
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-white">
-            {getGreeting()}, {user?.name?.split(' ')[0] || 'Гость'}!
+            {getGreeting()}, {user?.name?.split(' ')[0] || getGuestText()}!
           </h1>
           <p className="text-white/70 text-sm capitalize">
             {formattedDate}
@@ -50,7 +88,7 @@ export function HeroWelcome() {
       {/* Right: Motivational text */}
       <div className="relative z-10 hidden md:block text-right">
         <p className="text-white/90 text-sm font-medium">
-          Отличного продуктивного дня!
+          {getMotivationalText()}
         </p>
       </div>
     </div>

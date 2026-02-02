@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import moment from "moment";
 import "moment/locale/ru";
+import "moment/locale/kk";
 import { Lesson, StudentSubscription, LessonAttendance } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,8 +21,6 @@ import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-
-moment.locale("ru");
 
 type LessonStatus =
   | "attended"
@@ -53,6 +53,8 @@ export function StudentLessonCalendar({
   freezes = [],
 }: StudentLessonCalendarProps) {
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation("students");
+  moment.locale(i18n.language);
   const [openLessonId, setOpenLessonId] = useState<string | null>(null);
 
   // Get all lessons for this student within subscription periods
@@ -136,7 +138,7 @@ export function StudentLessonCalendar({
         const day = moment(dateKey, "YYYY-MM-DD");
         const virtualLesson: Lesson = {
           id: `freeze-${dateKey}`,
-          title: "Заморожено",
+          title: t("calendar.frozen"),
           teacherId: "",
           subject: "",
           start: day.toDate(),
@@ -277,7 +279,7 @@ export function StudentLessonCalendar({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <CalendarIcon className="h-5 w-5" />
-          Календарь посещаемости
+          {t("attendanceCalendar")}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -285,23 +287,23 @@ export function StudentLessonCalendar({
         <div className="flex flex-wrap gap-2 mb-4 text-xs text-foreground">
           <div className="flex items-center gap-1">
             <CheckCircle2 className="h-3 w-3 text-green-600 dark:text-green-400" />
-            <span className="text-foreground">Посещен</span>
+            <span className="text-foreground">{t("attendanceStatuses.attended")}</span>
           </div>
           <div className="flex items-center gap-1">
             <XCircle className="h-3 w-3 text-orange-600 dark:text-orange-400" />
-            <span className="text-foreground">Пропущен</span>
+            <span className="text-foreground">{t("attendanceStatuses.missed")}</span>
           </div>
           <div className="flex items-center gap-1">
             <Clock className="h-3 w-3 text-orange-600 dark:text-orange-400" />
-            <span className="text-foreground">Пропущен (ув.)</span>
+            <span className="text-foreground">{t("attendanceStatuses.excused")}</span>
           </div>
           <div className="flex items-center gap-1">
             <Snowflake className="h-3 w-3 text-gray-400 dark:text-gray-300" />
-            <span className="text-foreground">Заморожен</span>
+            <span className="text-foreground">{t("attendanceStatuses.frozen")}</span>
           </div>
           <div className="flex items-center gap-1">
             <GripVertical className="h-3 w-3 text-green-600 dark:text-green-400" />
-            <span className="text-foreground">Запланирован</span>
+            <span className="text-foreground">{t("attendanceStatuses.scheduled")}</span>
           </div>
         </div>
 
@@ -309,7 +311,7 @@ export function StudentLessonCalendar({
         <div className="grid grid-cols-5 gap-2 max-h-[600px] overflow-y-auto">
           {dateGrid.length === 0 ? (
             <div className="col-span-5 text-center py-8 text-muted-foreground">
-              Нет уроков в периоде абонемента
+              {t("calendar.noLessons")}
             </div>
           ) : (
             dateGrid.map((item, idx) => {
@@ -322,7 +324,7 @@ export function StudentLessonCalendar({
               const lesson = item.lesson?.lesson;
               const lessonId = lesson?.id || `freeze-${item.date.format("YYYY-MM-DD")}`;
 
-              const title = item.status === "frozen" ? "День заморозки" : (lesson?.title || "Урок");
+              const title = item.status === "frozen" ? t("calendar.freezeDay") : (lesson?.title || t("calendar.lesson"));
               const timeText = `${item.date.format("HH:mm")}${lesson ? " - " + moment(lesson.end).format("HH:mm") : ""}`;
 
               return (
@@ -360,7 +362,7 @@ export function StudentLessonCalendar({
                         {isToday && (
                           <div className="absolute top-0 right-0 flex items-center gap-0.5 text-[8px] text-green-600 dark:text-green-400 font-semibold">
                             <Flag className="h-2 w-2" />
-                            <span>сейчас</span>
+                            <span>{t("calendar.now")}</span>
                           </div>
                         )}
                       </div>
@@ -373,21 +375,21 @@ export function StudentLessonCalendar({
                           <div className="text-sm font-semibold">{title}</div>
                           <div className="text-xs text-muted-foreground">{item.date.format("dddd, DD.MM.YYYY")} {timeText}</div>
                         </div>
-                        <Badge variant="outline">{item.status === "frozen" ? "Заморожен" : "Урок"}</Badge>
+                        <Badge variant="outline">{item.status === "frozen" ? t("calendar.frozen") : t("calendar.lesson")}</Badge>
                       </div>
                       {lesson && (
                         <div className="text-xs text-muted-foreground">
-                          {lesson.groupName ? <div>Группа: {lesson.groupName}</div> : null}
-                          {lesson.teacherName ? <div>Преподаватель: {lesson.teacherName}</div> : null}
+                          {lesson.groupName ? <div>{t("calendar.group")}: {lesson.groupName}</div> : null}
+                          {lesson.teacherName ? <div>{t("calendar.teacher")}: {lesson.teacherName}</div> : null}
                         </div>
                       )}
                       <div className="pt-2 flex items-center gap-2">
                         {lesson ? (
                           <Button size="sm" onClick={() => navigate(`/schedule?lessonId=${lesson.id}`)}>
-                            Редактировать урок
+                            {t("calendar.editLesson")}
                           </Button>
                         ) : (
-                          <div className="text-xs text-muted-foreground">День помечен как замороженный</div>
+                          <div className="text-xs text-muted-foreground">{t("calendar.frozenMark")}</div>
                         )}
                       </div>
                     </div>

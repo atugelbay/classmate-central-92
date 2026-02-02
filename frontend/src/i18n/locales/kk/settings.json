@@ -1,0 +1,104 @@
+{
+  "title": "Баптаулар",
+  "tabs": {
+    "general": "Жалпы",
+    "company": "Компания",
+    "branches": "Филиалдар",
+    "users": "Пайдаланушылар",
+    "roles": "Рөлдер",
+    "billing": "Тарифтер",
+    "migration": "Көшіру"
+  },
+  "general": {
+    "title": "Жалпы баптаулар",
+    "language": "Тіл",
+    "timezone": "Уақыт белдеуі",
+    "currency": "Валюта",
+    "dateFormat": "Күн форматы",
+    "theme": "Интерфейс",
+    "themes": {
+      "light": "Ашық",
+      "dark": "Қараңғы",
+      "system": "Жүйелік"
+    }
+  },
+  "company": {
+    "title": "Компания туралы",
+    "name": "Атауы",
+    "phone": "Телефон",
+    "email": "Email",
+    "address": "Мекенжай",
+    "logo": "Логотип"
+  },
+  "branches": {
+    "title": "Филиалдар",
+    "add": "Филиал қосу",
+    "edit": "Филиалды өңдеу",
+    "current": "Ағымдағы филиал",
+    "switch": "Филиалды ауыстыру"
+  },
+  "users": {
+    "title": "Пайдаланушылар",
+    "invite": "Пайдаланушыны шақыру",
+    "role": "Рөлі",
+    "lastActive": "Соңғы белсенділік"
+  },
+  "roles": {
+    "title": "Рөлдер мен құқықтар",
+    "add": "Рөл қосу",
+    "permissions": "Рұқсаттар"
+  },
+  "billing": {
+    "title": "Тарифтер мен төлем",
+    "currentPlan": "Ағымдағы тариф",
+    "upgrade": "Тарифті жаңарту",
+    "usage": "Пайдалану"
+  },
+  "migration": {
+    "title": "Деректерді көшіру",
+    "fromAlfaCRM": "AlfaCRM-ден импорт",
+    "status": "Көшіру күйі"
+  },
+  "saved": "Баптаулар сақталды",
+  "saveError": "Баптауларды сақтау қатесі",
+  "about": {
+    "title": "Жүйе туралы",
+    "version": "Нұсқа",
+    "lastUpdate": "Соңғы жаңарту",
+    "storage": "Сақтау орны"
+  },
+  "interface": {
+    "themeTitle": "Безендіру тақырыбы",
+    "themeDescription": "Ашық, қараңғы немесе жүйелік тақырыпты таңдаңыз",
+    "colorPalette": "Түс палитрасы",
+    "colorPaletteDescription": "Интерфейстің негізгі түсін таңдаңыз",
+    "interfaceSize": "Интерфейс өлшемі",
+    "interfaceSizeDescription": "Мәтін мен элементтер өлшемін баптаңыз",
+    "compact": "Ықшам",
+    "normal": "Қалыпты",
+    "comfortable": "Ыңғайлы",
+    "animations": "Анимациялар",
+    "animationsDescription": "Интерфейстегі анимацияларды қосыңыз немесе өшіріңіз",
+    "enableAnimations": "Анимацияларды қосу",
+    "transitionsAndEffects": "Өтулер мен эффектілер",
+    "dataDensity": "Деректер тығыздығы",
+    "dataDensityDescription": "Кестелердегі шегіністерді баптаңыз",
+    "densityCompact": "Ықшам",
+    "densityStandard": "Стандартты",
+    "densitySpacious": "Кең",
+    "preview": "Алдын ала қарау",
+    "previewDescription": "Ағымдағы баптаулармен көрсету мысалы",
+    "previewTitle": "Тақырып мысалы",
+    "previewText": "Бұл ағымдағы интерфейс баптауларымен мәтін мысалы. Мұнда контенттің қалай көрінетінін көре аласыз.",
+    "previewButton": "Түйме мысалы",
+    "accentElement": "Негізгі түспен акцент элементі"
+  },
+  "colors": {
+    "blue": "Көк",
+    "purple": "Күлгін",
+    "green": "Жасыл",
+    "orange": "Қызғылт сары",
+    "red": "Қызыл",
+    "pink": "Қызғылт"
+  }
+}

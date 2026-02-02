@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,12 +20,6 @@ interface AssignSubscriptionModalProps {
   student: Student;
   onSuccess: () => void;
 }
-
-const billingTypeLabels: Record<BillingType, string> = {
-  per_lesson: "Поурочный",
-  monthly: "Помесячный",
-  unlimited: "Безлимитный",
-};
 
 const billingTypeColors: Record<BillingType, string> = {
   per_lesson: "bg-blue-100 text-blue-800",
@@ -80,6 +75,14 @@ export default function AssignSubscriptionModal({
   student,
   onSuccess,
 }: AssignSubscriptionModalProps) {
+  const { t } = useTranslation("subscriptions");
+  
+  const billingTypeLabels: Record<BillingType, string> = {
+    per_lesson: t("billingTypes.per_lesson"),
+    monthly: t("billingTypes.monthly"),
+    unlimited: t("billingTypes.unlimited"),
+  };
+
   const [subscriptionTypes, setSubscriptionTypes] = useState<SubscriptionType[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
@@ -186,24 +189,24 @@ export default function AssignSubscriptionModal({
       setGroups(groups);
       setTeachers(teachers);
     } catch (err: any) {
-      setError("Ошибка загрузки данных");
+      setError(t("errors.loadError"));
       console.error(err);
     }
   };
 
   const handleSubmit = async () => {
     if (!selectedTypeId && !customMode) {
-      setError("Выберите тип абонемента");
+      setError(t("errors.selectType"));
       return;
     }
 
     if (totalLessons <= 0) {
-      setError("Укажите количество занятий");
+      setError(t("errors.setLessons"));
       return;
     }
 
     if (totalPrice <= 0) {
-      setError("Укажите стоимость");
+      setError(t("errors.setPrice"));
       return;
     }
 
@@ -239,7 +242,7 @@ export default function AssignSubscriptionModal({
       onClose();
       resetForm();
     } catch (err: any) {
-      setError(err.response?.data?.error || "Ошибка создания абонемента");
+      setError(err.response?.data?.error || t("errors.createError"));
     } finally {
       setLoading(false);
     }
@@ -265,7 +268,7 @@ export default function AssignSubscriptionModal({
       <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle>
-            Абонемент: {student.name}
+            {t("assignSubscription")}: {student.name}
           </DialogTitle>
         </DialogHeader>
 
@@ -280,7 +283,7 @@ export default function AssignSubscriptionModal({
           {/* Custom Mode Toggle */}
           <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
             <Label htmlFor="custom-mode" className="cursor-pointer text-sm">
-              Индивидуальный (без шаблона)
+              {t("customMode")}
             </Label>
             <Switch
               id="custom-mode"
@@ -292,10 +295,10 @@ export default function AssignSubscriptionModal({
           {/* Select template */}
           {!customMode && (
             <div className="space-y-1.5">
-              <Label htmlFor="subscription-type">Шаблон абонемента *</Label>
+              <Label htmlFor="subscription-type">{t("template")} *</Label>
               <Select value={selectedTypeId} onValueChange={setSelectedTypeId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Выберите тип" />
+                  <SelectValue placeholder={t("selectType")} />
                 </SelectTrigger>
                 <SelectContent>
                   {subscriptionTypes.map((type) => (
@@ -319,7 +322,7 @@ export default function AssignSubscriptionModal({
           {/* Lessons & Price - One row */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="total-lessons">Кол-во занятий *</Label>
+              <Label htmlFor="total-lessons">{t("lessonsCount")} *</Label>
               <Input
                 id="total-lessons"
                 type="number"
@@ -331,7 +334,7 @@ export default function AssignSubscriptionModal({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="total-price">Общая стоимость *</Label>
+              <Label htmlFor="total-price">{t("totalPrice")} *</Label>
               <Input
                 id="total-price"
                 type="number"
@@ -347,7 +350,7 @@ export default function AssignSubscriptionModal({
 
           {/* Price per lesson - Readonly computed field */}
           <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800/50">
-            <span className="text-xs text-slate-500">Цена за занятие (авто)</span>
+            <span className="text-xs text-slate-500">{t("pricePerLesson")}</span>
             <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
               {totalLessons > 0 ? `${pricePerLesson.toFixed(0)} ₸` : "—"}
             </span>
@@ -356,13 +359,13 @@ export default function AssignSubscriptionModal({
           {/* Group & Teacher - One row */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="group">Группа</Label>
+              <Label htmlFor="group">{t("group")}</Label>
               <Select value={groupId || "none"} onValueChange={(val) => setGroupId(val === "none" ? "" : val)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Не выбрана" />
+                  <SelectValue placeholder={t("notSelected")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Не выбрана</SelectItem>
+                  <SelectItem value="none">{t("notSelected")}</SelectItem>
                   {groups.map((group) => (
                     <SelectItem key={group.id} value={group.id}>
                       {group.name}
@@ -372,13 +375,13 @@ export default function AssignSubscriptionModal({
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="teacher">Преподаватель</Label>
+              <Label htmlFor="teacher">{t("teacher")}</Label>
               <Select value={teacherId || "none"} onValueChange={(val) => setTeacherId(val === "none" ? "" : val)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Не выбран" />
+                  <SelectValue placeholder={t("notSelectedMale")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Не выбран</SelectItem>
+                  <SelectItem value="none">{t("notSelectedMale")}</SelectItem>
                   {teachers.filter(t => t.status === "active").map((teacher) => (
                     <SelectItem key={teacher.id} value={teacher.id}>
                       {teacher.name}
@@ -392,7 +395,7 @@ export default function AssignSubscriptionModal({
           {/* Start & End Date - One row */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="start-date">Начало *</Label>
+              <Label htmlFor="start-date">{t("startDate")} *</Label>
               <Input
                 id="start-date"
                 type="date"
@@ -401,7 +404,7 @@ export default function AssignSubscriptionModal({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="end-date">Окончание</Label>
+              <Label htmlFor="end-date">{t("endDate")}</Label>
               <Input
                 id="end-date"
                 type="date"
@@ -413,7 +416,7 @@ export default function AssignSubscriptionModal({
 
           {/* Validity days */}
           <div className="space-y-1.5">
-            <Label htmlFor="validity-days">Срок действия (дней)</Label>
+            <Label htmlFor="validity-days">{t("validityDays")}</Label>
             <Input
               id="validity-days"
               type="number"
@@ -429,10 +432,10 @@ export default function AssignSubscriptionModal({
             <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Итого к оплате</p>
+                  <p className="text-sm text-muted-foreground">{t("totalToPay")}</p>
                   {priceCalculation.discountAmount > 0 && (
                     <p className="text-xs text-emerald-600">
-                      Скидка: -{priceCalculation.discountAmount.toLocaleString()} ₸
+                      {t("discount")}: -{priceCalculation.discountAmount.toLocaleString()} ₸
                     </p>
                   )}
                 </div>
@@ -450,7 +453,7 @@ export default function AssignSubscriptionModal({
                     </p>
                   )}
                   <p className="text-xs text-muted-foreground">
-                    {totalLessons} занятий
+                    {totalLessons} {t("lessons")}
                   </p>
                 </div>
               </div>
@@ -464,10 +467,10 @@ export default function AssignSubscriptionModal({
             disabled={loading} 
             className="w-full bg-gradient-to-r from-[#6366f1] via-[#8b5cf6] to-[#a855f7] hover:opacity-90 text-white shadow-md"
           >
-            {loading ? "Создание..." : "Создать абонемент"}
+            {loading ? t("creating") : t("createSubscription")}
           </Button>
           <Button variant="ghost" onClick={onClose} disabled={loading} className="w-full text-muted-foreground">
-            Отмена
+            {t("cancel")}
           </Button>
         </div>
       </DialogContent>

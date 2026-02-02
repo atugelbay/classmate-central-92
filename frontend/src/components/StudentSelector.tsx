@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Student } from "@/types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +13,7 @@ interface StudentSelectorProps {
 }
 
 export function StudentSelector({ students, selectedStudentIds, onSelectionChange, compact = false }: StudentSelectorProps) {
+  const { t, i18n } = useTranslation(["students", "common"]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isFocused, setIsFocused] = useState(false);
 
@@ -33,8 +35,10 @@ export function StudentSelector({ students, selectedStudentIds, onSelectionChang
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <Label className="text-xs">Ученики *</Label>
-        <span className="text-[10px] text-muted-foreground">{selectedStudents.length} выбрано</span>
+        <Label className="text-xs">{t("title")} *</Label>
+        <span className="text-[10px] text-muted-foreground">
+          {selectedStudents.length} {i18n.language === 'kk' ? 'таңдалды' : i18n.language === 'en' ? 'selected' : 'выбрано'}
+        </span>
       </div>
 
       {/* Combined Input with Chips */}
@@ -66,7 +70,9 @@ export function StudentSelector({ students, selectedStudentIds, onSelectionChang
             <Search className="absolute left-0 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <input
               type="text"
-              placeholder={selectedStudents.length > 0 ? "Добавить ещё..." : "Поиск ученика..."}
+              placeholder={selectedStudents.length > 0 
+                ? (i18n.language === 'kk' ? 'Тағы қосу...' : i18n.language === 'en' ? 'Add more...' : 'Добавить ещё...') 
+                : (i18n.language === 'kk' ? 'Оқушыны іздеу...' : i18n.language === 'en' ? 'Search student...' : 'Поиск ученика...')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => setIsFocused(true)}
@@ -97,7 +103,7 @@ export function StudentSelector({ students, selectedStudentIds, onSelectionChang
             ))}
             {availableStudents.length > 6 && (
               <p className="text-[10px] text-muted-foreground text-center py-1.5 border-t">
-                +{availableStudents.length - 6} ещё
+                +{availableStudents.length - 6} {i18n.language === 'kk' ? 'тағы' : i18n.language === 'en' ? 'more' : 'ещё'}
               </p>
             )}
           </div>
@@ -105,7 +111,9 @@ export function StudentSelector({ students, selectedStudentIds, onSelectionChang
 
         {isFocused && searchQuery && availableStudents.length === 0 && (
           <div className="absolute z-50 w-full mt-1 p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-background shadow-lg">
-            <p className="text-xs text-muted-foreground text-center">Не найдено</p>
+            <p className="text-xs text-muted-foreground text-center">
+              {i18n.language === 'kk' ? 'Табылмады' : i18n.language === 'en' ? 'Not found' : 'Не найдено'}
+            </p>
           </div>
         )}
       </div>

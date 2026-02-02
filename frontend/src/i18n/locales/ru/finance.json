@@ -1,0 +1,112 @@
+{
+  "title": "Финансы",
+  "tabs": {
+    "transactions": "Транзакции",
+    "balances": "Балансы",
+    "discounts": "Скидки",
+    "debts": "Долги"
+  },
+  "stats": {
+    "income": "Доход",
+    "expenses": "Расходы",
+    "balance": "Баланс",
+    "debts": "Долги"
+  },
+  "transactions": {
+    "title": "История транзакций",
+    "add": "Добавить платёж",
+    "type": "Тип",
+    "amount": "Сумма",
+    "date": "Дата",
+    "description": "Описание",
+    "paymentMethod": "Способ оплаты",
+    "selectType": "Выберите тип",
+    "selectMethod": "Выберите способ",
+    "types": {
+      "payment": "Платёж",
+      "refund": "Возврат",
+      "debt": "Долг",
+      "deduction": "Списание"
+    },
+    "methods": {
+      "cash": "Наличные",
+      "card": "Карта",
+      "transfer": "Перевод",
+      "other": "Другое"
+    }
+  },
+  "balances": {
+    "title": "Балансы студентов",
+    "student": "Студент",
+    "balance": "Баланс",
+    "status": "Статус",
+    "lastActivity": "Последняя активность",
+    "positive": "Положительный",
+    "negative": "Задолженность",
+    "zero": "Нулевой",
+    "noBalances": "Нет данных о балансах"
+  },
+  "debts": {
+    "title": "Долги",
+    "add": "Добавить долг",
+    "edit": "Редактировать долг",
+    "new": "Новый долг",
+    "student": "Студент",
+    "selectStudent": "Выберите студента",
+    "amount": "Сумма (₸)",
+    "dueDate": "Срок погашения",
+    "status": "Статус",
+    "notes": "Примечания",
+    "overdue": "Просрочен",
+    "pending": "Ожидает",
+    "paid": "Оплачен",
+    "noDebts": "Нет долгов",
+    "table": {
+      "student": "Студент",
+      "amount": "Сумма",
+      "status": "Статус",
+      "dueDate": "Срок",
+      "notes": "Примечание"
+    }
+  },
+  "discounts": {
+    "title": "Скидки",
+    "add": "Создать скидку",
+    "edit": "Редактировать скидку",
+    "new": "Новая скидка",
+    "name": "Название",
+    "description": "Описание",
+    "type": "Тип скидки",
+    "value": "Значение",
+    "isActive": "Активна",
+    "types": {
+      "percentage": "Процентная",
+      "fixed": "Фиксированная сумма"
+    },
+    "active": "Активна",
+    "inactive": "Неактивна",
+    "yesNo": {
+      "yes": "Да",
+      "no": "Нет"
+    },
+    "noDiscounts": "Нет скидок",
+    "deleteConfirm": "Удалить эту скидку?"
+  },
+  "export": {
+    "title": "Экспорт",
+    "pdf": "Экспорт PDF",
+    "excel": "Экспорт Excel"
+  },
+  "empty": "Нет транзакций",
+  "emptyDescription": "Добавьте первую транзакцию",
+  "messages": {
+    "paymentAdded": "Платёж добавлен",
+    "refundAdded": "Возврат добавлен",
+    "discountCreated": "Скидка создана",
+    "discountUpdated": "Скидка обновлена",
+    "discountDeleted": "Скидка удалена",
+    "debtCreated": "Долг создан",
+    "debtUpdated": "Долг обновлён",
+    "error": "Произошла ошибка"
+  }
+}

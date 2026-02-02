@@ -1,6 +1,7 @@
 import { useState } from "react";
 import * as React from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { 
   useStudents, 
   useCreateStudent, 
@@ -43,11 +44,10 @@ import { useConfirmDelete } from "@/hooks/useConfirmDelete";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import moment from "moment";
 import "moment/locale/ru";
+import "moment/locale/kk";
 import { ExportDialog } from "@/components/ExportDialog";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
-
-moment.locale("ru");
 
 const ITEMS_PER_PAGE = 39;
 
@@ -108,12 +108,14 @@ const StudentsGrid = React.memo(function StudentsGrid({
   onDelete: (id: string) => void;
   onNavigate: (id: string) => void;
 }) {
+  const { t, i18n } = useTranslation(["students", "common"]);
+  moment.locale(i18n.language);
 
   return (
     <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
       {isFetching && (
         <div className="col-span-full flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" /> Обновление результатов...
+          <Loader2 className="h-4 w-4 animate-spin" /> {t("common:updateResults")}
         </div>
       )}
       {students.map((student) => {
@@ -145,7 +147,7 @@ const StudentsGrid = React.memo(function StudentsGrid({
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-foreground truncate">{student.name}</h3>
                 <p className="text-sm text-muted-foreground">
-                  {student.age} лет
+                  {student.age} {t("common:years")}
                 </p>
               </div>
             </div>
@@ -171,14 +173,14 @@ const StudentsGrid = React.memo(function StudentsGrid({
                 {nextLesson ? (
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-foreground">
-                      {moment(nextLesson.start).locale("ru").format("D MMM, dd")} в {moment(nextLesson.start).locale("ru").format("HH:mm")}
+                      {moment(nextLesson.start).format("D MMM, dd")} {moment(nextLesson.start).format("HH:mm")}
                     </p>
                     <p className="text-xs text-muted-foreground truncate">
-                      {nextLessonGroup ? nextLessonGroup.name : "Индивидуальное"}
+                      {nextLessonGroup ? nextLessonGroup.name : t("common:individual")}
                     </p>
                   </div>
                 ) : (
-                  <span className="text-sm text-muted-foreground">Нет занятий</span>
+                  <span className="text-sm text-muted-foreground">{t("common:noLessons")}</span>
                 )}
               </div>
             </div>
@@ -195,7 +197,7 @@ const StudentsGrid = React.memo(function StudentsGrid({
                 }}
               >
                 <Edit className="h-4 w-4 mr-1.5" />
-                Изменить
+                {t("common:change")}
               </Button>
               <Button
                 variant="ghost"
@@ -357,6 +359,11 @@ function StudentsGridContainer({
 
 export default function Students() {
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation("students");
+  
+  // Set moment locale based on current language
+  moment.locale(i18n.language);
+  
   // Server-side search + pagination
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -521,8 +528,8 @@ export default function Students() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Ученики"
-        description="Управление базой учащихся"
+        title={t("title")}
+        description={t("searchPlaceholder")}
         actions={
           <>
             <Button
@@ -532,7 +539,7 @@ export default function Students() {
               className="sm:size-default"
             >
               <FileText className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Экспорт</span>
+              <span className="hidden sm:inline">{t("common:export")}</span>
             </Button>
             <Dialog
               open={isDialogOpen}
@@ -544,28 +551,28 @@ export default function Students() {
               <DialogTrigger asChild>
                 <Button size="sm" className="sm:size-default">
                   <Plus className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Добавить ученика</span>
-                  <span className="sm:hidden">Добавить</span>
+                  <span className="hidden sm:inline">{t("addStudent")}</span>
+                  <span className="sm:hidden">{t("common:add")}</span>
                 </Button>
               </DialogTrigger>
           <DialogContent className="sm:max-w-[480px]">
             <DialogHeader>
               <DialogTitle>
-                {editingStudent ? "Редактировать ученика" : "Новый ученик"}
+                {editingStudent ? t("editStudent") : t("addStudent")}
               </DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Section: Личные данные */}
               <div className="space-y-3">
-                <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Личные данные</h4>
+                <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">{t("common:personalData")}</h4>
                 
                 {/* ФИО - Full width */}
                 <div className="space-y-1.5">
-                  <Label htmlFor="name">ФИО *</Label>
+                  <Label htmlFor="name">{t("fields.name")} *</Label>
                   <Input
                     id="name"
                     name="name"
-                    placeholder="Иван Иванов"
+                    placeholder={t("fields.name")}
                     defaultValue={editingStudent?.name}
                     required
                   />
@@ -574,7 +581,7 @@ export default function Students() {
                 {/* Возраст & Телефон - Two columns */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label htmlFor="age">Возраст *</Label>
+                    <Label htmlFor="age">{t("fields.age")} *</Label>
                     <Input
                       id="age"
                       name="age"
@@ -585,7 +592,7 @@ export default function Students() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="phone">Телефон *</Label>
+                    <Label htmlFor="phone">{t("fields.phone")} *</Label>
                     <Input
                       id="phone"
                       name="phone"
@@ -605,26 +612,26 @@ export default function Students() {
 
               {/* Section: Дополнительно */}
               <div className="space-y-3">
-                <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Дополнительно</h4>
+                <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">{t("common:additional")}</h4>
 
                 {/* Email & Предметы - Two columns */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="email">{t("fields.email")}</Label>
                     <Input
                       id="email"
                       name="email"
                       type="email"
-                      placeholder="ivan@mail.ru"
+                      placeholder="email@mail.com"
                       defaultValue={editingStudent?.email}
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="subjects">Предметы *</Label>
+                    <Label htmlFor="subjects">{t("common:subjects")} *</Label>
                     <Input
                       id="subjects"
                       name="subjects"
-                      placeholder="Математика, Физика"
+                      placeholder={t("common:subjects")}
                       defaultValue={editingStudent?.subjects.join(", ")}
                       required
                     />
@@ -638,7 +645,7 @@ export default function Students() {
                   type="submit" 
                   className="w-full bg-gradient-to-r from-[#6366f1] via-[#8b5cf6] to-[#a855f7] hover:opacity-90 text-white shadow-md"
                 >
-                  {editingStudent ? "Сохранить изменения" : "Добавить ученика"}
+                  {editingStudent ? t("common:save") : t("addStudent")}
                 </Button>
               </div>
             </form>
@@ -651,7 +658,7 @@ export default function Students() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Поиск учеников"
+          placeholder={t("searchPlaceholder")}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-9"
@@ -659,7 +666,7 @@ export default function Students() {
         {searchQuery && (
           <button
             type="button"
-            aria-label="Очистить поиск"
+            aria-label={t("common:clear")}
             onClick={() => {
               setSearchQuery("");
               setCurrentPage(1);
@@ -673,15 +680,15 @@ export default function Students() {
 
       {/* Sort Controls */}
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-sm font-medium hidden sm:inline">Сортировка:</span>
+        <span className="text-sm font-medium hidden sm:inline">{t("common:sort")}:</span>
         <Select value={sortBy} onValueChange={(value) => setSortBy(value as "name" | "age" | "id")}>
           <SelectTrigger className="w-[180px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="name">По алфавиту</SelectItem>
-            <SelectItem value="age">По возрасту</SelectItem>
-            <SelectItem value="id">По дате добавления</SelectItem>
+            <SelectItem value="name">{t("fields.name")}</SelectItem>
+            <SelectItem value="age">{t("fields.age")}</SelectItem>
+            <SelectItem value="id">{t("common:date")}</SelectItem>
           </SelectContent>
         </Select>
         <Button
@@ -691,7 +698,7 @@ export default function Students() {
           className="gap-2"
         >
           <ArrowUpDown className="h-4 w-4" />
-          {sortOrder === "asc" ? "Возрастание" : "Убывание"}
+          {sortOrder === "asc" ? "A-Z" : "Z-A"}
         </Button>
       </div>
       <StudentsGridContainer
@@ -714,10 +721,10 @@ export default function Students() {
       <ConfirmDialog
         open={deleteConfirm.isOpen}
         onOpenChange={(open) => !open && deleteConfirm.close()}
-        title="Удалить ученика"
-        description="Вы уверены, что хотите удалить этого ученика? Это действие нельзя отменить."
-        confirmText="Удалить"
-        cancelText="Отмена"
+        title={t("common:delete")}
+        description={t("deleteWarning")}
+        confirmText={t("common:delete")}
+        cancelText={t("common:cancel")}
         variant="destructive"
         onConfirm={deleteConfirm.confirm}
       />

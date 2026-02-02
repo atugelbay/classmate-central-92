@@ -1,7 +1,9 @@
 import { useState, useMemo, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import moment from "moment";
 import "moment/locale/ru";
+import "moment/locale/kk";
 import { useTeachers, useTeacherLessons, useGroups, useRooms, useStudents, useUpdateTeacher, useDeleteTeacher, useTeacherRates } from "@/hooks/useData";
 import { teacherRatesAPI } from "@/api/teacherRates";
 import { TeacherRatesModal } from "@/components/TeacherRatesModal";
@@ -49,11 +51,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-moment.locale("ru");
-
 export default function TeacherDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation(["teachers", "common", "schedule"]);
+  moment.locale(i18n.language);
 
   const { data: teachers = [] } = useTeachers();
   const { data: groups = [] } = useGroups();
@@ -89,9 +91,9 @@ export default function TeacherDetail() {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold">Учитель не найден</h2>
+          <h2 className="text-2xl font-bold">{t("detail.notFound")}</h2>
           <Button onClick={() => navigate("/teachers")} className="mt-4">
-            Вернуться к списку
+            {t("detail.backToListBtn")}
           </Button>
         </div>
       </div>
@@ -177,7 +179,7 @@ export default function TeacherDetail() {
 
     try {
       await deleteTeacher.mutateAsync(teacher.id);
-      toast.success("Учитель удален");
+      toast.success(t("deleted"));
       navigate("/teachers");
     } catch (error) {
       // Error handled by mutation
@@ -228,7 +230,7 @@ export default function TeacherDetail() {
         className="rounded-xl hover:bg-muted -mb-2"
       >
         <ArrowLeft className="h-4 w-4 mr-2" />
-        Назад к учителям
+        {t("detail.backToList")}
       </Button>
 
       {/* Bento Grid Layout */}
@@ -252,7 +254,7 @@ export default function TeacherDetail() {
                       variant={teacher.status === "active" ? "default" : "secondary"} 
                       className={teacher.status === "active" ? "bg-gradient-to-r from-emerald-500 to-green-600 border-0" : ""}
                     >
-                      {teacher.status === "active" ? "Активен" : "Неактивен"}
+                      {teacher.status === "active" ? t("badge.active") : t("badge.inactive")}
                     </Badge>
                   </div>
                   <div className="flex items-center gap-2 text-muted-foreground">
@@ -284,7 +286,7 @@ export default function TeacherDetail() {
                 className="rounded-xl bg-white/70 dark:bg-white/10 border border-sky-200/50 dark:border-white/10 hover:bg-white hover:shadow-md hover:scale-[1.02] transition-all duration-200"
               >
                 <Edit className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Редактировать</span>
+                <span className="hidden sm:inline">{t("actions.edit")}</span>
               </Button>
               <Button 
                 variant="outline" 
@@ -293,7 +295,7 @@ export default function TeacherDetail() {
                 className="rounded-xl bg-white/70 dark:bg-white/10 border border-sky-200/50 dark:border-white/10 hover:bg-white hover:shadow-md hover:scale-[1.02] transition-all duration-200"
               >
                 <Calculator className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Ставки</span>
+                <span className="hidden sm:inline">{t("actions.rates")}</span>
               </Button>
               <Button 
                 variant="outline" 
@@ -302,7 +304,7 @@ export default function TeacherDetail() {
                 className="rounded-xl bg-white/70 dark:bg-white/10 border border-sky-200/50 dark:border-white/10 hover:bg-white hover:shadow-md hover:scale-[1.02] transition-all duration-200"
               >
                 <DollarSign className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Зарплата</span>
+                <span className="hidden sm:inline">{t("actions.salary")}</span>
               </Button>
               <Button 
                 variant="ghost" 
@@ -311,7 +313,7 @@ export default function TeacherDetail() {
                 className="rounded-xl text-red-600 hover:text-red-700 hover:bg-red-100 hover:scale-[1.02] transition-all duration-200"
               >
                 <Trash2 className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Удалить</span>
+                <span className="hidden sm:inline">{t("actions.delete")}</span>
               </Button>
             </div>
           </div>
@@ -326,12 +328,12 @@ export default function TeacherDetail() {
               <div className="p-2 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-soft">
                 <TrendingUp className="h-5 w-5 text-white" />
               </div>
-              <span className="text-sm font-medium text-muted-foreground">Загруженность</span>
+              <span className="text-sm font-medium text-muted-foreground">{t("detail.loadTitle")}</span>
             </div>
             
             <div className="text-5xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent mb-1">
               {selectedWeekHours}
-              <span className="text-lg font-normal text-muted-foreground ml-1">ч/нед</span>
+              <span className="text-lg font-normal text-muted-foreground ml-1">{t("workload.hourWeek")}</span>
             </div>
             
             <p className="text-sm text-muted-foreground mb-4">
@@ -340,12 +342,12 @@ export default function TeacherDetail() {
             
             <div className="space-y-3 pt-2 border-t border-violet-200/50 dark:border-violet-700/50">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Уроков</span>
+                <span className="text-sm text-muted-foreground">{t("detail.lessons")}</span>
                 <span className="font-semibold text-lg">{selectedWeekLessonsCount}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Плановая</span>
-                <span className="font-semibold">{teacher.workload} ч/нед</span>
+                <span className="text-sm text-muted-foreground">{t("detail.planned")}</span>
+                <span className="font-semibold">{teacher.workload} {t("workload.hourWeek")}</span>
               </div>
             </div>
           </div>
@@ -357,7 +359,7 @@ export default function TeacherDetail() {
             <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600">
               <BookOpen className="h-4 w-4 text-white" />
             </div>
-            <span className="text-sm font-medium">Всего уроков</span>
+            <span className="text-sm font-medium">{t("detail.totalLessons")}</span>
           </div>
           <div className="text-4xl font-bold text-emerald-600 dark:text-emerald-400">{totalLessons}</div>
         </div>
@@ -367,10 +369,10 @@ export default function TeacherDetail() {
             <div className="p-2 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600">
               <Clock className="h-4 w-4 text-white" />
             </div>
-            <span className="text-sm font-medium">Проведено</span>
+            <span className="text-sm font-medium">{t("detail.completed")}</span>
           </div>
           <div className="text-4xl font-bold text-sky-600 dark:text-sky-400">{completedLessons}</div>
-          <div className="text-sm text-muted-foreground mt-1">{completionRate}% выполнено</div>
+          <div className="text-sm text-muted-foreground mt-1">{completionRate}% {t("detail.completedPercent")}</div>
         </div>
 
         <div className="lg:col-span-4 p-5 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-100 dark:from-amber-950 dark:to-orange-900 shadow-soft">
@@ -378,7 +380,7 @@ export default function TeacherDetail() {
             <div className="p-2 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600">
               <Calendar className="h-4 w-4 text-white" />
             </div>
-            <span className="text-sm font-medium">Запланировано</span>
+            <span className="text-sm font-medium">{t("detail.scheduled")}</span>
           </div>
           <div className="text-4xl font-bold text-amber-600 dark:text-amber-400">{scheduledLessons}</div>
         </div>
@@ -391,14 +393,14 @@ export default function TeacherDetail() {
           className="rounded-2xl h-12 px-6 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 shadow-soft-lg"
         >
           <Plus className="h-5 w-5 mr-2" />
-          Создать урок
+          {t("createLesson")}
         </Button>
       </div>
 
       {/* Schedule Section - Bento Style */}
       <div className="p-6 rounded-3xl bg-white dark:bg-gray-900 border border-border/50 shadow-soft">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <h2 className="text-xl font-bold">Расписание</h2>
+          <h2 className="text-xl font-bold">{t("detail.schedule")}</h2>
           <div className="flex items-center gap-2 p-1 rounded-xl bg-muted/50">
             <button
               onClick={() => setViewMode("calendar")}
@@ -409,7 +411,7 @@ export default function TeacherDetail() {
               }`}
             >
               <Calendar className="h-4 w-4" />
-              Календарь
+              {t("detail.calendar")}
             </button>
             <button
               onClick={() => setViewMode("list")}
@@ -420,7 +422,7 @@ export default function TeacherDetail() {
               }`}
             >
               <List className="h-4 w-4" />
-              Список
+              {t("detail.list")}
             </button>
           </div>
         </div>
@@ -441,7 +443,7 @@ export default function TeacherDetail() {
                   onClick={handleToday}
                   className="px-4 py-2 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 text-white text-sm font-medium shadow-soft hover:shadow-soft-lg transition-all"
                 >
-                  Сегодня
+                  {t("detail.today")}
                 </button>
                 <button
                   onClick={handleNextWeek}
@@ -548,7 +550,7 @@ export default function TeacherDetail() {
                                   )}
 
                                   <div className="flex items-center justify-between p-2 rounded-xl bg-muted/50">
-                                    <span className="text-sm font-medium">Статус</span>
+                                    <span className="text-sm font-medium">{t("detail.lessonStatus")}</span>
                                     <Badge className={
                                       lesson.status === "completed" 
                                         ? "bg-gradient-to-r from-emerald-500 to-green-600 border-0" 
@@ -556,13 +558,13 @@ export default function TeacherDetail() {
                                         ? "bg-gradient-to-r from-red-500 to-rose-600 border-0"
                                         : "bg-gradient-to-r from-sky-500 to-blue-600 border-0"
                                     }>
-                                      {lesson.status === "completed" ? "Проведен" : lesson.status === "cancelled" ? "Отменен" : "Запланирован"}
+                                      {lesson.status === "completed" ? t("detail.lessonStatuses.completed") : lesson.status === "cancelled" ? t("detail.lessonStatuses.cancelled") : t("detail.lessonStatuses.scheduled")}
                                     </Badge>
                                   </div>
                                 </div>
 
                                 <Button onClick={() => handleEditLesson(lesson)} className="w-full rounded-xl">
-                                  <Edit className="h-4 w-4 mr-2" /> Редактировать урок
+                                  <Edit className="h-4 w-4 mr-2" /> {t("detail.editLesson")}
                                 </Button>
                               </div>
                             </PopoverContent>
@@ -571,7 +573,7 @@ export default function TeacherDetail() {
                       })}
                       {dayLessons.length > 3 && (
                         <div className="text-[9px] sm:text-xs text-muted-foreground text-center py-1 rounded-lg bg-white/50 dark:bg-white/10">
-                          +{dayLessons.length - 3} ещё
+                          +{dayLessons.length - 3} {t("detail.more")}
                         </div>
                       )}
                     </div>
@@ -588,7 +590,7 @@ export default function TeacherDetail() {
               {lessons.length === 0 ? (
                 <div className="text-center text-muted-foreground py-12 rounded-2xl bg-muted/30">
                   <Calendar className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
-                  <p>Уроков не найдено</p>
+                  <p>{t("detail.noLessons")}</p>
                 </div>
               ) : (
                 lessons
@@ -617,7 +619,7 @@ export default function TeacherDetail() {
                               ? "bg-gradient-to-r from-emerald-500 to-green-600 border-0"
                               : "bg-gradient-to-r from-sky-500 to-blue-600 border-0"
                           }`}>
-                            {lesson.status === "completed" ? "Завершен" : "Запланир."}
+                            {lesson.status === "completed" ? t("detail.completedShort") : t("detail.scheduledShort")}
                           </Badge>
                         </div>
                         <div className="flex flex-wrap gap-2 text-xs">
@@ -649,13 +651,13 @@ export default function TeacherDetail() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-gradient-to-r from-slate-50 to-gray-100 dark:from-slate-900 dark:to-gray-800">
-                    <TableHead className="font-semibold">Дата</TableHead>
-                    <TableHead className="font-semibold">Время</TableHead>
-                    <TableHead className="font-semibold">Название</TableHead>
-                    <TableHead className="font-semibold">Группа</TableHead>
-                    <TableHead className="font-semibold">Аудитория</TableHead>
-                    <TableHead className="font-semibold">Статус</TableHead>
-                    <TableHead className="text-right font-semibold">Действия</TableHead>
+                    <TableHead className="font-semibold">{t("detail.tableHeaders.date")}</TableHead>
+                    <TableHead className="font-semibold">{t("detail.tableHeaders.time")}</TableHead>
+                    <TableHead className="font-semibold">{t("detail.tableHeaders.title")}</TableHead>
+                    <TableHead className="font-semibold">{t("detail.tableHeaders.group")}</TableHead>
+                    <TableHead className="font-semibold">{t("detail.tableHeaders.room")}</TableHead>
+                    <TableHead className="font-semibold">{t("detail.tableHeaders.status")}</TableHead>
+                    <TableHead className="text-right font-semibold">{t("detail.tableHeaders.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -663,7 +665,7 @@ export default function TeacherDetail() {
                     <TableRow>
                       <TableCell colSpan={7} className="text-center text-muted-foreground py-12">
                         <Calendar className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
-                        <p>Уроков не найдено</p>
+                        <p>{t("detail.noLessons")}</p>
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -689,7 +691,7 @@ export default function TeacherDetail() {
                                 {group.name}
                               </span>
                             ) : (
-                              <span className="text-muted-foreground">Индивидуальное</span>
+                              <span className="text-muted-foreground">{t("individual")}</span>
                             )}
                           </TableCell>
                           <TableCell>
@@ -713,10 +715,10 @@ export default function TeacherDetail() {
                               }
                             >
                               {lesson.status === "completed"
-                                ? "Проведен"
+                                ? t("detail.lessonStatuses.completed")
                                 : lesson.status === "cancelled"
-                                ? "Отменен"
-                                : "Запланирован"}
+                                ? t("detail.lessonStatuses.cancelled")
+                                : t("detail.lessonStatuses.scheduled")}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
@@ -763,13 +765,13 @@ export default function TeacherDetail() {
               <div className="p-2 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600">
                 <Edit className="h-5 w-5 text-white" />
               </div>
-              Редактировать учителя
+              {t("editTeacher")}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleEditTeacher} className="space-y-4">
             <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-50 to-gray-100 dark:from-slate-900 dark:to-gray-800 space-y-4">
               <div>
-                <Label htmlFor="name" className="text-sm font-medium">ФИО</Label>
+                <Label htmlFor="name" className="text-sm font-medium">{t("fields.name")}</Label>
                 <Input
                   id="name"
                   name="name"
@@ -779,7 +781,7 @@ export default function TeacherDetail() {
                 />
               </div>
               <div>
-                <Label htmlFor="subject" className="text-sm font-medium">Предмет</Label>
+                <Label htmlFor="subject" className="text-sm font-medium">{t("fields.subject")}</Label>
                 <Input
                   id="subject"
                   name="subject"
@@ -790,7 +792,7 @@ export default function TeacherDetail() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+                  <Label htmlFor="email" className="text-sm font-medium">{t("fields.email")}</Label>
                   <Input
                     id="email"
                     name="email"
@@ -801,7 +803,7 @@ export default function TeacherDetail() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="phone" className="text-sm font-medium">Телефон</Label>
+                  <Label htmlFor="phone" className="text-sm font-medium">{t("fields.phone")}</Label>
                   <Input
                     id="phone"
                     name="phone"
@@ -813,19 +815,19 @@ export default function TeacherDetail() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label htmlFor="status" className="text-sm font-medium">Статус</Label>
+                  <Label htmlFor="status" className="text-sm font-medium">{t("fields.status")}</Label>
                   <Select name="status" defaultValue={teacher.status}>
                     <SelectTrigger className="mt-1.5">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="active">Активный</SelectItem>
-                      <SelectItem value="inactive">Неактивный</SelectItem>
+                      <SelectItem value="active">{t("statuses.active")}</SelectItem>
+                      <SelectItem value="inactive">{t("statuses.inactive")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="workload" className="text-sm font-medium">Часов/нед.</Label>
+                  <Label htmlFor="workload" className="text-sm font-medium">{t("fields.hoursPerWeek")}</Label>
                   <Input
                     id="workload"
                     name="workload"
@@ -839,10 +841,10 @@ export default function TeacherDetail() {
             </div>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)} className="rounded-xl">
-                Отмена
+                {t("common:cancel")}
               </Button>
               <Button type="submit" className="rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700">
-                Сохранить
+                {t("common:save")}
               </Button>
             </div>
           </form>
@@ -864,7 +866,7 @@ export default function TeacherDetail() {
               <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600">
                 <DollarSign className="h-5 w-5 text-white" />
               </div>
-              Расчет зарплаты: {teacher.name}
+              {t("salary.title")}: {teacher.name}
             </DialogTitle>
           </DialogHeader>
           <SalaryCalculationComponent
@@ -873,10 +875,11 @@ export default function TeacherDetail() {
             periodEnd={salaryPeriodEnd}
             onPeriodStartChange={setSalaryPeriodStart}
             onPeriodEndChange={setSalaryPeriodEnd}
+            t={t}
           />
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsSalaryCalcOpen(false)} className="rounded-xl">
-              Закрыть
+              {t("salary.close")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -886,15 +889,15 @@ export default function TeacherDetail() {
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Вы уверены?</AlertDialogTitle>
+            <AlertDialogTitle>{t("deleteConfirm")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Это действие нельзя отменить. Учитель "{teacher.name}" будет удален навсегда.
+              {t("deleteDescription", { name: teacher.name })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogCancel>{t("common:cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteTeacher} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Удалить
+              {t("common:delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -910,12 +913,14 @@ function SalaryCalculationComponent({
   periodEnd,
   onPeriodStartChange,
   onPeriodEndChange,
+  t,
 }: {
   teacher: any;
   periodStart: string;
   periodEnd: string;
   onPeriodStartChange: (value: string) => void;
   onPeriodEndChange: (value: string) => void;
+  t: (key: string, options?: any) => string;
 }) {
   const [salaryData, setSalaryData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -928,7 +933,7 @@ function SalaryCalculationComponent({
       const data = await teacherRatesAPI.calculateSalary(teacher.id, periodStart, periodEnd);
       setSalaryData(data);
     } catch (error: any) {
-      toast.error(error.response?.data?.error || "Ошибка при расчете зарплаты");
+      toast.error(error.response?.data?.error || t("salary.error"));
       setSalaryData(null);
     } finally {
       setIsLoading(false);
@@ -948,7 +953,7 @@ function SalaryCalculationComponent({
       <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-50 to-gray-100 dark:from-slate-900 dark:to-gray-800">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="periodStart" className="text-sm font-medium">Начало периода</Label>
+            <Label htmlFor="periodStart" className="text-sm font-medium">{t("salary.periodStart")}</Label>
             <Input
               id="periodStart"
               type="date"
@@ -958,7 +963,7 @@ function SalaryCalculationComponent({
             />
           </div>
           <div>
-            <Label htmlFor="periodEnd" className="text-sm font-medium">Конец периода</Label>
+            <Label htmlFor="periodEnd" className="text-sm font-medium">{t("salary.periodEnd")}</Label>
             <Input
               id="periodEnd"
               type="date"
@@ -973,7 +978,7 @@ function SalaryCalculationComponent({
       {isLoading ? (
         <div className="p-8 rounded-2xl bg-muted/30 text-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-          <p className="text-sm text-muted-foreground mt-2">Расчет зарплаты...</p>
+          <p className="text-sm text-muted-foreground mt-2">{t("salary.calculating")}</p>
         </div>
       ) : salaryData?.breakdown && salaryData.breakdown.length > 0 ? (
         <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-50 to-green-100 dark:from-emerald-950 dark:to-green-900">
@@ -981,11 +986,11 @@ function SalaryCalculationComponent({
             <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600">
               <DollarSign className="h-4 w-4 text-white" />
             </div>
-            <span className="font-semibold">Результат расчета</span>
+            <span className="font-semibold">{t("salary.result")}</span>
           </div>
           
           <div className="text-sm mb-4 px-3 py-2 rounded-xl bg-white/50 dark:bg-white/10 inline-block">
-            <span className="text-muted-foreground">Период: </span>
+            <span className="text-muted-foreground">{t("salary.period")}: </span>
             <span className="font-medium">
               {moment(salaryData.period.start).format("DD.MM.YYYY")} - {moment(salaryData.period.end).format("DD.MM.YYYY")}
             </span>
@@ -996,34 +1001,34 @@ function SalaryCalculationComponent({
               <div key={index} className="p-4 rounded-xl bg-white/60 dark:bg-white/10">
                 <div className="flex justify-between items-start mb-3">
                   <span className="font-semibold text-sm">
-                    {item.lessonType === "group" ? "Групповые" : item.lessonType === "individual" ? "Индивидуальные" : "Специальные"} уроки
+                    {item.lessonType === "group" ? t("salary.groupLessons") : item.lessonType === "individual" ? t("salary.individualLessons") : t("salary.specialLessons")}
                   </span>
                   <Badge className="text-xs bg-gradient-to-r from-violet-500 to-purple-600 border-0">
-                    {item.rate.type === "hourly" ? "Почасовая" : "Поурочная"}
+                    {item.rate.type === "hourly" ? t("salary.hourly") : t("salary.perLesson")}
                   </Badge>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground mb-3">
                   <div className="p-2 rounded-lg bg-white/50 dark:bg-white/5">
                     {item.rate.type === "hourly" ? (
                       <>
-                        <span>Часов: </span>
+                        <span>{t("salary.hours")}: </span>
                         <span className="font-semibold text-foreground">{parseFloat(item.hours).toFixed(2)}</span>
                       </>
                     ) : (
                       <>
-                        <span>Уроков: </span>
+                        <span>{t("salary.lessonsCount")}: </span>
                         <span className="font-semibold text-foreground">{item.lessons}</span>
                       </>
                     )}
                   </div>
                   <div className="p-2 rounded-lg bg-white/50 dark:bg-white/5 text-right">
-                    <span>Ставка: </span>
+                    <span>{t("salary.rate")}: </span>
                     <span className="font-semibold text-foreground">{item.rate.value.toLocaleString()} ₸</span>
-                    <span className="text-[10px]">/{item.rate.type === "hourly" ? "час" : "урок"}</span>
+                    <span className="text-[10px]">/{item.rate.type === "hourly" ? t("salary.perHour") : t("salary.perLessonUnit")}</span>
                   </div>
                 </div>
                 <div className="flex justify-between items-center pt-3 border-t border-white/30">
-                  <span className="text-sm text-muted-foreground">Сумма:</span>
+                  <span className="text-sm text-muted-foreground">{t("salary.amount")}:</span>
                   <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{item.salary.toLocaleString()} ₸</span>
                 </div>
               </div>
@@ -1032,7 +1037,7 @@ function SalaryCalculationComponent({
           
           <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 text-white">
             <div className="flex items-baseline justify-between">
-              <span className="text-lg font-medium opacity-90">Итого:</span>
+              <span className="text-lg font-medium opacity-90">{t("salary.total")}:</span>
               <span className="text-3xl font-bold">
                 {salaryData.total.toLocaleString()} ₸
               </span>
@@ -1043,20 +1048,20 @@ function SalaryCalculationComponent({
         <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-100 dark:from-amber-950 dark:to-orange-900">
           <p className="text-sm text-amber-800 dark:text-amber-200">
             {salaryData.message === "No active rates found for this teacher" 
-              ? "Для расчета зарплаты необходимо добавить ставки для учителя. Используйте кнопку \"Ставки\" для управления ставками."
+              ? t("salary.noRates")
               : salaryData.message}
           </p>
         </div>
       ) : salaryData && (!salaryData.breakdown || salaryData.breakdown.length === 0) ? (
         <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-100 dark:from-amber-950 dark:to-orange-900">
           <p className="text-sm text-amber-800 dark:text-amber-200">
-            За выбранный период нет проведенных уроков или нет ставок для типов проведенных уроков.
+            {t("salary.noLessons")}
           </p>
         </div>
       ) : (
         <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-100 dark:from-amber-950 dark:to-orange-900">
           <p className="text-sm text-amber-800 dark:text-amber-200">
-            Для расчета зарплаты необходимо добавить ставки для учителя. Используйте кнопку "Ставки" для управления ставками.
+            {t("salary.noRates")}
           </p>
         </div>
       )}

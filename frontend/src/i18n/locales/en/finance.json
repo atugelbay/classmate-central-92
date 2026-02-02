@@ -1,0 +1,112 @@
+{
+  "title": "Finance",
+  "tabs": {
+    "transactions": "Transactions",
+    "balances": "Balances",
+    "discounts": "Discounts",
+    "debts": "Debts"
+  },
+  "stats": {
+    "income": "Income",
+    "expenses": "Expenses",
+    "balance": "Balance",
+    "debts": "Debts"
+  },
+  "transactions": {
+    "title": "Transaction History",
+    "add": "Add Payment",
+    "type": "Type",
+    "amount": "Amount",
+    "date": "Date",
+    "description": "Description",
+    "paymentMethod": "Payment Method",
+    "selectType": "Select type",
+    "selectMethod": "Select method",
+    "types": {
+      "payment": "Payment",
+      "refund": "Refund",
+      "debt": "Debt",
+      "deduction": "Deduction"
+    },
+    "methods": {
+      "cash": "Cash",
+      "card": "Card",
+      "transfer": "Transfer",
+      "other": "Other"
+    }
+  },
+  "balances": {
+    "title": "Student Balances",
+    "student": "Student",
+    "balance": "Balance",
+    "status": "Status",
+    "lastActivity": "Last Activity",
+    "positive": "Positive",
+    "negative": "Debt",
+    "zero": "Zero",
+    "noBalances": "No balance data"
+  },
+  "debts": {
+    "title": "Debts",
+    "add": "Add Debt",
+    "edit": "Edit Debt",
+    "new": "New Debt",
+    "student": "Student",
+    "selectStudent": "Select student",
+    "amount": "Amount (₸)",
+    "dueDate": "Due Date",
+    "status": "Status",
+    "notes": "Notes",
+    "overdue": "Overdue",
+    "pending": "Pending",
+    "paid": "Paid",
+    "noDebts": "No debts",
+    "table": {
+      "student": "Student",
+      "amount": "Amount",
+      "status": "Status",
+      "dueDate": "Due Date",
+      "notes": "Notes"
+    }
+  },
+  "discounts": {
+    "title": "Discounts",
+    "add": "Create Discount",
+    "edit": "Edit Discount",
+    "new": "New Discount",
+    "name": "Name",
+    "description": "Description",
+    "type": "Discount Type",
+    "value": "Value",
+    "isActive": "Active",
+    "types": {
+      "percentage": "Percentage",
+      "fixed": "Fixed Amount"
+    },
+    "active": "Active",
+    "inactive": "Inactive",
+    "yesNo": {
+      "yes": "Yes",
+      "no": "No"
+    },
+    "noDiscounts": "No discounts",
+    "deleteConfirm": "Delete this discount?"
+  },
+  "export": {
+    "title": "Export",
+    "pdf": "Export PDF",
+    "excel": "Export Excel"
+  },
+  "empty": "No transactions",
+  "emptyDescription": "Add your first transaction",
+  "messages": {
+    "paymentAdded": "Payment added",
+    "refundAdded": "Refund added",
+    "discountCreated": "Discount created",
+    "discountUpdated": "Discount updated",
+    "discountDeleted": "Discount deleted",
+    "debtCreated": "Debt created",
+    "debtUpdated": "Debt updated",
+    "error": "An error occurred"
+  }
+}

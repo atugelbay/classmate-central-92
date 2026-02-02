@@ -1,8 +1,10 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import moment from "moment";
 import { PageHeader } from "@/components/PageHeader";
 import "moment/dist/locale/ru";
+import "moment/dist/locale/kk";
 
 import { useLessons, useDeleteLesson, useUpdateLesson, useTeachers, useGroups, useRooms, useCreateRoom, useStudents, useMarkAttendance, useAllSubscriptions } from "@/hooks/useData";
 import { useLessonAttendances } from "@/hooks/useLessonAttendances";
@@ -47,10 +49,11 @@ import { Lesson } from "@/types";
 import { toast } from "sonner";
 import { ExportDialog } from "@/components/ExportDialog";
 
-moment.locale("ru");
-
 export default function Schedule() {
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation(["schedule", "common"]);
+  moment.locale(i18n.language);
+  
   const { data: lessons = [], isLoading } = useLessons();
   const { data: teachers = [] } = useTeachers();
   const { data: groups = [] } = useGroups();
@@ -416,8 +419,8 @@ export default function Schedule() {
   return (
     <div className="space-y-6 animate-fade-in-up min-w-0">
       <PageHeader
-        title="Расписание по аудиториям"
-        description="Кликните на временной слот для создания урока"
+        title={t("title")}
+        description={t("rooms.title")}
         actions={
           <>
             <Button
@@ -427,7 +430,7 @@ export default function Schedule() {
               className="sm:size-default"
             >
               <FileText className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Экспорт</span>
+              <span className="hidden sm:inline">{t("common:export")}</span>
             </Button>
             <Button
               variant="outline"
@@ -436,7 +439,7 @@ export default function Schedule() {
               className="sm:size-default"
             >
               <Building2 className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Аудитории</span>
+              <span className="hidden sm:inline">{t("rooms.title")}</span>
             </Button>
             <Button onClick={() => {
               setLessonFormData({});
@@ -444,7 +447,7 @@ export default function Schedule() {
               setIsLessonFormOpen(true);
             }} size="sm" className="sm:size-default">
               <Plus className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Добавить урок</span>
+              <span className="hidden sm:inline">{t("addLesson")}</span>
             </Button>
           </>
         }
@@ -457,7 +460,7 @@ export default function Schedule() {
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <Button variant="default" size="sm" onClick={handleToday}>
-            Сегодня
+            {t("common:today")}
           </Button>
           <Button variant="outline" size="sm" onClick={handleNext}>
             <ChevronRight className="h-4 w-4" />
@@ -478,7 +481,7 @@ export default function Schedule() {
             }`}
           >
             <Calendar className="h-4 w-4" />
-            День
+            {t("views.day")}
           </button>
           <button
             onClick={() => setViewMode("week")}
@@ -489,7 +492,7 @@ export default function Schedule() {
             }`}
           >
             <CalendarDays className="h-4 w-4" />
-            Неделя
+            {t("views.week")}
           </button>
           <button
             onClick={() => setViewMode("month")}
@@ -500,7 +503,7 @@ export default function Schedule() {
             }`}
           >
             <CalendarRange className="h-4 w-4" />
-            Месяц
+            {t("views.month")}
           </button>
         </div>
       </div>

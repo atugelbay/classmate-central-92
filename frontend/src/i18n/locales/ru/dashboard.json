@@ -1,0 +1,65 @@
+{
+  "title": "Главная",
+  "welcome": "Добро пожаловать",
+  "welcomeBack": "С возвращением, {{name}}!",
+  "overview": "Обзор",
+  "stats": {
+    "students": "Учеников",
+    "teachers": "Учителей",
+    "groups": "Групп",
+    "lessons": "Уроков",
+    "revenue": "Доход",
+    "attendance": "Посещаемость"
+  },
+  "todaySchedule": {
+    "title": "Расписание на сегодня",
+    "noLessons": "Нет уроков на сегодня",
+    "upcoming": "Ближайшие уроки"
+  },
+  "quickActions": {
+    "title": "Быстрые действия",
+    "addStudent": "Добавить ученика",
+    "addLesson": "Добавить урок",
+    "addPayment": "Добавить оплату",
+    "viewSchedule": "Создать группу"
+  },
+  "recentPayments": {
+    "title": "Последние платежи",
+    "viewAll": "Все"
+  },
+  "debtors": {
+    "title": "Должники",
+    "count": "{{count}} должников",
+    "viewAll": "Все должники",
+    "noDebtors": "Нет должников"
+  },
+  "debts": {
+    "title": "Задолженности",
+    "noDebts": "Нет задолженностей"
+  },
+  "attendance": {
+    "title": "Посещаемость",
+    "thisWeek": "На этой неделе",
+    "thisMonth": "В этом месяце"
+  },
+  "leads": {
+    "title": "Лиды",
+    "new": "Новые",
+    "inProgress": "В работе",
+    "noLeads": "Нет новых заявок"
+  },
+  "groups": {
+    "title": "Группы",
+    "active": "Активные группы"
+  },
+  "notifications": {
+    "title": "Уведомления",
+    "oneLesson": "Осталось 1 урок",
+    "debt": "Должники"
+  },
+  "income": "Доходы",
+  "details": "Подробнее",
+  "now": "Сейчас",
+  "individual": "Индивидуальное",
+  "noLessons": "Нет занятий"
+}

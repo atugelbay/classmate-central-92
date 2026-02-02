@@ -1,0 +1,146 @@
+{
+  "title": "Teachers",
+  "addTeacher": "Add Teacher",
+  "add": "Add",
+  "newTeacher": "New Teacher",
+  "editTeacher": "Edit Teacher",
+  "teacherDetails": "Teacher Details",
+  "searchPlaceholder": "Search teachers...",
+  "searchByNameOrSubject": "Search by name or subject...",
+  "allStatuses": "All statuses",
+  "fields": {
+    "name": "Full Name",
+    "phone": "Phone",
+    "email": "Email",
+    "subject": "Subject",
+    "subjects": "Subjects",
+    "status": "Status",
+    "salary": "Salary",
+    "groups": "Groups",
+    "workload": "Planned workload (hours/week)",
+    "hoursPerWeek": "Hours/week"
+  },
+  "statuses": {
+    "active": "Active",
+    "inactive": "Inactive"
+  },
+  "badge": {
+    "active": "Active",
+    "inactive": "Inactive"
+  },
+  "workload": {
+    "title": "Weekly workload",
+    "hour": "h",
+    "hourWeek": "h/week",
+    "lesson_one": "lesson",
+    "lesson_few": "lessons",
+    "lesson_many": "lessons"
+  },
+  "detail": {
+    "backToList": "Back to teachers",
+    "notFound": "Teacher not found",
+    "backToListBtn": "Back to list",
+    "loadTitle": "Workload",
+    "lessons": "Lessons",
+    "planned": "Planned",
+    "totalLessons": "Total lessons",
+    "completed": "Completed",
+    "completedPercent": "completed",
+    "scheduled": "Scheduled",
+    "schedule": "Schedule",
+    "calendar": "Calendar",
+    "list": "List",
+    "today": "Today",
+    "noLessons": "No lessons found",
+    "more": "more",
+    "lessonStatus": "Status",
+    "lessonStatuses": {
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "scheduled": "Scheduled"
+    },
+    "editLesson": "Edit lesson",
+    "completedShort": "Done",
+    "scheduledShort": "Sched.",
+    "tableHeaders": {
+      "date": "Date",
+      "time": "Time",
+      "title": "Title",
+      "group": "Group",
+      "room": "Room",
+      "status": "Status",
+      "actions": "Actions"
+    }
+  },
+  "actions": {
+    "edit": "Edit",
+    "rates": "Rates",
+    "salary": "Salary",
+    "delete": "Delete"
+  },
+  "nextLesson": "Next lesson:",
+  "createLesson": "Create Lesson",
+  "individual": "Individual",
+  "empty": "No teachers",
+  "emptyDescription": "Add your first teacher",
+  "deleteConfirm": "Are you sure?",
+  "deleteDescription": "This action cannot be undone. Teacher \"{{name}}\" will be permanently deleted.",
+  "deleteWarning": "This action cannot be undone",
+  "deleted": "Teacher deleted",
+  "salary": {
+    "title": "Salary Calculation",
+    "periodStart": "Period start",
+    "periodEnd": "Period end",
+    "calculating": "Calculating salary...",
+    "result": "Calculation result",
+    "period": "Period",
+    "groupLessons": "Group lessons",
+    "individualLessons": "Individual lessons",
+    "specialLessons": "Special lessons",
+    "hourly": "Hourly",
+    "perLesson": "Per lesson",
+    "hours": "Hours",
+    "lessonsCount": "Lessons",
+    "rate": "Rate",
+    "perHour": "hour",
+    "perLessonUnit": "lesson",
+    "amount": "Amount",
+    "total": "Total",
+    "close": "Close",
+    "noRates": "To calculate salary, you need to add rates for the teacher. Use the \"Rates\" button to manage rates.",
+    "noLessons": "No completed lessons for the selected period or no rates for the completed lesson types.",
+    "error": "Error calculating salary"
+  },
+  "rates": {
+    "title": "Rate Management",
+    "addRate": "Add Rate",
+    "editRate": "Edit Rate",
+    "noRates": "No rates added. Click \"Add Rate\" to create the first rate.",
+    "lessonType": "Lesson Type",
+    "rateType": "Rate Type",
+    "value": "Value",
+    "status": "Status",
+    "actions": "Actions",
+    "rateValue": "Rate Value (₸)",
+    "active": "Active",
+    "inactive": "Inactive",
+    "deleteRate": "Delete rate?",
+    "deleteWarning": "This action cannot be undone. The rate will be permanently deleted.",
+    "hourlyDesc": "Cost per hour",
+    "perLessonDesc": "Cost per lesson",
+    "duplicateWarning": "An active rate with this lesson type and rate type already exists. Deactivate the existing one or choose a different combination.",
+    "lessonTypes": {
+      "group": "Group",
+      "individual": "Individual",
+      "special": "Special"
+    },
+    "rateTypes": {
+      "hourly": "Hourly",
+      "per_lesson": "Per Lesson"
+    },
+    "units": {
+      "hour": "hour",
+      "lesson": "lesson"
+    }
+  }
+}

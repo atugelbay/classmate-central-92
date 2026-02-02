@@ -1,0 +1,21 @@
+{
+  "dashboard": "Dashboard",
+  "students": "Students",
+  "teachers": "Teachers",
+  "groups": "Groups",
+  "schedule": "Schedule",
+  "individualLessons": "Individual Lessons",
+  "finance": "Finance",
+  "subscriptions": "Subscriptions",
+  "leads": "Leads",
+  "settings": "Settings",
+  "roles": "Roles",
+  "logout": "Logout",
+  "profile": "Profile",
+  "notifications": "Notifications",
+  "help": "Help",
+  "search": "Search...",
+  "menu": "Menu",
+  "collapse": "Collapse",
+  "expand": "Expand"
+}

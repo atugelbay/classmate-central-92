@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Bell, AlertCircle, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,12 +25,25 @@ interface NotificationItem {
 
 export function NotificationDropdown() {
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation(["dashboard", "common"]);
   const [open, setOpen] = useState(false);
   const [expandedOneLesson, setExpandedOneLesson] = useState(false);
   const [expandedDebts, setExpandedDebts] = useState(false);
   const { data: students = [] } = useStudents();
   const { data: debts = [] } = useDebts();
   const { data: subscriptions = [] } = useAllSubscriptions();
+
+  // Message translations
+  const getOneLessonMessage = () => {
+    const texts = { ru: "1 урок остался", kk: "1 сабақ қалды", en: "1 lesson left" };
+    return texts[i18n.language as 'ru' | 'kk' | 'en'] || texts.ru;
+  };
+
+  const getDebtMessage = (amount: number) => {
+    const labels = { ru: "Долг", kk: "Борыш", en: "Debt" };
+    const label = labels[i18n.language as 'ru' | 'kk' | 'en'] || labels.ru;
+    return `${label}: ${amount.toLocaleString()} ₸`;
+  };
 
   // Calculate notifications grouped by type
   const oneLessonLeftStudents: NotificationItem[] = [];
@@ -45,7 +59,7 @@ export function NotificationDropdown() {
           type: "one_lesson_left",
           studentId: student.id,
           studentName: student.name,
-          message: "1 урок остался",
+          message: getOneLessonMessage(),
         });
       }
     }
@@ -62,7 +76,7 @@ export function NotificationDropdown() {
           type: "debt",
           studentId: student.id,
           studentName: student.name,
-          message: `Долг: ${debt.amount.toLocaleString()} ₸`,
+          message: getDebtMessage(debt.amount),
           amount: debt.amount,
         });
       }
@@ -93,7 +107,7 @@ export function NotificationDropdown() {
       <PopoverContent className="w-80 p-0 rounded-xl border border-slate-200 dark:border-slate-800 shadow-lg" align="end">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800">
-          <h3 className="font-bold text-slate-900 dark:text-slate-100">Уведомления</h3>
+          <h3 className="font-bold text-slate-900 dark:text-slate-100">{t("notifications.title")}</h3>
           {notificationCount > 0 && (
             <span className="text-xs font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">
               {notificationCount}
@@ -107,7 +121,7 @@ export function NotificationDropdown() {
                 <Bell className="h-6 w-6 text-slate-400" />
               </div>
               <p className="text-sm text-slate-500">
-                Нет уведомлений
+                {i18n.language === 'kk' ? 'Хабарландырулар жоқ' : i18n.language === 'en' ? 'No notifications' : 'Нет уведомлений'}
               </p>
             </div>
           ) : (
@@ -126,7 +140,7 @@ export function NotificationDropdown() {
                       </div>
                       <div className="flex-1">
                         <span className="font-bold text-sm text-slate-900 dark:text-slate-100">
-                          Осталось 1 урок
+                          {t("notifications.oneLesson")}
                         </span>
                       </div>
                       <span className="text-xs font-semibold text-violet-600 dark:text-violet-400 bg-violet-100 dark:bg-violet-900/50 px-2 py-0.5 rounded-full">
@@ -186,7 +200,7 @@ export function NotificationDropdown() {
                       </div>
                       <div className="flex-1">
                         <span className="font-bold text-sm text-slate-900 dark:text-slate-100">
-                          Должники
+                          {i18n.language === 'kk' ? 'Борышкерлер' : i18n.language === 'en' ? 'Debtors' : 'Должники'}
                         </span>
                       </div>
                       <span className="text-xs font-semibold text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/50 px-2 py-0.5 rounded-full">

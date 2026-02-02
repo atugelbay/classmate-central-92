@@ -1,16 +1,19 @@
 import { ArrowRight, Loader2, CreditCard, TrendingUp, TrendingDown } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import * as financeApi from "@/api/finance";
 import { PaymentTransaction } from "@/types";
 import { useStudents } from "@/hooks/useData";
 import { useNavigate } from "react-router-dom";
 import moment from "moment";
 import "moment/locale/ru";
+import "moment/locale/kk";
 import { useQuery } from "@tanstack/react-query";
-
-moment.locale("ru");
 
 export function RecentPaymentsList() {
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation("dashboard");
+  moment.locale(i18n.language);
+  
   const { data: students = [] } = useStudents();
   
   const { data: transactions = [], isLoading } = useQuery({
@@ -32,13 +35,13 @@ export function RecentPaymentsList() {
           <div className="p-2 rounded-xl bg-amber-500/10">
             <CreditCard className="h-5 w-5 text-amber-500" />
           </div>
-          <span className="font-semibold text-foreground">Последние платежи</span>
+          <span className="font-semibold text-foreground">{t("recentPayments.title")}</span>
         </div>
         <button 
           onClick={() => navigate("/finance")}
           className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
-          Все <ArrowRight className="h-3 w-3" />
+          {t("recentPayments.viewAll")} <ArrowRight className="h-3 w-3" />
         </button>
       </div>
 
@@ -53,7 +56,9 @@ export function RecentPaymentsList() {
             <div className="p-3 rounded-full bg-muted mb-3">
               <CreditCard className="h-6 w-6 text-muted-foreground" />
             </div>
-            <p className="text-muted-foreground text-sm">Нет платежей</p>
+            <p className="text-muted-foreground text-sm">
+              {i18n.language === 'kk' ? 'Төлемдер жоқ' : i18n.language === 'en' ? 'No payments' : 'Нет платежей'}
+            </p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -80,7 +85,7 @@ export function RecentPaymentsList() {
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-foreground text-sm truncate">
-                      {student?.name || "Ученик"}
+                      {student?.name || (i18n.language === 'kk' ? 'Оқушы' : i18n.language === 'en' ? 'Student' : 'Ученик')}
                     </div>
                     <div className="text-xs text-muted-foreground">
                       {date.format("D MMM, HH:mm")}

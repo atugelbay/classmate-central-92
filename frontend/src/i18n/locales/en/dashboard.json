@@ -1,0 +1,65 @@
+{
+  "title": "Dashboard",
+  "welcome": "Welcome",
+  "welcomeBack": "Welcome back, {{name}}!",
+  "overview": "Overview",
+  "stats": {
+    "students": "Students",
+    "teachers": "Teachers",
+    "groups": "Groups",
+    "lessons": "Lessons",
+    "revenue": "Revenue",
+    "attendance": "Attendance"
+  },
+  "todaySchedule": {
+    "title": "Today's Schedule",
+    "noLessons": "No lessons today",
+    "upcoming": "Upcoming Lessons"
+  },
+  "quickActions": {
+    "title": "Quick Actions",
+    "addStudent": "Add Student",
+    "addLesson": "Add Lesson",
+    "addPayment": "Add Payment",
+    "viewSchedule": "Create Group"
+  },
+  "recentPayments": {
+    "title": "Recent Payments",
+    "viewAll": "View All"
+  },
+  "debtors": {
+    "title": "Debtors",
+    "count": "{{count}} debtors",
+    "viewAll": "View All",
+    "noDebtors": "No debtors"
+  },
+  "debts": {
+    "title": "Debts",
+    "noDebts": "No debts"
+  },
+  "attendance": {
+    "title": "Attendance",
+    "thisWeek": "This Week",
+    "thisMonth": "This Month"
+  },
+  "leads": {
+    "title": "Leads",
+    "new": "New",
+    "inProgress": "In Progress",
+    "noLeads": "No new leads"
+  },
+  "groups": {
+    "title": "Groups",
+    "active": "Active Groups"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "oneLesson": "1 lesson left",
+    "debt": "Debtors"
+  },
+  "income": "Income",
+  "details": "Details",
+  "now": "Now",
+  "individual": "Individual",
+  "noLessons": "No lessons"
+}

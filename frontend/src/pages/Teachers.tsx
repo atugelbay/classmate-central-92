@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import moment from "moment";
 import "moment/locale/ru";
+import "moment/locale/kk";
 import { useTeachers, useCreateTeacher, useUpdateTeacher, useDeleteTeacher, useGroups, useRooms, useStudents, useLessons } from "@/hooks/useData";
 import { useConfirmDelete } from "@/hooks/useConfirmDelete";
-
-moment.locale("ru");
 import { LessonFormModal } from "@/components/LessonFormModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +35,9 @@ import { toast } from "sonner";
 
 export default function Teachers() {
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation(["teachers", "common"]);
+  moment.locale(i18n.language);
+  
   const { data: teachers = [], isLoading } = useTeachers();
   const { data: groups = [] } = useGroups();
   const { data: rooms = [] } = useRooms();
@@ -127,8 +130,8 @@ export default function Teachers() {
   return (
     <div className="space-y-6 animate-fade-in-up">
       <PageHeader
-        title="Учителя"
-        description="Управление преподавательским составом"
+        title={t("title")}
+        description={t("searchPlaceholder")}
         actions={
             <Dialog
             open={isDialogOpen}
@@ -142,19 +145,19 @@ export default function Teachers() {
             <DialogTrigger asChild>
               <Button size="sm" className="sm:size-default">
                 <Plus className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Добавить учителя</span>
-                <span className="sm:hidden">Добавить</span>
+                <span className="hidden sm:inline">{t("addTeacher")}</span>
+                <span className="sm:hidden">{t("add")}</span>
               </Button>
             </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
-                {editingTeacher ? "Редактировать учителя" : "Новый учитель"}
+                {editingTeacher ? t("editTeacher") : t("newTeacher")}
               </DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <Label htmlFor="name">ФИО</Label>
+                <Label htmlFor="name">{t("fields.name")}</Label>
                 <Input
                   id="name"
                   name="name"
@@ -163,7 +166,7 @@ export default function Teachers() {
                 />
               </div>
               <div>
-                <Label htmlFor="subject">Предмет</Label>
+                <Label htmlFor="subject">{t("fields.subject")}</Label>
                 <Input
                   id="subject"
                   name="subject"
@@ -172,7 +175,7 @@ export default function Teachers() {
                 />
               </div>
               <div>
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t("fields.email")}</Label>
                 <Input
                   id="email"
                   name="email"
@@ -181,7 +184,7 @@ export default function Teachers() {
                 />
               </div>
               <div>
-                <Label htmlFor="phone">Телефон</Label>
+                <Label htmlFor="phone">{t("fields.phone")}</Label>
                 <Input
                   id="phone"
                   name="phone"
@@ -192,7 +195,7 @@ export default function Teachers() {
                 />
               </div>
               <div>
-                <Label htmlFor="workload">Плановая загруженность (часов/нед.)</Label>
+                <Label htmlFor="workload">{t("fields.workload")}</Label>
                 <Input
                   id="workload"
                   name="workload"
@@ -202,7 +205,7 @@ export default function Teachers() {
                 />
               </div>
               <div>
-                <Label htmlFor="status">Статус</Label>
+                <Label htmlFor="status">{t("fields.status")}</Label>
                 <Select
                   name="status"
                   defaultValue={editingTeacher?.status || "active"}
@@ -211,14 +214,14 @@ export default function Teachers() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">Активный</SelectItem>
-                    <SelectItem value="inactive">Неактивный</SelectItem>
+                    <SelectItem value="active">{t("statuses.active")}</SelectItem>
+                    <SelectItem value="inactive">{t("statuses.inactive")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               
               <Button type="submit" className="w-full">
-                {editingTeacher ? "Сохранить" : "Добавить"}
+                {editingTeacher ? t("common:save") : t("add")}
               </Button>
             </form>
           </DialogContent>
@@ -230,7 +233,7 @@ export default function Teachers() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Поиск по имени или предмету..."
+            placeholder={t("searchByNameOrSubject")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9"
@@ -241,9 +244,9 @@ export default function Teachers() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Все статусы</SelectItem>
-            <SelectItem value="active">Активные</SelectItem>
-            <SelectItem value="inactive">Неактивные</SelectItem>
+            <SelectItem value="all">{t("allStatuses")}</SelectItem>
+            <SelectItem value="active">{t("statuses.active")}</SelectItem>
+            <SelectItem value="inactive">{t("statuses.inactive")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -294,7 +297,7 @@ export default function Teachers() {
                   <Badge
                     variant={teacher.status === "active" ? "default" : "secondary"}
                   >
-                    {teacher.status === "active" ? "Активен" : "Неактивен"}
+                    {teacher.status === "active" ? t("badge.active") : t("badge.inactive")}
                   </Badge>
                 </div>
               </CardHeader>
@@ -310,23 +313,23 @@ export default function Teachers() {
                   </div>
                   
                   <div className="mt-4 rounded-2xl bg-gradient-to-br from-sky-50 to-blue-100 dark:from-sky-950 dark:to-blue-900 p-4">
-                    <p className="text-sm font-medium text-sky-700 dark:text-sky-300">Загруженность на неделю</p>
+                    <p className="text-sm font-medium text-sky-700 dark:text-sky-300">{t("workload.title")}</p>
                     <p className="text-2xl font-bold text-sky-900 dark:text-sky-100">
                       {workloadHours}
                       <span className="text-sm font-normal text-sky-600 dark:text-sky-400">
                         {" "}
-                        ч
+                        {t("workload.hour")}
                       </span>
                     </p>
                     <p className="text-xs text-sky-600 dark:text-sky-400 mt-1">
-                      {teacherLessons.length} {teacherLessons.length === 1 ? 'урок' : teacherLessons.length < 5 ? 'урока' : 'уроков'}
+                      {teacherLessons.length} {teacherLessons.length === 1 ? t("workload.lesson_one") : teacherLessons.length < 5 ? t("workload.lesson_few") : t("workload.lesson_many")}
                     </p>
                   </div>
                   
                   {/* Next Lesson */}
                   {nextLesson && (
                     <div className="mt-2 rounded-2xl bg-gradient-to-br from-emerald-50 to-green-100 dark:from-emerald-950 dark:to-green-900 p-3">
-                      <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300 mb-1">Ближайший урок:</p>
+                      <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300 mb-1">{t("nextLesson")}</p>
                       <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
                         {moment(nextLesson.start).format("DD MMM, HH:mm")}
                       </p>
@@ -337,7 +340,7 @@ export default function Teachers() {
                       )}
                       {!nextLessonGroup && (
                         <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
-                          Индивидуальное
+                          {t("individual")}
                         </p>
                       )}
                     </div>
@@ -354,7 +357,7 @@ export default function Teachers() {
                       }}
                     >
                       <Plus className="mr-2 h-4 w-4" />
-                      Создать урок
+                      {t("createLesson")}
                     </Button>
                   </div>
                 </div>
@@ -383,10 +386,10 @@ export default function Teachers() {
       <ConfirmDialog
         open={deleteConfirm.isOpen}
         onOpenChange={(open) => !open && deleteConfirm.close()}
-        title="Удалить преподавателя"
-        description="Вы уверены, что хотите удалить этого преподавателя? Это действие нельзя отменить."
-        confirmText="Удалить"
-        cancelText="Отмена"
+        title={t("deleteConfirm")}
+        description={t("deleteDescription")}
+        confirmText={t("common:delete")}
+        cancelText={t("common:cancel")}
         variant="destructive"
         onConfirm={deleteConfirm.confirm}
       />
