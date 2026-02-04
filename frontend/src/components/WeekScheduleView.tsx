@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import moment from "moment";
 import "moment/dist/locale/ru";
+import "moment/dist/locale/kk";
 import { Room, Lesson, Teacher, Group, Student, StudentSubscription } from "@/types";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -36,6 +38,7 @@ export default function WeekScheduleView({
   unmarkedLessonIds = new Set(),
 }: WeekScheduleViewProps) {
   const navigate = useNavigate();
+  const { t } = useTranslation("schedule");
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [draggingLesson, setDraggingLesson] = useState<Lesson | null>(null);
@@ -579,7 +582,7 @@ export default function WeekScheduleView({
 
                                     return lessonStudentIds.length > 0 && (
                                       <div className="pt-2 border-t">
-                                        <h3 className="text-sm font-semibold mb-2">Ученики ({lessonStudentIds.length})</h3>
+                                        <h3 className="text-sm font-semibold mb-2">{t("lesson.students")} ({lessonStudentIds.length})</h3>
                                         <div className="flex flex-col gap-2 max-h-48 overflow-y-auto">
                                           {lessonStudentIds.map(studentId => {
                                             const student = students.find(s => s.id === studentId);
@@ -607,7 +610,7 @@ export default function WeekScheduleView({
 
                                 <div className="flex flex-col gap-2 pt-2">
                                   <Button onClick={handleEditClick}>
-                                    <Edit2 className="h-4 w-4 mr-2" /> Редактировать урок
+                                    <Edit2 className="h-4 w-4 mr-2" /> {t("lesson.editLesson")}
                                   </Button>
                                 </div>
                               </div>

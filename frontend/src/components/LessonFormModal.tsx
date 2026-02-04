@@ -372,7 +372,7 @@ export function LessonFormModal({
                     <SelectValue placeholder={t("lesson.individual")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Индивидуальный</SelectItem>
+                    <SelectItem value="none">{t("lesson.individual")}</SelectItem>
                     {groups.map((group) => (
                       <SelectItem key={group.id} value={group.id}>
                         {group.name}
@@ -396,8 +396,8 @@ export function LessonFormModal({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="individual">Индивидуальный</SelectItem>
-                    <SelectItem value="special">Специальный</SelectItem>
+                    <SelectItem value="individual">{t("lesson.individual")}</SelectItem>
+                    <SelectItem value="special">{t("lesson.special")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -418,7 +418,7 @@ export function LessonFormModal({
           <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 space-y-3">
             <div className="flex items-center gap-2 mb-1">
               <Calendar className="h-4 w-4 text-slate-500" />
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Дата и время</span>
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{t("lesson.dateAndTime")}</span>
             </div>
 
             {/* Date & Room - One row */}
@@ -463,15 +463,15 @@ export function LessonFormModal({
             {/* Status - only for edit mode */}
             {mode === "edit" && (
               <div className="space-y-1.5 pt-2 border-t border-slate-200 dark:border-slate-700">
-                <Label htmlFor="status">Статус</Label>
+                <Label htmlFor="status">{t("lesson.status")}</Label>
                 <Select value={status} onValueChange={(value: "scheduled" | "completed" | "cancelled") => setStatus(value)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="scheduled">Запланирован</SelectItem>
-                    <SelectItem value="completed">Проведен</SelectItem>
-                    <SelectItem value="cancelled">Отменен</SelectItem>
+                    <SelectItem value="scheduled">{t("statuses.scheduled")}</SelectItem>
+                    <SelectItem value="completed">{t("statuses.completed")}</SelectItem>
+                    <SelectItem value="cancelled">{t("statuses.cancelled")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -483,11 +483,11 @@ export function LessonFormModal({
             <div className="p-4 rounded-xl bg-violet-50 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-800 space-y-3">
               <div className="flex items-center gap-2 mb-1">
                 <Repeat className="h-4 w-4 text-violet-500" />
-                <span className="text-xs font-semibold text-violet-600 dark:text-violet-400 uppercase tracking-wide">Повторение</span>
+                <span className="text-xs font-semibold text-violet-600 dark:text-violet-400 uppercase tracking-wide">{t("series.repeat")}</span>
               </div>
 
               <div>
-                <Label className="text-xs mb-2 block">Дни недели *</Label>
+                <Label className="text-xs mb-2 block">{t("series.weekdaysLabel")} *</Label>
                 <div className="flex flex-wrap gap-1.5">
                   {WEEKDAYS.map((day) => (
                     <button
@@ -507,7 +507,7 @@ export function LessonFormModal({
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="seriesEndDate">До какой даты *</Label>
+                <Label htmlFor="seriesEndDate">{t("series.endDateLabel")} *</Label>
                 <Input
                   id="seriesEndDate"
                   type="date"
@@ -524,7 +524,7 @@ export function LessonFormModal({
           {checkingConflicts && (
             <Alert>
               <Loader2 className="h-4 w-4 animate-spin" />
-              <AlertDescription>Проверка конфликтов...</AlertDescription>
+              <AlertDescription>{t("conflicts.checking")}</AlertDescription>
             </Alert>
           )}
 
@@ -532,17 +532,17 @@ export function LessonFormModal({
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                <p className="font-semibold mb-2">Обнаружены конфликты:</p>
+                <p className="font-semibold mb-2">{t("conflicts.foundTitle")}</p>
                 {conflicts.conflicts.map((conflict, idx) => (
                   <p key={idx} className="text-sm">
                     - {conflict.title} ({moment(conflict.start).format("HH:mm")} - {moment(conflict.end).format("HH:mm")})
-                    {conflict.conflictType === "teacher" && ` - Учитель занят`}
-                    {conflict.conflictType === "room" && ` - Аудитория занята`}
+                    {conflict.conflictType === "teacher" && ` - ${t("conflicts.teacherBusy")}`}
+                    {conflict.conflictType === "room" && ` - ${t("conflicts.roomBusy")}`}
                   </p>
                 ))}
                 {conflicts.suggestedTimes && conflicts.suggestedTimes.length > 0 && (
                   <div className="mt-3">
-                    <p className="font-semibold text-sm mb-1">Предложенное время:</p>
+                    <p className="font-semibold text-sm mb-1">{t("conflicts.suggestedTime")}</p>
                     {conflicts.suggestedTimes.map((time, idx) => (
                       <Button
                         key={idx}
@@ -564,7 +564,7 @@ export function LessonFormModal({
           {!conflicts?.hasConflicts && !checkingConflicts && teacherId && roomId && (
             <Alert variant="success">
               <CheckCircle className="h-4 w-4" />
-              <AlertDescription>Конфликтов не обнаружено</AlertDescription>
+              <AlertDescription>{t("conflicts.noConflicts")}</AlertDescription>
             </Alert>
           )}
 

@@ -591,7 +591,7 @@ export default function Schedule() {
         <DialogContent className="sm:max-w-3xl w-[95vw] overflow-x-hidden">
           <DialogHeader>
             <DialogTitle>
-              Отметка посещаемости: {selectedLesson?.title}
+              {t("schedule:attendance.markTitle")}: {selectedLesson?.title}
             </DialogTitle>
           </DialogHeader>
           {selectedLesson && (
@@ -599,21 +599,21 @@ export default function Schedule() {
               <div className="bg-muted p-4 rounded-lg">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <span className="text-muted-foreground">Дата:</span>{" "}
+                    <span className="text-muted-foreground">{t("schedule:attendance.dateLabel")}:</span>{" "}
                     <span className="font-medium">{moment.utc(selectedLesson.start).local().format("DD.MM.YYYY")}</span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Время:</span>{" "}
+                    <span className="text-muted-foreground">{t("schedule:attendance.timeLabel")}:</span>{" "}
                     <span className="font-medium">
                       {moment.utc(selectedLesson.start).local().format("HH:mm")} - {moment.utc(selectedLesson.end).local().format("HH:mm")}
                     </span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Предмет:</span>{" "}
+                    <span className="text-muted-foreground">{t("schedule:attendance.subjectLabel")}:</span>{" "}
                     <span className="font-medium">{selectedLesson.subject}</span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Преподаватель:</span>{" "}
+                    <span className="text-muted-foreground">{t("schedule:attendance.teacherLabel")}:</span>{" "}
                     <span className="font-medium">
                       {selectedLesson.teacherName}
                     </span>
@@ -622,10 +622,10 @@ export default function Schedule() {
               </div>
 
               <div className="space-y-3">
-                <h3 className="font-semibold">Ученики ({Object.keys(attendanceData).length})</h3>
+                <h3 className="font-semibold">{t("schedule:lesson.students")} ({Object.keys(attendanceData).length})</h3>
                 {Object.keys(attendanceData).length === 0 ? (
                   <p className="text-center text-muted-foreground py-8">
-                    Нет учеников в этом уроке. Добавьте группу к уроку или добавьте учеников вручную.
+                    {t("schedule:attendance.noStudentsInLesson")}
                   </p>
                 ) : (
                   Object.keys(attendanceData).map((studentId) => {
@@ -657,7 +657,7 @@ export default function Schedule() {
                               className="w-full"
                             >
                               <CheckCircle2 className="h-4 w-4 mr-2" />
-                              Присутствовал
+                              {t("schedule:attendance.attended")}
                             </Button>
                             <Button
                               variant={data.status === "missed" ? "destructive" : "outline"}
@@ -666,7 +666,7 @@ export default function Schedule() {
                               className="w-full"
                             >
                               <XCircle className="h-4 w-4 mr-2" />
-                              Отсутствовал
+                              {t("schedule:attendance.missed")}
                             </Button>
                             <Button
                               variant={data.status === "cancelled" ? "secondary" : "outline"}
@@ -675,13 +675,13 @@ export default function Schedule() {
                               className="w-full"
                             >
                               <Clock className="h-4 w-4 mr-2" />
-                              Отменен
+                              {t("schedule:attendance.cancelled")}
                             </Button>
                           </div>
 
                           {data.status === "missed" && (
                             <div className="space-y-2">
-                              <Label htmlFor={`reason-${studentId}`}>Причина пропуска</Label>
+                              <Label htmlFor={`reason-${studentId}`}>{t("schedule:attendance.reasonLabel")}</Label>
                               <Select
                                 defaultValue={data.reason || "unexcused"}
                                 onValueChange={(v) => updateAttendanceReason(studentId, v)}
@@ -690,18 +690,18 @@ export default function Schedule() {
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="excused">Уважительная причина (без списания)</SelectItem>
-                                  <SelectItem value="unexcused">Неуважительная причина (спишется 1 занятие)</SelectItem>
+                                  <SelectItem value="excused">{t("schedule:attendance.excusedOption")}</SelectItem>
+                                  <SelectItem value="unexcused">{t("schedule:attendance.unexcusedOption")}</SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>
                           )}
 
                           <div className="space-y-2">
-                            <Label htmlFor={`notes-${studentId}`}>Заметки (опционально)</Label>
+                            <Label htmlFor={`notes-${studentId}`}>{t("schedule:attendance.notesOptional")}</Label>
                             <Textarea
                               id={`notes-${studentId}`}
-                              placeholder="Дополнительные заметки..."
+                              placeholder={t("schedule:attendance.notesPlaceholder")}
                               value={data.notes}
                               onChange={(e) => updateAttendanceNotes(studentId, e.target.value)}
                               rows={2}
@@ -723,7 +723,7 @@ export default function Schedule() {
                     setAttendanceData({});
                   }}
                 >
-                  Отмена
+                  {t("schedule:modal.cancel")}
                 </Button>
                 <Button
                   onClick={handleAttendanceSubmit}
@@ -732,10 +732,10 @@ export default function Schedule() {
                   {markAttendance.isPending ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Сохранение...
+                      {t("schedule:attendance.saving")}
                     </>
                   ) : (
-                    "Сохранить посещаемость"
+                    t("schedule:attendance.saveAttendance")
                   )}
                 </Button>
               </div>

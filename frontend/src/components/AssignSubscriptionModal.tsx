@@ -5,13 +5,26 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { SubscriptionType, BillingType, Student, Group, Teacher, Discount, StudentDiscount } from "@/types";
 import { getSubscriptionTypes, createStudentSubscription } from "@/api/subscriptions";
 import { groupsAPI } from "@/api/groups";
 import { teachersAPI } from "@/api/teachers";
 import { useStudentDiscounts, useDiscounts } from "@/hooks/useData";
-import { Calendar, DollarSign, BookOpen, Clock, User, Users, AlertCircle } from "lucide-react";
+import { Calendar, DollarSign, BookOpen, Clock, User, Users, AlertCircle, ChevronsUpDown } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 
 interface AssignSubscriptionModalProps {
@@ -107,6 +120,9 @@ export default function AssignSubscriptionModal({
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
+  const [templateComboboxOpen, setTemplateComboboxOpen] = useState(false);
+  const [groupComboboxOpen, setGroupComboboxOpen] = useState(false);
+  const [teacherComboboxOpen, setTeacherComboboxOpen] = useState(false);
 
   // Get student discounts
   const { data: studentDiscounts = [] } = useStudentDiscounts(student.id);
@@ -296,26 +312,56 @@ export default function AssignSubscriptionModal({
           {!customMode && (
             <div className="space-y-1.5">
               <Label htmlFor="subscription-type">{t("template")} *</Label>
-              <Select value={selectedTypeId} onValueChange={setSelectedTypeId}>
-                <SelectTrigger>
-                  <SelectValue placeholder={t("selectType")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {subscriptionTypes.map((type) => (
-                    <SelectItem key={type.id} value={type.id}>
-                      <div className="flex items-center gap-2">
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] ${billingTypeColors[type.billingType]}`}>
-                          {billingTypeLabels[type.billingType]}
-                        </span>
-                        <span>{type.name}</span>
-                        <span className="text-muted-foreground text-xs">
-                          {type.lessonsCount} × {(type.price / type.lessonsCount).toFixed(0)} ₸
-                        </span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={templateComboboxOpen} onOpenChange={setTemplateComboboxOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={templateComboboxOpen}
+                    className="w-full justify-between font-normal"
+                  >
+                    {selectedTypeId
+                      ? (() => {
+                          const type = subscriptionTypes.find((x) => x.id === selectedTypeId);
+                          return type
+                            ? `${type.name} — ${type.lessonsCount} × ${(type.price / type.lessonsCount).toFixed(0)} ₸`
+                            : t("selectType");
+                        })()
+                      : t("selectType")}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 rounded-xl" align="start">
+                  <Command>
+                    <CommandInput placeholder={t("searchTemplate")} className="border-0 border-b rounded-t-xl" />
+                    <CommandList>
+                      <CommandEmpty>{t("noTemplatesFound")}</CommandEmpty>
+                      <CommandGroup>
+                        {subscriptionTypes.map((type) => (
+                          <CommandItem
+                            key={type.id}
+                            value={`${type.name} ${billingTypeLabels[type.billingType]} ${type.lessonsCount} ${type.price}`}
+                            onSelect={() => {
+                              setSelectedTypeId(type.id);
+                              setTemplateComboboxOpen(false);
+                            }}
+                          >
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <span className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] ${billingTypeColors[type.billingType]}`}>
+                                {billingTypeLabels[type.billingType]}
+                              </span>
+                              <span className="truncate">{type.name}</span>
+                              <span className="text-muted-foreground text-xs shrink-0">
+                                {type.lessonsCount} × {(type.price / type.lessonsCount).toFixed(0)} ₸
+                              </span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
           )}
 
@@ -360,35 +406,97 @@ export default function AssignSubscriptionModal({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="group">{t("group")}</Label>
-              <Select value={groupId || "none"} onValueChange={(val) => setGroupId(val === "none" ? "" : val)}>
-                <SelectTrigger>
-                  <SelectValue placeholder={t("notSelected")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">{t("notSelected")}</SelectItem>
-                  {groups.map((group) => (
-                    <SelectItem key={group.id} value={group.id}>
-                      {group.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={groupComboboxOpen} onOpenChange={setGroupComboboxOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={groupComboboxOpen}
+                    className="w-full justify-between font-normal"
+                  >
+                    {groupId ? groups.find((g) => g.id === groupId)?.name ?? t("notSelected") : t("notSelected")}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 rounded-xl" align="start">
+                  <Command>
+                    <CommandInput placeholder={t("searchGroup")} className="border-0 border-b rounded-t-xl" />
+                    <CommandList>
+                      <CommandEmpty>{t("noGroupsFound")}</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="__none__"
+                          onSelect={() => {
+                            setGroupId("");
+                            setGroupComboboxOpen(false);
+                          }}
+                        >
+                          {t("notSelected")}
+                        </CommandItem>
+                        {groups.map((group) => (
+                          <CommandItem
+                            key={group.id}
+                            value={`${group.name} ${group.subject ?? ""}`}
+                            onSelect={() => {
+                              setGroupId(group.id);
+                              setGroupComboboxOpen(false);
+                            }}
+                          >
+                            {group.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="teacher">{t("teacher")}</Label>
-              <Select value={teacherId || "none"} onValueChange={(val) => setTeacherId(val === "none" ? "" : val)}>
-                <SelectTrigger>
-                  <SelectValue placeholder={t("notSelectedMale")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">{t("notSelectedMale")}</SelectItem>
-                  {teachers.filter(t => t.status === "active").map((teacher) => (
-                    <SelectItem key={teacher.id} value={teacher.id}>
-                      {teacher.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={teacherComboboxOpen} onOpenChange={setTeacherComboboxOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={teacherComboboxOpen}
+                    className="w-full justify-between font-normal"
+                  >
+                    {teacherId ? teachers.find((teach) => teach.id === teacherId)?.name ?? t("notSelectedMale") : t("notSelectedMale")}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 rounded-xl" align="start">
+                  <Command>
+                    <CommandInput placeholder={t("searchTeacher")} className="border-0 border-b rounded-t-xl" />
+                    <CommandList>
+                      <CommandEmpty>{t("noTeachersFound")}</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="__none__"
+                          onSelect={() => {
+                            setTeacherId("");
+                            setTeacherComboboxOpen(false);
+                          }}
+                        >
+                          {t("notSelectedMale")}
+                        </CommandItem>
+                        {teachers.filter((teach) => teach.status === "active").map((teacher) => (
+                          <CommandItem
+                            key={teacher.id}
+                            value={teacher.name}
+                            onSelect={() => {
+                              setTeacherId(teacher.id);
+                              setTeacherComboboxOpen(false);
+                            }}
+                          >
+                            {teacher.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 

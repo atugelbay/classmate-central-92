@@ -30,30 +30,52 @@
     "status": "Статус",
     "notes": "Заметки",
     "date": "Дата",
+    "dateAndTime": "Дата и время",
     "type": "Тип",
     "individual": "Индивидуальный",
-    "special": "Разовое",
+    "special": "Специальный",
     "start": "Начало",
-    "end": "Окончание"
+    "end": "Окончание",
+    "editLesson": "Редактировать урок",
+    "cancelLesson": "Отменить урок",
+    "resumeLesson": "Возобновить урок",
+    "markAttendance": "Отметить посещаемость",
+    "roomNotSpecified": "Не указана"
   },
   "statuses": {
     "scheduled": "Запланирован",
-    "completed": "Завершён",
-    "cancelled": "Отменён"
+    "completed": "Проведен",
+    "cancelled": "Отменен",
+    "inProgress": "Проводится"
   },
   "attendance": {
     "title": "Посещаемость",
     "mark": "Отметить",
+    "markTitle": "Отметка посещаемости",
+    "dateLabel": "Дата",
+    "timeLabel": "Время",
+    "subjectLabel": "Предмет",
+    "teacherLabel": "Преподаватель",
     "attended": "Присутствовал",
     "missed": "Отсутствовал",
+    "cancelled": "Отменен",
     "excused": "Уважительная причина",
     "reason": "Причина",
+    "reasonLabel": "Причина пропуска",
+    "excusedOption": "Уважительная причина (без списания)",
+    "unexcusedOption": "Неуважительная причина (спишется 1 занятие)",
     "notes": "Заметки",
-    "save": "Сохранить отметки"
+    "notesOptional": "Заметки (опционально)",
+    "notesPlaceholder": "Дополнительные заметки...",
+    "save": "Сохранить отметки",
+    "saveAttendance": "Сохранить посещаемость",
+    "saving": "Сохранение...",
+    "noStudentsInLesson": "Нет учеников в этом уроке. Добавьте группу к уроку или добавьте учеников вручную."
   },
   "conflicts": {
     "title": "Конфликты",
     "found": "Найдены конфликты",
+    "foundTitle": "Обнаружены конфликты:",
     "roomBusy": "Аудитория занята",
     "teacherBusy": "Преподаватель занят",
     "checking": "Проверка конфликтов...",
@@ -62,9 +84,12 @@
   },
   "series": {
     "title": "Серия уроков",
+    "repeat": "Повторение",
     "create": "Создать серию",
     "endDate": "Дата окончания серии",
     "weekdays": "Дни недели",
+    "weekdaysLabel": "Дни недели",
+    "endDateLabel": "До какой даты",
     "selectDays": "Выберите хотя бы один день"
   },
   "modal": {

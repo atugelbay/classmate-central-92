@@ -44,7 +44,7 @@ export default function RoomScheduleView({
   unmarkedLessonIds = new Set(),
 }: RoomScheduleViewProps) {
   const navigate = useNavigate();
-  const { i18n } = useTranslation("schedule");
+  const { t, i18n } = useTranslation("schedule");
   moment.locale(i18n.language);
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [popoverOpen, setPopoverOpen] = useState(false);
@@ -162,13 +162,13 @@ export default function RoomScheduleView({
   };
 
   const getDisplayStatus = (lesson: Lesson) => {
-    if (lesson.status === "cancelled") return "Отменен";
+    if (lesson.status === "cancelled") return t("statuses.cancelled");
     const now = moment();
     const start = moment.utc(lesson.start).local();
     const end = moment.utc(lesson.end).local();
-    if (now.isBetween(start, end)) return "Проводится";
-    if (now.isAfter(end)) return "Проведен";
-    return "Запланирован";
+    if (now.isBetween(start, end)) return t("statuses.inProgress");
+    if (now.isAfter(end)) return t("statuses.completed");
+    return t("statuses.scheduled");
   };
 
   const activeRooms = rooms?.filter((room) => room.status === "active") || [];
@@ -839,7 +839,7 @@ export default function RoomScheduleView({
 
                             return lessonStudentIds.length > 0 && (
                               <div className="pt-2 border-t">
-                                <h3 className="text-sm font-semibold mb-2">Ученики ({lessonStudentIds.length})</h3>
+                                <h3 className="text-sm font-semibold mb-2">{t("lesson.students")} ({lessonStudentIds.length})</h3>
                                 <div className="flex flex-col gap-2 max-h-48 overflow-y-auto">
                                   {lessonStudentIds.map(studentId => {
                                     const student = students.find(s => s.id === studentId);
@@ -866,38 +866,38 @@ export default function RoomScheduleView({
 
                           <div className="pt-2 border-t">
                             <div className="text-sm text-muted-foreground">
-                              <span className="font-medium">Аудитория:</span> {lessonRoom?.name || "Не указана"}
+                              <span className="font-medium">{t("lesson.room")}:</span> {lessonRoom?.name || t("lesson.roomNotSpecified")}
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              <span className="font-medium">Статус:</span> {getDisplayStatus(lesson)}
+                              <span className="font-medium">{t("lesson.status")}:</span> {getDisplayStatus(lesson)}
                             </div>
                           </div>
                         </div>
 
                         <div className="flex flex-col gap-2 pt-2">
                           <Button onClick={handleEditClick}>
-                            <Edit2 className="h-4 w-4 mr-2" /> Редактировать урок
+                            <Edit2 className="h-4 w-4 mr-2" /> {t("lesson.editLesson")}
                           </Button>
                           {lesson.status === "cancelled" ? (
                             <Button
                               variant="default"
                               onClick={(e) => { e.stopPropagation(); onResumeLesson && onResumeLesson(lesson); setPopoverOpen(false); }}
                             >
-                              Возобновить урок
+                              {t("lesson.resumeLesson")}
                             </Button>
                           ) : (
                             <Button
                               variant="destructive"
                               onClick={(e) => { e.stopPropagation(); onCancelLesson && onCancelLesson(lesson); setPopoverOpen(false); }}
                             >
-                              Отменить урок
+                              {t("lesson.cancelLesson")}
                             </Button>
                           )}
                           <Button
                             variant="secondary"
                             onClick={(e) => { e.stopPropagation(); onOpenAttendance && onOpenAttendance(lesson); setPopoverOpen(false); }}
                           >
-                            Отметить посещаемость
+                            {t("lesson.markAttendance")}
                           </Button>
                         </div>
                       </div>

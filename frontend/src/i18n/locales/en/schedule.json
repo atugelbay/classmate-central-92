@@ -30,30 +30,52 @@
     "status": "Status",
     "notes": "Notes",
     "date": "Date",
+    "dateAndTime": "Date and time",
     "type": "Type",
     "individual": "Individual",
-    "special": "One-time",
+    "special": "Special",
     "start": "Start",
-    "end": "End"
+    "end": "End",
+    "editLesson": "Edit lesson",
+    "cancelLesson": "Cancel lesson",
+    "resumeLesson": "Resume lesson",
+    "markAttendance": "Mark attendance",
+    "roomNotSpecified": "Not specified"
   },
   "statuses": {
     "scheduled": "Scheduled",
     "completed": "Completed",
-    "cancelled": "Cancelled"
+    "cancelled": "Cancelled",
+    "inProgress": "In progress"
   },
   "attendance": {
     "title": "Attendance",
     "mark": "Mark",
+    "markTitle": "Mark attendance",
+    "dateLabel": "Date",
+    "timeLabel": "Time",
+    "subjectLabel": "Subject",
+    "teacherLabel": "Teacher",
     "attended": "Attended",
     "missed": "Missed",
+    "cancelled": "Cancelled",
     "excused": "Excused",
     "reason": "Reason",
+    "reasonLabel": "Reason for absence",
+    "excusedOption": "Excused (no deduction)",
+    "unexcusedOption": "Unexcused (1 lesson deducted)",
     "notes": "Notes",
-    "save": "Save attendance"
+    "notesOptional": "Notes (optional)",
+    "notesPlaceholder": "Additional notes...",
+    "save": "Save attendance",
+    "saveAttendance": "Save attendance",
+    "saving": "Saving...",
+    "noStudentsInLesson": "No students in this lesson. Add a group to the lesson or add students manually."
   },
   "conflicts": {
     "title": "Conflicts",
     "found": "Conflicts found",
+    "foundTitle": "Conflicts detected:",
     "roomBusy": "Room is busy",
     "teacherBusy": "Teacher is busy",
     "checking": "Checking conflicts...",
@@ -62,9 +84,12 @@
   },
   "series": {
     "title": "Lesson Series",
+    "repeat": "Repeat",
     "create": "Create Series",
     "endDate": "Series End Date",
     "weekdays": "Weekdays",
+    "weekdaysLabel": "Weekdays",
+    "endDateLabel": "Until date",
     "selectDays": "Select at least one day"
   },
   "modal": {

@@ -30,41 +30,66 @@
     "status": "Мәртебе",
     "notes": "Жазбалар",
     "date": "Күні",
+    "dateAndTime": "Күні және уақыты",
     "type": "Түрі",
     "individual": "Жеке",
-    "special": "Бір реттік",
+    "special": "Арнайы",
     "start": "Басталуы",
-    "end": "Аяқталуы"
+    "end": "Аяқталуы",
+    "editLesson": "Сабақты өңдеу",
+    "cancelLesson": "Сабақты тоқтату",
+    "resumeLesson": "Сабақты жалғастыру",
+    "markAttendance": "Қатысуды белгілеу",
+    "roomNotSpecified": "Көрсетілмеген"
   },
   "statuses": {
     "scheduled": "Жоспарланған",
-    "completed": "Аяқталған",
-    "cancelled": "Бас тартылған"
+    "completed": "Өткізілді",
+    "cancelled": "Бас тартылған",
+    "inProgress": "Өтуде"
   },
   "attendance": {
     "title": "Қатысу",
     "mark": "Белгілеу",
+    "markTitle": "Қатысуды белгілеу",
+    "dateLabel": "Күні",
+    "timeLabel": "Уақыт",
+    "subjectLabel": "Пән",
+    "teacherLabel": "Мұғалім",
     "attended": "Қатысты",
     "missed": "Қатыспады",
+    "cancelled": "Бас тартылған",
     "excused": "Дәлелді себеп",
     "reason": "Себебі",
+    "reasonLabel": "Қатыспау себебі",
+    "excusedOption": "Дәлелді себеп (жазылымнан шығарылмайды)",
+    "unexcusedOption": "Дәлелсіз себеп (1 сабақ жазылады)",
     "notes": "Жазбалар",
-    "save": "Белгілерді сақтау"
+    "notesOptional": "Жазбалар (міндетті емес)",
+    "notesPlaceholder": "Қосымша жазбалар...",
+    "save": "Белгілерді сақтау",
+    "saveAttendance": "Қатысуды сақтау",
+    "saving": "Сақтау...",
+    "noStudentsInLesson": "Бұл сабақта оқушылар жоқ. Топ қосыңыз немесе оқушыларды қолмен қосыңыз."
   },
   "conflicts": {
     "title": "Қайшылықтар",
     "found": "Қайшылықтар табылды",
+    "foundTitle": "Қайшылықтар табылды:",
     "roomBusy": "Аудитория бос емес",
     "teacherBusy": "Мұғалім бос емес",
     "checking": "Қайшылықтарды тексеру...",
-    "noConflicts": "Қайшылықтар табылмады",
+    "noConflicts": "Қайшылықтар табылған жоқ",
     "suggestedTime": "Ұсынылған уақыт:"
   },
   "series": {
     "title": "Сабақтар сериясы",
+    "repeat": "Қайталау",
     "create": "Серия құру",
     "endDate": "Серия аяқталу күні",
     "weekdays": "Апта күндері",
+    "weekdaysLabel": "Апта күндері",
+    "endDateLabel": "Қай күніне дейін",
     "selectDays": "Кемінде бір күн таңдаңыз"
   },
   "modal": {

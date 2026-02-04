@@ -15,6 +15,8 @@
   "notInGroups": "Оқушы топтарда жоқ",
   "removeFromGroup": "Топтан шығару",
   "addToGroup": "Топқа қосу",
+  "searchGroupsPlaceholder": "Топты іздеу...",
+  "noGroupsFound": "Топтар табылмады",
   "subjects": "Пәндер",
   "add": "Қосу",
   "addNote": "Жазба қосу",

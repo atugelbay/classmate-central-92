@@ -46,6 +46,19 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Label } from "@/components/ui/label";
 import { 
   ArrowLeft, 
@@ -70,6 +83,7 @@ import {
   Percent,
   Wallet,
   CalendarClock,
+  ChevronsUpDown,
 } from "lucide-react";
 import { Discount, PaymentTransaction } from "@/types";
 import moment from "moment";
@@ -156,6 +170,7 @@ export default function StudentDetail() {
   const [isFreezeModalOpen, setIsFreezeModalOpen] = useState(false);
   const [isEditStudentDialogOpen, setIsEditStudentDialogOpen] = useState(false);
   const [isReportsDialogOpen, setIsReportsDialogOpen] = useState(false);
+  const [groupComboboxOpen, setGroupComboboxOpen] = useState(false);
 
   const student = students.find((s) => s.id === id);
   const studentGroups = student ? groups.filter((g) => student.groupIds?.includes(g.id)) : [];
@@ -743,36 +758,55 @@ export default function StudentDetail() {
                 </div>
                 <h3 className="font-semibold text-slate-900 dark:text-slate-100">{t("groups")}</h3>
               </div>
-              <Select
-                onValueChange={async (groupId) => {
-                  if (!id || !groupId) return;
-                  const group = groups.find((g) => g.id === groupId);
-                  if (!group) return;
-                  
-                  if (!group.studentIds.includes(id)) {
-                    await updateGroup.mutateAsync({
-                      id: groupId,
-                      data: {
-                        ...group,
-                        studentIds: [...group.studentIds, id],
-                      },
-                    });
-                  }
-                }}
-              >
-                <SelectTrigger className="w-[180px] h-9">
-                  <SelectValue placeholder={t("addToGroup")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {groups
-                    .filter((g) => !studentGroups.find((sg) => sg.id === g.id))
-                    .map((group) => (
-                      <SelectItem key={group.id} value={group.id}>
-                        {group.name} - {group.subject}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+              <Popover open={groupComboboxOpen} onOpenChange={setGroupComboboxOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={groupComboboxOpen}
+                    className="w-[200px] h-9 justify-between rounded-lg"
+                  >
+                    {t("addToGroup")}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[280px] p-0 rounded-xl" align="end">
+                  <Command>
+                    <CommandInput
+                      placeholder={t("searchGroupsPlaceholder")}
+                      className="rounded-t-xl border-0 border-b"
+                    />
+                    <CommandList>
+                      <CommandEmpty>{t("noGroupsFound")}</CommandEmpty>
+                      <CommandGroup>
+                        {groups
+                          .filter((g) => !studentGroups.find((sg) => sg.id === g.id))
+                          .map((group) => (
+                            <CommandItem
+                              key={group.id}
+                              value={`${group.name} ${group.subject}`}
+                              onSelect={async () => {
+                                if (!id) return;
+                                if (!group.studentIds.includes(id)) {
+                                  await updateGroup.mutateAsync({
+                                    id: group.id,
+                                    data: {
+                                      ...group,
+                                      studentIds: [...group.studentIds, id],
+                                    },
+                                  });
+                                }
+                                setGroupComboboxOpen(false);
+                              }}
+                            >
+                              {group.name} — {group.subject}
+                            </CommandItem>
+                          ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
             
             {studentGroups.length === 0 ? (
