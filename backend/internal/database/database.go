@@ -148,6 +148,8 @@ func (d *Database) RunMigrations() error {
 		"migrations/034_make_student_email_nullable.up.sql",
 		"migrations/035_add_billing_system.up.sql",
 		"migrations/036_update_plan_features.up.sql",
+		"migrations/037_add_trial_plan.up.sql",
+		"migrations/038_add_phone_to_users.up.sql",
 	}
 
 	log.Printf("📋 Total migrations to process: %d", len(migrations))

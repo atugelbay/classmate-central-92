@@ -464,6 +464,7 @@ export interface User {
   id: number;
   email: string;
   name: string;
+  phone?: string;
   companyId: string;
   roleId?: string;
   roles?: Role[];

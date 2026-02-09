@@ -381,9 +381,8 @@ func (s *EmailService) sendEmailWithTLS(toEmail, msg string, auth smtp.Auth) err
 	}
 
 	// Port 587 uses STARTTLS
-	// Use DialTimeout to avoid hanging connections
 	dialer := &net.Dialer{
-		Timeout: 30 * time.Second,
+		Timeout: 45 * time.Second,
 	}
 
 	conn, err := dialer.Dial("tcp", fmt.Sprintf("%s:%d", s.smtpHost, port))
@@ -462,12 +461,10 @@ func (s *EmailService) sendEmailWithSSL(toEmail, msg string, auth smtp.Auth) err
 		return fmt.Errorf("invalid SMTP port: %w", err)
 	}
 
-	// Use DialTimeout to avoid hanging connections
 	dialer := &net.Dialer{
-		Timeout: 30 * time.Second,
+		Timeout: 45 * time.Second,
 	}
 
-	// Connect with SSL from the start
 	conn, err := tls.DialWithDialer(dialer, "tcp", fmt.Sprintf("%s:%d", s.smtpHost, port), &tls.Config{
 		ServerName:         s.smtpHost,
 		InsecureSkipVerify: false,

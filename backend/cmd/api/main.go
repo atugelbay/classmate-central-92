@@ -85,7 +85,7 @@ func main() {
 
 	// Initialize handlers
 	branchRepo := repository.NewBranchRepository(db.DB)
-	authHandler := handlers.NewAuthHandler(userRepo, companyRepo, roleRepo, settingsRepo, emailService, branchRepo, db.DB)
+	authHandler := handlers.NewAuthHandler(userRepo, companyRepo, roleRepo, settingsRepo, emailService, branchRepo, licenseRepo, db.DB)
 	teacherHandler := handlers.NewTeacherHandlerWithRates(teacherRepo, teacherRateRepo, lessonRepo)
 	teacherRateHandler := handlers.NewTeacherRateHandler(teacherRateRepo)
 	studentHandler := handlers.NewStudentHandler(studentRepo, activityRepo, notificationRepo, activityService)

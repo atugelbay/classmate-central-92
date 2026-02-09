@@ -17,12 +17,12 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 
 func (r *UserRepository) Create(user *models.User) error {
 	query := `
-		INSERT INTO users (email, password, name, company_id, role_id, is_email_verified, email_verification_token, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+		INSERT INTO users (email, password, name, phone, company_id, role_id, is_email_verified, email_verification_token, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
 		RETURNING id, created_at, updated_at
 	`
 
-	err := r.db.QueryRow(query, user.Email, user.Password, user.Name, user.CompanyID, user.RoleID, user.IsEmailVerified, user.EmailVerificationToken).
+	err := r.db.QueryRow(query, user.Email, user.Password, user.Name, user.Phone, user.CompanyID, user.RoleID, user.IsEmailVerified, user.EmailVerificationToken).
 		Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("error creating user: %w", err)
@@ -34,7 +34,7 @@ func (r *UserRepository) Create(user *models.User) error {
 func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
 	user := &models.User{}
 	query := `
-		SELECT id, email, password, name, company_id, role_id, is_email_verified,
+		SELECT id, email, password, name, phone, company_id, role_id, is_email_verified,
 		       onboarding_completed, onboarding_completed_at,
 		       created_at, updated_at
 		FROM users
@@ -42,9 +42,10 @@ func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
 	`
 
 	var roleID sql.NullString
+	var phone sql.NullString
 	var onboardingCompletedAt sql.NullTime
 	err := r.db.QueryRow(query, email).Scan(
-		&user.ID, &user.Email, &user.Password, &user.Name, &user.CompanyID, &roleID, &user.IsEmailVerified,
+		&user.ID, &user.Email, &user.Password, &user.Name, &phone, &user.CompanyID, &roleID, &user.IsEmailVerified,
 		&user.OnboardingCompleted, &onboardingCompletedAt,
 		&user.CreatedAt, &user.UpdatedAt,
 	)
@@ -58,6 +59,9 @@ func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
 	if roleID.Valid {
 		user.RoleID = &roleID.String
 	}
+	if phone.Valid {
+		user.Phone = phone.String
+	}
 	if onboardingCompletedAt.Valid {
 		t := onboardingCompletedAt.Time
 		user.OnboardingCompletedAt = &t
@@ -69,7 +73,7 @@ func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
 func (r *UserRepository) GetByID(id int) (*models.User, error) {
 	user := &models.User{}
 	query := `
-		SELECT id, email, password, name, company_id, role_id, is_email_verified,
+		SELECT id, email, password, name, phone, company_id, role_id, is_email_verified,
 		       onboarding_completed, onboarding_completed_at,
 		       created_at, updated_at
 		FROM users
@@ -77,9 +81,10 @@ func (r *UserRepository) GetByID(id int) (*models.User, error) {
 	`
 
 	var roleID sql.NullString
+	var phone sql.NullString
 	var onboardingCompletedAt sql.NullTime
 	err := r.db.QueryRow(query, id).Scan(
-		&user.ID, &user.Email, &user.Password, &user.Name, &user.CompanyID, &roleID, &user.IsEmailVerified,
+		&user.ID, &user.Email, &user.Password, &user.Name, &phone, &user.CompanyID, &roleID, &user.IsEmailVerified,
 		&user.OnboardingCompleted, &onboardingCompletedAt,
 		&user.CreatedAt, &user.UpdatedAt,
 	)
@@ -92,6 +97,9 @@ func (r *UserRepository) GetByID(id int) (*models.User, error) {
 
 	if roleID.Valid {
 		user.RoleID = &roleID.String
+	}
+	if phone.Valid {
+		user.Phone = phone.String
 	}
 	if onboardingCompletedAt.Valid {
 		t := onboardingCompletedAt.Time

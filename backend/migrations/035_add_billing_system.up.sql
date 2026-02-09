@@ -202,19 +202,5 @@ ON CONFLICT (id) DO UPDATE SET
     updated_at = CURRENT_TIMESTAMP;
 
 -- ============================================================================
--- Seed: Grant Enterprise license to all existing companies for 1 month
--- ============================================================================
-INSERT INTO company_licenses (company_id, plan_id, status, current_period_start, current_period_end, notes)
-SELECT 
-    id, 
-    'enterprise', 
-    'active', 
-    NOW(), 
-    NOW() + INTERVAL '1 month',
-    'Initial Enterprise license - 1 month free'
-FROM companies
-ON CONFLICT (company_id) DO NOTHING;
-
--- ============================================================================
 -- Done
 -- ============================================================================

@@ -14,6 +14,7 @@ type User struct {
 	Permissions            []string   `json:"permissions,omitempty"`     // Populated from roles
 	Branches               []*Branch  `json:"branches,omitempty"`        // User's accessible branches
 	CurrentBranchID        *string    `json:"currentBranchId,omitempty"` // Currently active branch
+	Phone                  string     `json:"phone,omitempty" db:"phone"`
 	IsEmailVerified        bool       `json:"isEmailVerified" db:"is_email_verified"`
 	EmailVerificationToken *string    `json:"-" db:"email_verification_token"`
 	OnboardingCompleted    bool       `json:"onboardingCompleted" db:"onboarding_completed"`
@@ -161,6 +162,7 @@ type RegisterRequest struct {
 	Email       string `json:"email" binding:"required,email"`
 	Password    string `json:"password" binding:"required,min=6"`
 	CompanyName string `json:"companyName" binding:"required"`
+	Phone       string `json:"phone" binding:"required"`
 }
 
 // InviteUserRequest represents admin-driven user invitation

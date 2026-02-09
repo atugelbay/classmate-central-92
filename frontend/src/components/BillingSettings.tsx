@@ -8,8 +8,8 @@ import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { 
   Crown, Users, UserCog, BookOpen, Building2, 
-  Calendar, AlertCircle, Loader2, ArrowRight,
-  Check, ExternalLink
+  AlertCircle, Loader2, ArrowRight,
+  Check
 } from "lucide-react";
 import {
   Dialog,
@@ -145,8 +145,8 @@ export function BillingSettings() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button onClick={() => navigate("/select-plan")}>
-            Выбрать тариф
+          <Button onClick={() => navigate("/")}>
+            Перейти в личный кабинет
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </CardContent>
@@ -207,10 +207,6 @@ export function BillingSettings() {
           <div className="flex flex-wrap gap-3">
             <Button variant="outline" onClick={() => setShowChangePlanDialog(true)}>
               Сменить тариф
-            </Button>
-            <Button variant="outline" onClick={() => navigate("/select-plan")}>
-              Сравнить тарифы
-              <ExternalLink className="ml-2 h-4 w-4" />
             </Button>
           </div>
         </CardContent>

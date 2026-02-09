@@ -249,6 +249,39 @@ func (r *LicenseRepository) UpdateLicensePlan(companyID, planID string) error {
 	return nil
 }
 
+// CreateTrialLicense creates a trial license for a newly registered company (1 month, unlimited)
+func (r *LicenseRepository) CreateTrialLicense(companyID string) (*models.CompanyLicense, error) {
+	license := &models.CompanyLicense{}
+
+	query := `
+		INSERT INTO company_licenses (
+			company_id, plan_id, status, trial_ends_at,
+			current_period_start, current_period_end,
+			created_at, updated_at
+		)
+		VALUES ($1, 'trial', 'trial', NOW() + INTERVAL '1 month',
+			NOW(), NOW() + INTERVAL '1 month',
+			NOW(), NOW())
+		ON CONFLICT (company_id) DO NOTHING
+		RETURNING id, company_id, plan_id, status, current_period_start, current_period_end, created_at, updated_at
+	`
+
+	err := r.db.QueryRow(query, companyID).Scan(
+		&license.ID, &license.CompanyID, &license.PlanID, &license.Status,
+		&license.CurrentPeriodStart, &license.CurrentPeriodEnd,
+		&license.CreatedAt, &license.UpdatedAt,
+	)
+	if err == sql.ErrNoRows {
+		// Already has license (ON CONFLICT DO NOTHING)
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("error creating trial license: %w", err)
+	}
+
+	return license, nil
+}
+
 // HasLicense checks if a company has a license
 func (r *LicenseRepository) HasLicense(companyID string) (bool, error) {
 	var count int

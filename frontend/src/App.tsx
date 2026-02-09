@@ -20,11 +20,10 @@ import Finance from "./pages/Finance";
 import Subscriptions from "./pages/Subscriptions";
 import Settings from "./pages/Settings";
 import Roles from "./pages/Roles";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
+import LoginPage from "./pages/auth/LoginPage";
+import RegisterPage from "./pages/auth/RegisterPage";
 import VerifyEmail from "./pages/VerifyEmail";
 import AcceptInvite from "./pages/AcceptInvite";
-import SelectPlan from "./pages/SelectPlan";
 import NotFound from "./pages/NotFound";
 import { ReactNode } from "react";
 
@@ -83,8 +82,8 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  // Allow verify-email, invite, and select-plan pages even if already signed in
-  if (isAuthenticated && location.pathname !== "/verify-email" && location.pathname !== "/invite" && location.pathname !== "/select-plan") {
+  // Allow verify-email and invite pages even if already signed in
+  if (isAuthenticated && location.pathname !== "/verify-email" && location.pathname !== "/invite") {
     return <Navigate to="/" replace />;
   }
 
@@ -105,7 +104,7 @@ const App = () => (
                 path="/login"
                 element={
                   <PublicRoute>
-                    <Login />
+                    <LoginPage />
                   </PublicRoute>
                 }
               />
@@ -113,7 +112,7 @@ const App = () => (
                 path="/register"
                 element={
                   <PublicRoute>
-                    <Register />
+                    <RegisterPage />
                   </PublicRoute>
                 }
               />
@@ -135,11 +134,7 @@ const App = () => (
               />
               <Route
                 path="/select-plan"
-                element={
-                  <PublicRoute>
-                    <SelectPlan />
-                  </PublicRoute>
-                }
+                element={<Navigate to="/" replace />}
               />
               <Route
                 path="/*"

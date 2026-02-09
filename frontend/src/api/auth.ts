@@ -11,6 +11,7 @@ export interface RegisterRequest {
   email: string;
   password: string;
   companyName: string;
+  phone: string;
 }
 
 export interface InviteUserRequest {

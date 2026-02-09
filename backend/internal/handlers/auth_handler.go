@@ -27,10 +27,11 @@ type AuthHandler struct {
 	settingsRepo *repository.SettingsRepository
 	emailService *services.EmailService
 	branchRepo   *repository.BranchRepository
+	licenseRepo  *repository.LicenseRepository
 	db           *sql.DB
 }
 
-func NewAuthHandler(userRepo *repository.UserRepository, companyRepo *repository.CompanyRepository, roleRepo *repository.RoleRepository, settingsRepo *repository.SettingsRepository, emailService *services.EmailService, branchRepo *repository.BranchRepository, db *sql.DB) *AuthHandler {
+func NewAuthHandler(userRepo *repository.UserRepository, companyRepo *repository.CompanyRepository, roleRepo *repository.RoleRepository, settingsRepo *repository.SettingsRepository, emailService *services.EmailService, branchRepo *repository.BranchRepository, licenseRepo *repository.LicenseRepository, db *sql.DB) *AuthHandler {
 	return &AuthHandler{
 		userRepo:     userRepo,
 		db:           db,
@@ -39,6 +40,7 @@ func NewAuthHandler(userRepo *repository.UserRepository, companyRepo *repository
 		settingsRepo: settingsRepo,
 		emailService: emailService,
 		branchRepo:   branchRepo,
+		licenseRepo:  licenseRepo,
 	}
 }
 
@@ -81,6 +83,10 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "company name: " + err.Error()})
 		return
 	}
+	if err := validation.ValidatePhone(req.Phone); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
 	// Check if user already exists
 	existingUser, err := h.userRepo.GetByEmail(req.Email)
@@ -115,6 +121,16 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	}
 
 	logger.Info("Company created", zap.String("companyId", company.ID), zap.String("companyName", company.Name))
+
+	// Create Trial license for the new company (1 month free, unlimited)
+	if h.licenseRepo != nil {
+		if _, err := h.licenseRepo.CreateTrialLicense(company.ID); err != nil {
+			logger.Warn("Failed to create trial license", logger.ErrorField(err), zap.String("companyId", company.ID))
+			// Continue registration - license can be assigned later
+		} else {
+			logger.Info("Trial license created", zap.String("companyId", company.ID))
+		}
+	}
 
 	// Create default branch for the new company
 	branchRepo := repository.NewBranchRepository(h.db)
@@ -178,6 +194,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		Email:                  req.Email,
 		Password:               string(hashedPassword),
 		Name:                   req.Name,
+		Phone:                  req.Phone,
 		CompanyID:              company.ID,
 		IsEmailVerified:        false,
 		EmailVerificationToken: &verificationCode,
@@ -196,6 +213,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	go func() {
 		if err := h.emailService.SendVerificationCode(user.Email, verificationCode); err != nil {
 			logger.Error("Failed to send verification email", logger.ErrorField(err), zap.String("email", user.Email))
+			fmt.Printf("\n>>> Код верификации для %s: %s (скопируйте из консоли сервера)\n\n", user.Email, verificationCode)
 		}
 	}()
 

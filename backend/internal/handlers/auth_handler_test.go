@@ -33,7 +33,8 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *AuthHandler, *sql.DB) {
 
 	// Create handler
 	branchRepo := repository.NewBranchRepository(db)
-	authHandler := NewAuthHandler(userRepo, companyRepo, roleRepo, settingsRepo, emailService, branchRepo, db)
+	licenseRepo := repository.NewLicenseRepository(db)
+	authHandler := NewAuthHandler(userRepo, companyRepo, roleRepo, settingsRepo, emailService, branchRepo, licenseRepo, db)
 
 	// Setup router
 	router := gin.New()
@@ -53,6 +54,7 @@ func TestAuthHandler_Register(t *testing.T) {
 		Password:    "password123",
 		Name:        "Test User",
 		CompanyName: "Test Company",
+		Phone:       "+77771234567",
 	}
 
 	jsonBody, _ := json.Marshal(reqBody)
@@ -83,6 +85,7 @@ func TestAuthHandler_Register_DuplicateEmail(t *testing.T) {
 		Password:    "password123",
 		Name:        "First User",
 		CompanyName: "First Company",
+		Phone:       "+77771234567",
 	}
 	jsonBody, _ := json.Marshal(reqBody)
 	req, _ := http.NewRequest("POST", "/api/auth/register", bytes.NewBuffer(jsonBody))
@@ -110,6 +113,7 @@ func TestAuthHandler_Login(t *testing.T) {
 		Password:    "password123",
 		Name:        "Login User",
 		CompanyName: "Login Company",
+		Phone:       "+77771234567",
 	}
 	jsonBody, _ := json.Marshal(registerReq)
 	req, _ := http.NewRequest("POST", "/api/auth/register", bytes.NewBuffer(jsonBody))

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 
 	"classmate-central/internal/logger"
@@ -88,6 +89,7 @@ func (h *AuthHandler) ResendVerificationEmail(c *gin.Context) {
 	go func() {
 		if err := h.emailService.SendVerificationCode(user.Email, newCode); err != nil {
 			logger.Error("Failed to resend verification email", logger.ErrorField(err), zap.String("email", user.Email))
+			fmt.Printf("\n>>> Код верификации для %s: %s (скопируйте из консоли сервера)\n\n", user.Email, newCode)
 		}
 	}()
 
