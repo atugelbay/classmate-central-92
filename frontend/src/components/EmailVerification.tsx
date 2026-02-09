@@ -113,18 +113,25 @@ export function EmailVerification() {
                 <Input
                   id="verification-code"
                   type="text"
-                  placeholder="Введите 6-значный код"
+                  inputMode="text"
+                  autoComplete="one-time-code"
+                  placeholder="Введите 6-символьный код"
                   value={code}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
-                    setCode(value.toUpperCase());
+                  onChange={(e) => setCode(e.target.value.replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 6))}
+                  onPaste={(e) => {
+                    e.preventDefault();
+                    const pasted = (e.clipboardData?.getData("text") || "")
+                      .replace(/[^A-Za-z0-9]/g, "")
+                      .toUpperCase()
+                      .slice(0, 6);
+                    setCode(pasted);
                   }}
                   maxLength={6}
                   disabled={isVerifying || isResending}
-                  className="text-center text-lg tracking-widest font-mono"
+                  className="text-center text-lg tracking-widest font-mono uppercase"
                 />
                 <p className="text-sm text-muted-foreground mt-2">
-                  Введите 6-значный код, отправленный на вашу почту
+                  Введите код из 6 символов (буквы и цифры), отправленный на вашу почту
                 </p>
               </div>
 
