@@ -391,6 +391,9 @@ export function RegisterWizard({ onStepChange }: { onStepChange?: (step: number)
               if (step < STEPS) {
                 e.preventDefault();
                 goNext();
+              } else if (step === STEPS && typeof window.gtag === "function") {
+                // Конверсия по клику «Начать бесплатно». В Google Рекламе добавьте метку конверсии: send_to: "AW-17925890772/МЕТКА"
+                window.gtag("event", "conversion", { send_to: "AW-17925890772" });
               }
             }}
           >
