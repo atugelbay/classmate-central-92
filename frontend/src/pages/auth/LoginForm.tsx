@@ -43,7 +43,7 @@ export function LoginForm() {
             onChange={(e) => setEmail(e.target.value)}
             required
             disabled={isLoading}
-            className="pl-11 h-12"
+            className="pl-11 h-12 text-base"
           />
         </div>
       </div>
@@ -59,7 +59,7 @@ export function LoginForm() {
             onChange={(e) => setPassword(e.target.value)}
             required
             disabled={isLoading}
-            className="pl-11 h-12"
+            className="pl-11 h-12 text-base"
           />
         </div>
       </div>

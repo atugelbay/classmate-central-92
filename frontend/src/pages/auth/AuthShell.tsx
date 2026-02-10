@@ -22,18 +22,13 @@ export function AuthShell({ mode, children, registerStep, formPanelVariant = "de
   const isLogin = mode === "login";
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[hsl(270,58%,97%)] via-[hsl(270,35%,95%)] to-[hsl(25,50%,96%)] dark:from-[hsl(224,71%,6%)] dark:via-[hsl(224,71%,4%)] dark:to-[hsl(215,28%,10%)] px-3 md:px-6 py-6">
-      <div className="relative w-full max-w-[1200px]">
-        <div className="relative z-10 min-h-[600px] md:min-h-[680px] lg:h-[720px] max-h-[90vh] rounded-[24px] md:rounded-[28px] border border-white/50 dark:border-white/10 bg-white/90 dark:bg-[rgba(9,12,20,0.96)] shadow-[0_24px_80px_rgba(15,20,26,0.12)] overflow-hidden flex flex-col md:flex-row">
+    <div className="min-h-screen min-h-[100dvh] flex items-center justify-center bg-gradient-to-br from-[hsl(270,58%,97%)] via-[hsl(270,35%,95%)] to-[hsl(25,50%,96%)] dark:from-[hsl(224,71%,6%)] dark:via-[hsl(224,71%,4%)] dark:to-[hsl(215,28%,10%)] px-2 sm:px-3 md:px-6 px-2 sm:px-3 md:px-6 py-4 sm:py-6 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div className="relative w-full max-w-[1200px] h-full min-h-0 flex flex-col md:block">
+        <div className="relative z-10 flex-1 md:flex-none min-h-0 md:min-h-[680px] lg:h-[720px] max-h-[85dvh] md:max-h-[90vh] rounded-[20px] md:rounded-[28px] border border-white/50 dark:border-white/10 bg-white/90 dark:bg-[rgba(9,12,20,0.96)] shadow-[0_24px_80px_rgba(15,20,26,0.12)] overflow-hidden flex flex-col md:flex-row">
           {isMobile ? (
-            <>
-              <div className="flex-1 overflow-y-auto flex flex-col min-h-0">
-                <FormPanel mode={mode} variant={formPanelVariant}>{children}</FormPanel>
-              </div>
-              <div className="shrink-0">
-                <VisualPanel mode={mode} compact currentStep={registerStep} />
-              </div>
-            </>
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden flex flex-col">
+              <FormPanel mode={mode} variant={formPanelVariant}>{children}</FormPanel>
+            </div>
           ) : (
             <motion.div
               layout

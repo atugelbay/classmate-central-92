@@ -23,41 +23,41 @@ export function FormPanel({ mode, children, variant = "default" }: FormPanelProp
   const bottomLinkTo = isLogin ? "/register" : "/login";
 
   return (
-    <div className={`flex h-full min-h-0 flex-col bg-white dark:bg-card rounded-2xl md:rounded-none shadow-sm p-6 md:p-8 lg:p-10 ${isLogin ? "md:rounded-l-[28px]" : "md:rounded-r-[28px]"}`}>
-      <div className="flex items-center gap-2 mb-8">
+    <div className={`flex h-full min-h-0 flex-col bg-white dark:bg-card rounded-2xl md:rounded-none shadow-sm p-4 sm:p-6 md:p-8 lg:p-10 min-w-0 ${isLogin ? "md:rounded-l-[28px]" : "md:rounded-r-[28px]"}`}>
+      <div className="flex items-center gap-2 mb-5 sm:mb-8 shrink-0">
         <img
           src="/Neosmart/logo.png"
           alt="Neosmart"
-          className="h-9 w-9 rounded-xl object-contain"
+          className="h-8 w-8 sm:h-9 sm:w-9 rounded-xl object-contain"
         />
         <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
           Neosmart
         </span>
       </div>
 
-      <div className="space-y-1.5 mb-8">
-        <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
+      <div className="space-y-1.5 mb-5 sm:mb-8 shrink-0">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight text-foreground break-words">
           {t(titleKey)}
         </h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground break-words">
           {t(subtitleKey)}
         </p>
         {trustText ? (
-          <p className="text-xs text-primary/80 mt-2">
+          <p className="text-xs text-primary/80 mt-2 break-words">
             {trustText}
           </p>
         ) : null}
       </div>
 
-      <div className="flex-1 min-h-0 flex flex-col">
+      <div className="flex-1 min-h-0 flex flex-col min-w-0 overflow-hidden">
         {children}
       </div>
 
-      <div className="mt-8 pt-6 border-t border-border/60 flex items-center justify-between gap-3 text-sm text-muted-foreground">
-        <span>{bottomText}</span>
+      <div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-border/60 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 text-sm text-muted-foreground shrink-0">
+        <span className="break-words">{bottomText}</span>
         <Link
           to={bottomLinkTo}
-          className="text-primary font-medium hover:underline underline-offset-4 focus:outline-none focus:ring-2 focus:ring-primary/20 rounded"
+          className="text-primary font-medium hover:underline underline-offset-4 focus:outline-none focus:ring-2 focus:ring-primary/20 rounded touch-manipulation"
         >
           {bottomLinkText}
         </Link>

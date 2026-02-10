@@ -41,6 +41,56 @@ router.get('/', async (req: AuthenticatedRequest, res: Response): Promise<void> 
   }
 });
 
+// GET /api/users/stats/overview — must be before /:id
+router.get('/stats/overview', async (_req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const result = await dbService.executeQuery(`
+      SELECT 
+        COUNT(*) as total,
+        COUNT(*) FILTER (WHERE is_email_verified = true) as verified,
+        COUNT(*) FILTER (WHERE is_email_verified = false) as unverified,
+        COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '7 days') as new_this_week,
+        COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '30 days') as new_this_month
+      FROM users
+    `);
+
+    res.json({
+      success: true,
+      data: result.rows[0],
+    });
+  } catch (error) {
+    console.error('Get user stats error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch user stats',
+    });
+  }
+});
+
+// DELETE /api/users/:id — delete user and all related data
+router.delete('/:id', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const id = req.params.id as string;
+    const userId = parseInt(id, 10);
+    if (Number.isNaN(userId)) {
+      res.status(400).json({ success: false, error: 'Invalid user ID' });
+      return;
+    }
+    const deleted = await dbService.deleteUserWithAllData(userId);
+    if (!deleted) {
+      res.status(404).json({ success: false, error: 'User not found' });
+      return;
+    }
+    res.json({ success: true, message: 'User and all related data deleted' });
+  } catch (error) {
+    console.error('Delete user error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete user',
+    });
+  }
+});
+
 // GET /api/users/:id
 router.get('/:id', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
@@ -106,32 +156,6 @@ router.get('/:id', async (req: AuthenticatedRequest, res: Response): Promise<voi
     res.status(500).json({
       success: false,
       error: 'Failed to fetch user details',
-    });
-  }
-});
-
-// GET /api/users/stats
-router.get('/stats/overview', async (_req: AuthenticatedRequest, res: Response): Promise<void> => {
-  try {
-    const result = await dbService.executeQuery(`
-      SELECT 
-        COUNT(*) as total,
-        COUNT(*) FILTER (WHERE is_email_verified = true) as verified,
-        COUNT(*) FILTER (WHERE is_email_verified = false) as unverified,
-        COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '7 days') as new_this_week,
-        COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE - INTERVAL '30 days') as new_this_month
-      FROM users
-    `);
-
-    res.json({
-      success: true,
-      data: result.rows[0],
-    });
-  } catch (error) {
-    console.error('Get user stats error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch user stats',
     });
   }
 });

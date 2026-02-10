@@ -112,6 +112,10 @@ export const usersApi = {
     const response = await apiClient.get('/users/stats/overview');
     return response.data;
   },
+  deleteWithAllData: async (id: number) => {
+    const response = await apiClient.delete(`/users/${id}`);
+    return response.data;
+  },
 };
 
 // Database API

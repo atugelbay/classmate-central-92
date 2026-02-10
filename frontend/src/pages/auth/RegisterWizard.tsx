@@ -12,6 +12,27 @@ import { authAPI } from "@/api/auth";
 const STEPS = 4;
 const TRANSITION = { duration: 0.45, ease: [0.32, 0.72, 0, 1] as const };
 
+function formatPhoneDisplay(digits: string): string {
+  const d = digits.replace(/\D/g, "");
+  let normalized = d.startsWith("8") ? "7" + d.slice(1) : d.startsWith("7") ? d : d ? "7" + d : "";
+  normalized = normalized.slice(0, 11);
+  if (!normalized) return "";
+  if (normalized.length === 1) return "+7";
+  const rest = normalized.slice(1);
+  let s = "+7";
+  if (rest.length > 0) s += " (" + rest.slice(0, 3);
+  if (rest.length >= 3) s += ") " + rest.slice(3, 6);
+  if (rest.length >= 6) s += "-" + rest.slice(6, 8);
+  if (rest.length >= 8) s += "-" + rest.slice(8, 10);
+  return s;
+}
+
+function parsePhoneDigits(value: string): string {
+  const d = value.replace(/\D/g, "");
+  const normalized = d.startsWith("8") ? "7" + d.slice(1) : d.startsWith("7") ? d : d ? "7" + d : "";
+  return normalized.slice(0, 11);
+}
+
 export function RegisterWizard({ onStepChange }: { onStepChange?: (step: number) => void }) {
   const [step, setStep] = useState(1);
   const [verificationEmail, setVerificationEmail] = useState<string | null>(null);
@@ -143,7 +164,7 @@ export function RegisterWizard({ onStepChange }: { onStepChange?: (step: number)
 
   if (verificationEmail) {
     return (
-      <form onSubmit={handleVerify} className="flex flex-col flex-1 min-h-0">
+      <form onSubmit={handleVerify} className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
         <div className="mb-6">
           <p className="text-xs font-medium text-muted-foreground mb-1.5">
             {t("verification.title")}
@@ -217,7 +238,7 @@ export function RegisterWizard({ onStepChange }: { onStepChange?: (step: number)
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+    <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
       <div className="mb-6">
         <p className="text-xs font-medium text-muted-foreground mb-1.5">
           {t("register.stepLabel", { current: step, total: STEPS })}
@@ -254,7 +275,7 @@ export function RegisterWizard({ onStepChange }: { onStepChange?: (step: number)
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     disabled={isLoading}
-                    className="pl-11 h-12"
+                    className="pl-11 h-12 text-base"
                     autoFocus
                   />
                 </div>
@@ -282,7 +303,7 @@ export function RegisterWizard({ onStepChange }: { onStepChange?: (step: number)
                     value={companyName}
                     onChange={(e) => setCompanyName(e.target.value)}
                     disabled={isLoading}
-                    className="pl-11 h-12"
+                    className="pl-11 h-12 text-base"
                     autoFocus
                   />
                 </div>
@@ -311,7 +332,7 @@ export function RegisterWizard({ onStepChange }: { onStepChange?: (step: number)
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={isLoading}
-                    className="pl-11 h-12"
+                    className="pl-11 h-12 text-base"
                     autoFocus
                   />
                 </div>
@@ -323,11 +344,13 @@ export function RegisterWizard({ onStepChange }: { onStepChange?: (step: number)
                   <Input
                     id="wizard-phone"
                     type="tel"
-                    placeholder="+7"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    inputMode="numeric"
+                    autoComplete="tel"
+                    placeholder="+7 (___) ___-__-__"
+                    value={formatPhoneDisplay(phone)}
+                    onChange={(e) => setPhone(parsePhoneDigits(e.target.value))}
                     disabled={isLoading}
-                    className="pl-11 h-12"
+                    className="pl-11 h-12 text-base"
                   />
                 </div>
               </div>
@@ -354,7 +377,7 @@ export function RegisterWizard({ onStepChange }: { onStepChange?: (step: number)
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={isLoading}
-                    className="pl-11 h-12"
+                    className="pl-11 h-12 text-base"
                     autoFocus
                   />
                 </div>
@@ -370,7 +393,7 @@ export function RegisterWizard({ onStepChange }: { onStepChange?: (step: number)
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     disabled={isLoading}
-                    className="pl-11 h-12"
+                    className="pl-11 h-12 text-base"
                   />
                 </div>
               </div>

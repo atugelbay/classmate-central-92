@@ -524,6 +524,40 @@ export class DatabaseService {
     };
   }
 
+  /**
+   * Delete user and all related data: user, their company, company_licenses, branches (CASCADE),
+   * and settings for that company (no FK, so explicit delete).
+   */
+  async deleteUserWithAllData(userId: number): Promise<boolean> {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const userResult = await client.query<{ company_id: string }>(
+        'SELECT company_id FROM users WHERE id = $1',
+        [userId]
+      );
+      if (userResult.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return false;
+      }
+      const companyId = userResult.rows[0].company_id;
+
+      await client.query('DELETE FROM users WHERE id = $1', [userId]);
+
+      await client.query('DELETE FROM settings WHERE company_id = $1', [companyId]);
+      await client.query('DELETE FROM companies WHERE id = $1', [companyId]);
+
+      await client.query('COMMIT');
+      return true;
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   // ============================================================================
   // LICENSE MANAGEMENT METHODS
   // ============================================================================

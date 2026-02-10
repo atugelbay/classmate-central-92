@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usersApi, companiesApi } from '@/api/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,15 +20,36 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2, ChevronLeft, ChevronRight, Search, CheckCircle, XCircle, X } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Loader2, ChevronLeft, ChevronRight, Search, CheckCircle, XCircle, X, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
+
+type UserRow = {
+  id: number;
+  email: string;
+  name: string;
+  company_name: string;
+  role_name: string;
+  is_email_verified: boolean;
+  created_at: string;
+};
 
 export default function Users() {
   const [page, setPage] = useState(1);
   const [emailFilter, setEmailFilter] = useState('');
   const [verifiedFilter, setVerifiedFilter] = useState<string>('all');
   const [companyFilter, setCompanyFilter] = useState<string>('all');
+  const [userToDelete, setUserToDelete] = useState<UserRow | null>(null);
   const limit = 50;
+  const queryClient = useQueryClient();
 
   // Fetch companies for filter dropdown
   const { data: companiesData } = useQuery({
@@ -51,6 +72,18 @@ export default function Users() {
   const { data: statsData } = useQuery({
     queryKey: ['users', 'stats'],
     queryFn: usersApi.getStats,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (userId: number) => usersApi.deleteWithAllData(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      setUserToDelete(null);
+      toast.success('Пользователь и все связанные данные удалены');
+    },
+    onError: (err: { response?: { data?: { error?: string } } }) => {
+      toast.error(err.response?.data?.error || 'Не удалось удалить пользователя');
+    },
   });
 
   const handleSearch = () => {
@@ -205,18 +238,11 @@ export default function Users() {
                 <TableHead>Role</TableHead>
                 <TableHead>Verified</TableHead>
                 <TableHead>Created</TableHead>
+                <TableHead className="w-[80px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user: {
-                id: number;
-                email: string;
-                name: string;
-                company_name: string;
-                role_name: string;
-                is_email_verified: boolean;
-                created_at: string;
-              }) => (
+              {users.map((user: UserRow) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">{user.email}</TableCell>
                   <TableCell>{user.name || '-'}</TableCell>
@@ -236,10 +262,49 @@ export default function Users() {
                   <TableCell className="text-muted-foreground text-sm">
                     {format(new Date(user.created_at), 'MMM d, yyyy')}
                   </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => setUserToDelete(user)}
+                      title="Удалить пользователя и все данные"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
+
+          {/* Delete confirmation dialog */}
+          <Dialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Удалить пользователя?</DialogTitle>
+                <DialogDescription>
+                  Будет удалён пользователь <strong>{userToDelete?.email}</strong> и все связанные с ним данные из базы (роли, филиалы и т.д.). Это действие необратимо.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setUserToDelete(null)} disabled={deleteMutation.isPending}>
+                  Отмена
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => userToDelete && deleteMutation.mutate(userToDelete.id)}
+                  disabled={deleteMutation.isPending}
+                >
+                  {deleteMutation.isPending ? (
+                    <><Loader2 className="h-4 w-4 animate-spin mr-2" />Удаление...</>
+                  ) : (
+                    'Удалить'
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           {/* Pagination */}
           <div className="flex items-center justify-between mt-4">
