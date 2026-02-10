@@ -58,8 +58,16 @@ func NewEmailService() *EmailService {
 		logger.Info("Email service initialized with Resend API",
 			zap.String("fromEmail", service.fromEmail),
 		)
-		logger.Info("Resend API is recommended for Railway as it works via HTTPS and is not blocked")
 		return service
+	}
+
+	// Log why Resend was not used (helps debug prod: env vars often not passed to container)
+	if service.resendAPIKey == "" || service.fromEmail == "" {
+		logger.Warn("Resend not used: missing env vars",
+			zap.Bool("RESEND_API_KEY_set", service.resendAPIKey != ""),
+			zap.Bool("SMTP_FROM_EMAIL_set", service.fromEmail != ""),
+			zap.String("hint", "On production, set RESEND_API_KEY and SMTP_FROM_EMAIL in the environment (e.g. in .env or Railway Variables)"),
+		)
 	}
 
 	// Fallback to SMTP if Resend is not configured
@@ -68,9 +76,7 @@ func NewEmailService() *EmailService {
 
 	if !service.enabled {
 		logger.Warn("Email service is not configured. Email notifications will be logged to console only.")
-		logger.Info("To enable email notifications, set one of:")
-		logger.Info("  - RESEND_API_KEY and SMTP_FROM_EMAIL (recommended for Railway)")
-		logger.Info("  - SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, and SMTP_FROM_EMAIL")
+		logger.Info("To enable Resend: set RESEND_API_KEY and SMTP_FROM_EMAIL for the backend process (e.g. in .env or deployment Variables).")
 	} else {
 		logger.Info("Email service initialized with SMTP",
 			zap.String("smtpHost", service.smtpHost),

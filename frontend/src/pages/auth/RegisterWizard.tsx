@@ -85,6 +85,18 @@ export function RegisterWizard({ onStepChange }: { onStepChange?: (step: number)
     setIsLoading(true);
     try {
       await authAPI.register({ name, email, password, companyName, phone: phone || "" });
+      if (typeof window.gtag === "function") {
+        const transactionId =
+          typeof crypto !== "undefined" && crypto.randomUUID
+            ? crypto.randomUUID()
+            : `reg_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+        window.gtag("event", "conversion", {
+          send_to: "AW-17925890772/T7IECMPy5_UbENTF3eNC",
+          value: 1.0,
+          currency: "USD",
+          transaction_id: transactionId,
+        });
+      }
       toast.success(t("common:success"));
       setVerificationEmail(email);
     } catch (err: unknown) {
@@ -391,17 +403,6 @@ export function RegisterWizard({ onStepChange }: { onStepChange?: (step: number)
               if (step < STEPS) {
                 e.preventDefault();
                 goNext();
-              } else if (step === STEPS && typeof window.gtag === "function") {
-                const transactionId =
-                  typeof crypto !== "undefined" && crypto.randomUUID
-                    ? crypto.randomUUID()
-                    : `reg_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
-                window.gtag("event", "conversion", {
-                  send_to: "AW-17925890772/T7IECMPy5_UbENTF3eNC",
-                  value: 1.0,
-                  currency: "USD",
-                  transaction_id: transactionId,
-                });
               }
             }}
           >
