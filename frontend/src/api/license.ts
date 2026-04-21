@@ -1,12 +1,10 @@
 import apiClient from './client';
 import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+import { API_BASE_URL } from '@/config/api';
 
 // Get base URL without /api suffix for public endpoints
 const getBaseURL = () => {
-  const url = API_URL.replace(/\/api\/?$/, ''); // Remove /api or /api/ from end
-  return url;
+  return API_BASE_URL;
 };
 
 // Types for billing/license

@@ -20,6 +20,8 @@ jobs:
       # ---------- Build Main App ----------
       - name: Build main app
         working-directory: ./frontend
+        env:
+          VITE_API_URL: https://api.neosmart.kz/api
         run: |
           npm install
           npm run build

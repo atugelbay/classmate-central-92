@@ -1,11 +1,6 @@
 import axios from 'axios';
 import { Branch } from '@/types';
-
-// Use same env variable as client.ts for consistency
-// VITE_API_URL should be like 'http://localhost:8080/api' or 'https://api.example.com/api'
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
-// Extract base URL - remove trailing /api if present
-const API_BASE_URL = API_URL.replace(/\/api\/?$/, '') || 'http://localhost:8080';
+import { API_BASE_URL } from '@/config/api';
 
 // Create axios instance with auth token
 const getAuthHeaders = () => {
