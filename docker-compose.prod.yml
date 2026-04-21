@@ -29,9 +29,9 @@ services:
       ENV: production
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_USER: postgres
-      DB_PASSWORD: postgres
-      DB_NAME: classmate_central
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
       DB_SSLMODE: disable
       SERVER_PORT: 8080
       SERVER_HOST: 0.0.0.0
@@ -39,6 +39,8 @@ services:
       # Resend: RESEND_API_KEY и SMTP_FROM_EMAIL берутся из .env.prod (env_file выше)
       SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-no-reply@neosmart.kz}
       FRONTEND_URL: https://app.neosmart.kz
+    ports:
+      - "127.0.0.1:8080:8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -74,6 +76,8 @@ services:
       context: ./admin/frontend
       dockerfile: Dockerfile
     container_name: classmate_admin_ui_prod
+    ports:
+      - "127.0.0.1:3002:80"
     depends_on:
       - admin-backend
     restart: always

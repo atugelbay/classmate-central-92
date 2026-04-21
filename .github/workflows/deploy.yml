@@ -60,10 +60,11 @@ jobs:
             git pull
 
             echo "▶ Build & run all services (backend + admin)"
-            docker compose -f docker-compose.prod.yml up -d --build
+            docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
 
-            echo "▶ Restart nginx (safe)"
-            docker restart neosmart-nginx || true
+            echo "▶ Reload system nginx"
+            sudo nginx -t
+            sudo systemctl reload nginx
 
             echo "▶ Show running containers"
             docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"

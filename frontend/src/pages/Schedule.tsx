@@ -98,16 +98,38 @@ export default function Schedule() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
   
-  // Get all passed lessons that need attendance check
+  // Get lessons only for the currently visible date range
+  const visibleLessons = useMemo(() => {
+    if (viewMode === "day") {
+      return lessons.filter((lesson) => moment(lesson.start).isSame(selectedDate, "day"));
+    }
+    if (viewMode === "week") {
+      const weekStart = moment(selectedDate).startOf("isoWeek");
+      const weekEnd = moment(selectedDate).endOf("isoWeek");
+      return lessons.filter((lesson) => {
+        const lessonStart = moment(lesson.start);
+        return lessonStart.isSameOrAfter(weekStart) && lessonStart.isSameOrBefore(weekEnd);
+      });
+    }
+
+    const monthStart = moment(selectedDate).startOf("month");
+    const monthEnd = moment(selectedDate).endOf("month");
+    return lessons.filter((lesson) => {
+      const lessonStart = moment(lesson.start);
+      return lessonStart.isSameOrAfter(monthStart) && lessonStart.isSameOrBefore(monthEnd);
+    });
+  }, [lessons, selectedDate, viewMode]);
+
+  // Get passed lessons in current view that need attendance check
   const passedLessonIds = useMemo(() => {
     const now = moment();
-    return lessons
+    return visibleLessons
       .filter((lesson) => {
         const lessonStart = moment(lesson.start);
         return lessonStart.isBefore(now) && lesson.status !== "cancelled";
       })
       .map((lesson) => lesson.id);
-  }, [lessons]);
+  }, [visibleLessons]);
 
   // Fetch attendances for all passed lessons
   const { data: attendancesMap = new Map() } = useLessonAttendances(passedLessonIds);
