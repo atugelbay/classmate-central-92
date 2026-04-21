@@ -3,6 +3,7 @@ package repository
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"classmate-central/internal/models"
 )
@@ -16,6 +17,8 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 }
 
 func (r *UserRepository) Create(user *models.User) error {
+	user.Email = strings.ToLower(strings.TrimSpace(user.Email))
+
 	query := `
 		INSERT INTO users (email, password, name, phone, company_id, role_id, is_email_verified, email_verification_token, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
@@ -33,18 +36,19 @@ func (r *UserRepository) Create(user *models.User) error {
 
 func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
 	user := &models.User{}
+	normalizedEmail := strings.ToLower(strings.TrimSpace(email))
 	query := `
 		SELECT id, email, password, name, phone, company_id, role_id, is_email_verified,
 		       onboarding_completed, onboarding_completed_at,
 		       created_at, updated_at
 		FROM users
-		WHERE email = $1
+		WHERE LOWER(TRIM(email)) = $1
 	`
 
 	var roleID sql.NullString
 	var phone sql.NullString
 	var onboardingCompletedAt sql.NullTime
-	err := r.db.QueryRow(query, email).Scan(
+	err := r.db.QueryRow(query, normalizedEmail).Scan(
 		&user.ID, &user.Email, &user.Password, &user.Name, &phone, &user.CompanyID, &roleID, &user.IsEmailVerified,
 		&user.OnboardingCompleted, &onboardingCompletedAt,
 		&user.CreatedAt, &user.UpdatedAt,
